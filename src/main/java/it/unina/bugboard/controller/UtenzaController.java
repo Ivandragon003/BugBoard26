@@ -1,200 +1,392 @@
 package it.unina.bugboard.controller;
 
-import it.unina.bugboard.model.Utenza;
-import it.unina.bugboard.model.Ruolo;
 import it.unina.bugboard.dao.UtenzaDAO;
+import it.unina.bugboard.model.Ruolo;
+import it.unina.bugboard.model.Utenza;
 import it.unina.bugboard.exception.InvalidFieldException;
+import it.unina.bugboard.util.AccessTokenUtil;
+import it.unina.bugboard.util.PasswordUtil;
+import it.unina.bugboard.util.EmailUtil;
+import it.unina.bugboard.util.ValidationUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/utenze")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/utenza")
 public class UtenzaController {
 
     @Autowired
     private UtenzaDAO utenzaDAO;
 
-    /**
-     * Login utente
-     * POST /api/utenze/login
-     * Body: { "email": "...", "password": "..." }
-     */
+    @Autowired
+    private AccessTokenUtil accessTokenUtil;
+
+    @Autowired
+    private PasswordUtil passwordUtil;
+
+    @Autowired
+    private EmailUtil emailUtil;
+
+    @Autowired
+    private ValidationUtil validationUtil;
+
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
         try {
             String email = credentials.get("email");
             String password = credentials.get("password");
-
-            if (email == null || password == null) {
-                return new ResponseEntity<>("Email e password sono obbligatori", HttpStatus.BAD_REQUEST);
-            }
-
-            Optional<Utenza> utenza = utenzaDAO.findByEmail(email);
+            String ruoloStr = credentials.get("ruolo");
             
-            if (utenza.isEmpty()) {
-                return new ResponseEntity<>("Credenziali non valide", HttpStatus.UNAUTHORIZED);
-            }
-
-            Utenza user = utenza.get();
+            // Valida email
+            validationUtil.validaEmailFormat(email);
             
-            // NOTA: In produzione usa BCrypt per confrontare password hashate
-            if (!user.getPassword().equals(password)) {
-                return new ResponseEntity<>("Credenziali non valide", HttpStatus.UNAUTHORIZED);
-            }
-
-            // Ritorna i dati utente (senza password)
-            Map<String, Object> response = new HashMap<>();
-            response.put("idUtente", user.getIdUtente());
-            response.put("nome", user.getNome());
-            response.put("cognome", user.getCognome());
-            response.put("email", user.getEmail());
-            response.put("ruolo", user.getRuolo());
-
-            return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Errore durante il login", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Crea una nuova utenza
-     * POST /api/utenze
-     */
-    @PostMapping
-    public ResponseEntity<?> creaUtenza(@RequestBody Utenza utenza) {
-        try {
-            // Verifica se l'email esiste già
-            if (utenzaDAO.existsByEmail(utenza.getEmail())) {
-                return new ResponseEntity<>("Email già registrata", HttpStatus.CONFLICT);
-            }
-
-            // NOTA: In produzione, hashare la password con BCrypt prima di salvare
-            // utenza.setPassword(passwordEncoder.encode(utenza.getPassword()));
-
-            Utenza salvata = utenzaDAO.save(utenza);
+            // Converti ruolo
+            Ruolo ruolo = Ruolo.valueOf(ruoloStr.toUpperCase());
             
-            // Rimuovi la password dalla risposta
-            salvata.setPassword(null);
+            // Cerca utente per email
+            Optional<Utenza> utenzaOpt = utenzaDAO.findByEmail(email);
             
-            return new ResponseEntity<>(salvata, HttpStatus.CREATED);
+            if (utenzaOpt.isEmpty()) {
+                throw new InvalidFieldException("Credenziali non valide");
+            }
+            
+            Utenza utenza = utenzaOpt.get();
+            
+            // Verifica ruolo
+            if (!utenza.getRuolo().equals(ruolo)) {
+                throw new InvalidFieldException("Credenziali non valide");
+            }
+            
+            // Verifica che l'account sia attivo
+            if (!utenza.getStato()) {
+                throw new InvalidFieldException("Account disattivato");
+            }
+            
+            // Verifica password
+            if (!passwordUtil.HashPassword(password).equals(utenza.getPassword())) {
+                throw new InvalidFieldException("Credenziali non valide");
+            }
+            
+            // Genera token
+            String token = accessTokenUtil.generaToken(utenza);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Login effettuato con successo",
+                "token", token,
+                "utente", Map.of(
+                    "id", utenza.getIdUtente(),
+                    "nome", utenza.getNome(),
+                    "cognome", utenza.getCognome(),
+                    "email", utenza.getEmail(),
+                    "ruolo", utenza.getRuolo().toString()
+                )
+            ));
         } catch (InvalidFieldException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return new ResponseEntity<>("Errore nella creazione dell'utenza", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Errore durante il login"));
         }
     }
 
     /**
-     * Visualizza una singola utenza
-     * GET /api/utenze/{id}
+     * Creazione di una nuova utenza
+     * @param utenzaData dati della nuova utenza
+     * @param token JWT token dell'utente che sta creando
+     * @return ResponseEntity con utenza creata o messaggio di errore
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<?> visualizzaUtenza(@PathVariable Integer id) {
+    @PostMapping("/crea")
+    public ResponseEntity<?> creaUtenza(
+            @RequestBody Map<String, Object> utenzaData,
+            @RequestHeader("Authorization") String token) {
         try {
-            Optional<Utenza> utenza = utenzaDAO.findById(id);
-            if (utenza.isEmpty()) {
-                return new ResponseEntity<>("Utenza non trovata", HttpStatus.NOT_FOUND);
+            // Estrai e verifica il token
+            String jwtToken = token.replace("Bearer ", "");
+            Utenza creatore = accessTokenUtil.verificaToken(jwtToken);
+            
+            // Verifica che il creatore sia attivo
+            if (!creatore.getStato()) {
+                throw new InvalidFieldException("Account creatore non attivo");
             }
             
-            Utenza user = utenza.get();
-            user.setPassword(null); // Non inviare la password
+            // Estrai i dati dalla richiesta
+            String nome = (String) utenzaData.get("nome");
+            String cognome = (String) utenzaData.get("cognome");
+            String email = (String) utenzaData.get("email");
+            String password = (String) utenzaData.get("password");
+            Ruolo ruolo = Ruolo.valueOf(((String) utenzaData.get("ruolo")).toUpperCase());
             
-            return new ResponseEntity<>(user, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Errore nel recupero dell'utenza", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Visualizza la lista di tutte le utenze
-     * GET /api/utenze
-     */
-    @GetMapping
-    public ResponseEntity<?> visualizzaListaUtenze(@RequestParam(required = false) Ruolo ruolo) {
-        try {
-            if (ruolo != null) {
-                return new ResponseEntity<>(utenzaDAO.findByRuolo(ruolo), HttpStatus.OK);
+            // Valida email unica usando il metodo del DAO
+            validationUtil.validaUniqueEmail(email);
+            
+            // Verifica se email esiste già usando il metodo esistente
+            if (utenzaDAO.existsByEmail(email)) {
+                throw new InvalidFieldException("Email già registrata");
             }
-            return new ResponseEntity<>(utenzaDAO.findAll(), HttpStatus.OK);
+            
+            // Hash della password
+            String hashedPassword = passwordUtil.HashPassword(password);
+            
+            // Crea nuova utenza
+            Utenza nuovaUtenza = new Utenza(nome, cognome, email, hashedPassword, ruolo, creatore);
+            
+            // Salva nel database
+            Utenza utenzaSalvata = utenzaDAO.save(nuovaUtenza);
+            
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of(
+                        "message", "Utenza creata con successo",
+                        "utenza", Map.of(
+                            "id", utenzaSalvata.getIdUtente(),
+                            "nome", utenzaSalvata.getNome(),
+                            "cognome", utenzaSalvata.getCognome(),
+                            "email", utenzaSalvata.getEmail(),
+                            "ruolo", utenzaSalvata.getRuolo().toString(),
+                            "stato", utenzaSalvata.getStato()
+                        )
+                    ));
+        } catch (InvalidFieldException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return new ResponseEntity<>("Errore nel recupero delle utenze", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Errore durante la creazione dell'utenza"));
         }
     }
 
     /**
-     * Modifica un'utenza esistente
-     * PUT /api/utenze/{id}
+     * Recupero password
+     * @param data contiene l'email dell'utente
+     * @return ResponseEntity con messaggio di conferma
+     */
+    @PostMapping("/recupera-password")
+    public ResponseEntity<?> recuperaPassword(@RequestBody Map<String, String> data) {
+        try {
+            String email = data.get("email");
+            
+            // Valida email
+            validationUtil.validaEmailFormat(email);
+            
+            // Cerca utente per email
+            Optional<Utenza> utenzaOpt = utenzaDAO.findByEmail(email);
+            
+            if (utenzaOpt.isEmpty()) {
+                throw new InvalidFieldException("Email non trovata");
+            }
+            
+            Utenza utenza = utenzaOpt.get();
+            
+            // Genera nuova password temporanea
+            String nuovaPassword = passwordUtil.generaPassword();
+            String hashedPassword = passwordUtil.HashPassword(nuovaPassword);
+            
+            // Aggiorna password
+            utenza.setPassword(hashedPassword);
+            utenzaDAO.save(utenza);
+            
+            // Invia email
+            emailUtil.sendEmail(
+                email,
+                "Recupero Password - BugBoard",
+                "La tua nuova password temporanea è: " + nuovaPassword
+            );
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Email di recupero password inviata con successo"
+            ));
+        } catch (InvalidFieldException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Errore durante il recupero password"));
+        }
+    }
+
+    /**
+     * Ottieni informazioni utente autenticato
+     * @param token JWT token
+     * @return ResponseEntity con dati utente
+     */
+    @GetMapping("/me")
+    public ResponseEntity<?> getUtenteCorrente(@RequestHeader("Authorization") String token) {
+        try {
+            String jwtToken = token.replace("Bearer ", "");
+            Utenza utente = accessTokenUtil.verificaToken(jwtToken);
+            
+            return ResponseEntity.ok(Map.of(
+                "id", utente.getIdUtente(),
+                "nome", utente.getNome(),
+                "cognome", utente.getCognome(),
+                "email", utente.getEmail(),
+                "ruolo", utente.getRuolo().toString(),
+                "stato", utente.getStato()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Token non valido"));
+        }
+    }
+
+    /**
+     * Aggiorna informazioni utente
+     * @param id ID dell'utente da aggiornare
+     * @param utenzaData nuovi dati
+     * @param token JWT token
+     * @return ResponseEntity con utenza aggiornata
      */
     @PutMapping("/{id}")
-    public ResponseEntity<?> modificaUtenza(@PathVariable Integer id, @RequestBody Utenza utenza) {
+    public ResponseEntity<?> aggiornaUtenza(
+            @PathVariable Integer id,
+            @RequestBody Map<String, String> utenzaData,
+            @RequestHeader("Authorization") String token) {
         try {
-            Optional<Utenza> utenzaEsistente = utenzaDAO.findById(id);
-            if (utenzaEsistente.isEmpty()) {
-                return new ResponseEntity<>("Utenza non trovata", HttpStatus.NOT_FOUND);
-            }
-
-            Utenza daModificare = utenzaEsistente.get();
-
-            if (utenza.getNome() != null) daModificare.setNome(utenza.getNome());
-            if (utenza.getCognome() != null) daModificare.setCognome(utenza.getCognome());
-            if (utenza.getEmail() != null && !utenza.getEmail().equals(daModificare.getEmail())) {
-                // Verifica che la nuova email non sia già in uso
-                if (utenzaDAO.existsByEmail(utenza.getEmail())) {
-                    return new ResponseEntity<>("Email già in uso", HttpStatus.CONFLICT);
-                }
-                daModificare.setEmail(utenza.getEmail());
-            }
-            if (utenza.getPassword() != null) {
-                // NOTA: In produzione, hashare la password
-                daModificare.setPassword(utenza.getPassword());
-            }
-            if (utenza.getRuolo() != null) daModificare.setRuolo(utenza.getRuolo());
-
-            Utenza aggiornata = utenzaDAO.save(daModificare);
-            aggiornata.setPassword(null); // Non inviare la password
+            String jwtToken = token.replace("Bearer ", "");
+            Utenza utenteCorrente = accessTokenUtil.verificaToken(jwtToken);
             
-            return new ResponseEntity<>(aggiornata, HttpStatus.OK);
+            // Verifica autorizzazione (solo admin o utente stesso)
+            if (!utenteCorrente.getRuolo().equals(Ruolo.AMMINISTRATORE) 
+                && !utenteCorrente.getIdUtente().equals(id)) {
+                throw new InvalidFieldException("Non autorizzato");
+            }
+            
+            // Verifica esistenza utente usando il metodo del DAO
+            if (!utenzaDAO.existsByIdUtente(id)) {
+                throw new InvalidFieldException("Utente non trovato");
+            }
+            
+            // Cerca utente da aggiornare
+            Optional<Utenza> utenzaOpt = utenzaDAO.findById(id);
+            Utenza utenza = utenzaOpt.get();
+            
+            // Aggiorna campi se presenti
+            if (utenzaData.containsKey("nome")) {
+                utenza.setNome(utenzaData.get("nome"));
+            }
+            if (utenzaData.containsKey("cognome")) {
+                utenza.setCognome(utenzaData.get("cognome"));
+            }
+            if (utenzaData.containsKey("email")) {
+                String nuovaEmail = utenzaData.get("email");
+                // Verifica che la nuova email non sia già usata
+                Optional<Utenza> emailEsistente = utenzaDAO.findByEmail(nuovaEmail);
+                if (emailEsistente.isPresent() && !emailEsistente.get().getIdUtente().equals(id)) {
+                    throw new InvalidFieldException("Email già in uso");
+                }
+                utenza.setEmail(nuovaEmail);
+            }
+            if (utenzaData.containsKey("password")) {
+                String hashedPassword = passwordUtil.HashPassword(utenzaData.get("password"));
+                utenza.setPassword(hashedPassword);
+            }
+            
+            // Salva modifiche
+            Utenza utenzaAggiornata = utenzaDAO.save(utenza);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Utenza aggiornata con successo",
+                "utenza", Map.of(
+                    "id", utenzaAggiornata.getIdUtente(),
+                    "nome", utenzaAggiornata.getNome(),
+                    "cognome", utenzaAggiornata.getCognome(),
+                    "email", utenzaAggiornata.getEmail()
+                )
+            ));
         } catch (InvalidFieldException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return new ResponseEntity<>("Errore nella modifica dell'utenza", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Errore durante l'aggiornamento"));
         }
     }
 
     /**
-     * Elimina un'utenza
-     * DELETE /api/utenze/{id}
+     * Disattiva un'utenza (soft delete)
+     * @param id ID dell'utenza da disattivare
+     * @param token JWT token
+     * @return ResponseEntity con messaggio di conferma
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminaUtenza(@PathVariable Integer id) {
+    public ResponseEntity<?> disattivaUtenza(
+            @PathVariable Integer id,
+            @RequestHeader("Authorization") String token) {
         try {
-            if (!utenzaDAO.existsById(id)) {
-                return new ResponseEntity<>("Utenza non trovata", HttpStatus.NOT_FOUND);
+            String jwtToken = token.replace("Bearer ", "");
+            Utenza utenteCorrente = accessTokenUtil.verificaToken(jwtToken);
+            
+            // Solo amministratori possono disattivare utenti
+            if (!utenteCorrente.getRuolo().equals(Ruolo.AMMINISTRATORE)) {
+                throw new InvalidFieldException("Solo gli amministratori possono disattivare utenti");
             }
-            utenzaDAO.deleteById(id);
-            return new ResponseEntity<>("Utenza eliminata con successo", HttpStatus.OK);
+            
+            // Verifica esistenza
+            if (!utenzaDAO.existsByIdUtente(id)) {
+                throw new InvalidFieldException("Utente non trovato");
+            }
+            
+            // Cerca utente
+            Optional<Utenza> utenzaOpt = utenzaDAO.findById(id);
+            Utenza utenza = utenzaOpt.get();
+            
+            // Disattiva (soft delete)
+            utenza.setStato(false);
+            utenzaDAO.save(utenza);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Utenza disattivata con successo"
+            ));
+        } catch (InvalidFieldException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return new ResponseEntity<>("Errore nell'eliminazione dell'utenza", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Errore durante la disattivazione"));
         }
     }
 
-    /**
-     * Cerca utenze per nome o cognome
-     * GET /api/utenze/cerca
-     */
-    @GetMapping("/cerca")
-    public ResponseEntity<?> cercaUtenze(@RequestParam String termine) {
+    @PatchMapping("/{id}/riattiva")
+    public ResponseEntity<?> riattivaUtenza(
+            @PathVariable Integer id,
+            @RequestHeader("Authorization") String token) {
         try {
-            return new ResponseEntity<>(utenzaDAO.searchByNomeOrCognome(termine), HttpStatus.OK);
+            String jwtToken = token.replace("Bearer ", "");
+            Utenza utenteCorrente = accessTokenUtil.verificaToken(jwtToken);
+            
+            // Solo amministratori possono riattivare utenti
+            if (!utenteCorrente.getRuolo().equals(Ruolo.AMMINISTRATORE)) {
+                throw new InvalidFieldException("Solo gli amministratori possono riattivare utenti");
+            }
+            
+            // Verifica esistenza
+            if (!utenzaDAO.existsByIdUtente(id)) {
+                throw new InvalidFieldException("Utente non trovato");
+            }
+            
+            // Cerca utente
+            Optional<Utenza> utenzaOpt = utenzaDAO.findById(id);
+            Utenza utenza = utenzaOpt.get();
+            
+            // Riattiva
+            utenza.setStato(true);
+            utenzaDAO.save(utenza);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Utenza riattivata con successo"
+            ));
+        } catch (InvalidFieldException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return new ResponseEntity<>("Errore nella ricerca delle utenze", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Errore durante la riattivazione"));
         }
     }
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import it.unina.bugboard.exception.InvalidFieldException;
+
 @Entity
 @Table(name = "utenza")
 public class Utenza {
@@ -37,6 +38,9 @@ public class Utenza {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private Ruolo ruolo;
+
+	@Column(nullable = false)
+	private Boolean stato = true;
 
 	@OneToMany(mappedBy = "creatore")
 	@JsonIgnore
@@ -113,6 +117,14 @@ public class Utenza {
 	public void setRuolo(Ruolo ruolo) {
 		this.ruolo = ruolo;
 	}
+
+	public Boolean getStato() {
+		return stato;
+	}
+
+	public void setStato(Boolean stato) {
+		this.stato = stato;
+	}
 	
 	public String toStringNome() {
 	    return "Nome: " + nome;
@@ -142,6 +154,10 @@ public class Utenza {
 	    return creatore != null ?
 	            "Creatore: " + creatore.getIdUtente() :
 	            "Creatore: null";
+	}
+
+	public String toStringStato() {
+	    return "Stato: " + (stato ? "Attivo" : "Disattivo");
 	}
 
 }
