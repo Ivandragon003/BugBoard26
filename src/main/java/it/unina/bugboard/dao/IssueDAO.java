@@ -63,8 +63,6 @@ public interface IssueDAO extends JpaRepository<Issue, Integer> {
 
 	List<Issue> findByTitoloContainingIgnoreCase(String titolo);
 
-	List<Issue> findByDescrizioneContainingIgnoreCase(String descrizione);
-
 	List<Issue> findAllByOrderByDataUltimaModificaDesc();
 
 	@Query("SELECT i FROM Issue i WHERE i.priorita IN ('critical', 'high') AND i.archiviata = false")
