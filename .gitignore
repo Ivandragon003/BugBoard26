@@ -3,7 +3,7 @@ target/
 *.class
 
 # Eclipse
-.settings/
+.settings/              # tiene fuori configurazioni Eclipse
 .classpath
 .project
 .metadata/
@@ -14,19 +14,28 @@ target/
 *.iws
 
 # Maven
-.mvn/
-!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.jar   # include solo il wrapper
+.mvn/**                         # tutto il resto lo ignora
 
 # Spring Boot
 *.log
+*.jar
+*.war
+*.ear
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Database
+# Database locali
 *.db
 pgdata/
 
 # Eclipse Maven integration files
 *.prefs
+.settings/org.eclipse.m2e.core.prefs
+
+# Node/Frontend (se presente)
+node_modules/
+dist/
+build/
