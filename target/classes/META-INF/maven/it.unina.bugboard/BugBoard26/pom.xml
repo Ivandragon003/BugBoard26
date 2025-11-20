@@ -22,6 +22,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>21</java.version>
+    <jwt.version>0.12.5</jwt.version>
   </properties>
 
   <dependencyManagement>
@@ -82,6 +83,49 @@
       <scope>runtime</scope>
       <optional>true</optional>
     </dependency>
+
+    <!-- ========== NUOVE DIPENDENZE PER RNF-1: SICUREZZA ========== -->
+    
+    <!-- Spring Security per BCrypt Password Encoding - RNF-1: password hashate -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
+    <!-- JWT - JSON Web Token per autenticazione - RNF-1: sessioni 30 min -->
+    <!-- API -->
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-api</artifactId>
+      <version>${jwt.version}</version>
+    </dependency>
+    <!-- Implementazione -->
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-impl</artifactId>
+      <version>${jwt.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- JSON serialization con Jackson -->
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-jackson</artifactId>
+      <version>${jwt.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- Spring Boot Mail per invio email recupero password -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+
+    <!-- Jackson JSON per gestione JSON nelle API REST -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
   </dependencies>
 
   <build>
