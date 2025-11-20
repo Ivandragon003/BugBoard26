@@ -1,237 +1,255 @@
 package it.unina.bugboard.controller;
 
-import it.unina.bugboard.dao.AllegatoDAO;
 import it.unina.bugboard.dao.IssueDAO;
-import it.unina.bugboard.model.Allegato;
-import it.unina.bugboard.model.Issue;
-import it.unina.bugboard.model.Utenza;
-import it.unina.bugboard.util.ImageUtil;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
+import it.unina.bugboard.dao.AllegatoDAO;
+import it.unina.bugboard.dao.UtenzaDAO;
+import it.unina.bugboard.model.*;
+import it.unina.bugboard.exception.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
-@RequestMapping("/api/issues")
+@RequestMapping("/api/issue")
+@CrossOrigin(origins = "*")
 public class IssueController {
 
-    private final IssueDAO issueDAO;
-    private final AllegatoDAO allegatoDAO;
+    @Autowired
+    private IssueDAO issueDAO;
 
-    // se vuoi accedere a utenti dal DB per ricavare Utenza dall'authentication:
-    // private final UtenzaDAO utenzaDAO;
+    @Autowired
+    private AllegatoDAO allegatoDAO;
 
-    @Value("${bugboard.upload.dir}")
-    private String uploadDir;
+    @Autowired
+    private UtenzaDAO utenzaDAO;
 
-    @Value("${bugboard.max-file-size-bytes:5242880}") // default 5MB
-    private long maxFileSizeBytes;
-
-    public IssueController(IssueDAO issueDAO, AllegatoDAO allegatoDAO /*, UtenzaDAO utenzaDAO */) {
-        this.issueDAO = issueDAO;
-        this.allegatoDAO = allegatoDAO;
-        // this.utenzaDAO = utenzaDAO;
-    }
-
-    // --- CRUD base per Issue ------------------------------------------------
-
-    @PostMapping
-    public ResponseEntity<?> createIssue(@RequestBody Issue issue /*, Principal principal */) {
-        // valida campi minimi (RD-1)
-        if (issue.getTitolo() == null || issue.getTitolo().isBlank() || issue.getTitolo().length() > 200) {
-            return ResponseEntity.badRequest().body("Titolo mancante o troppo lungo (max 200)");
-        }
-        if (issue.getDescrizione() == null || issue.getDescrizione().isBlank() || issue.getDescrizione().length() > 5000) {
-            return ResponseEntity.badRequest().body("Descrizione mancante o troppo lunga (max 5000)");
-        }
-        // imposto campi obbligatori
-        issue.setDataCreazione(LocalDateTime.now());
-        issue.setDataUltimaModifica(LocalDateTime.now());
-        // stato iniziale TODO (assumo enum definito)
-        // issue.setStato(Stato.Todo); // disabilitato se vuoi settarlo esplicitamente
-        Issue saved = issueDAO.save(issue);
-        return new ResponseEntity<>(saved, HttpStatus.CREATED);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getIssue(@PathVariable Integer id) {
-        Optional<Issue> maybe = issueDAO.findById(id);
-        return maybe.<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Issue non trovata"));
-    }
-
-    @PutMapping("/{id}")
-    @Transactional
-    public ResponseEntity<?> updateIssue(@PathVariable Integer id, @RequestBody Issue updated) {
-        Optional<Issue> maybe = issueDAO.findById(id);
-        if (maybe.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Issue non trovata");
-        Issue issue = maybe.get();
-
-        // RD-1: tipo non modificabile dopo la creazione
-        if (updated.getTipo() != null && !updated.getTipo().equals(issue.getTipo())) {
-            return ResponseEntity.badRequest().body("Il tipo di issue non è modificabile");
-        }
-
-        // non permettere modifica dopo done ecc salvo admin (qui controllo minimale)
-        // if (issue.getStato() == Stato.Done) return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Non modificabile in stato DONE");
-
-        // applico campi modificabili
-        if (updated.getTitolo() != null) issue.setTitolo(updated.getTitolo());
-        if (updated.getDescrizione() != null) issue.setDescrizione(updated.getDescrizione());
-        if (updated.getPriorita() != null) issue.setPriorita(updated.getPriorita());
-        if (updated.getStato() != null) issue.setStato(updated.getStato());
-        issue.setDataUltimaModifica(LocalDateTime.now());
-
-        Issue saved = issueDAO.save(issue);
-        return ResponseEntity.ok(saved);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteIssue(@PathVariable Integer id) {
-        if (!issueDAO.existsById(id)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Issue non trovata");
-        }
-        issueDAO.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    // --- Archivia / Ripristina ------------------------------------------------
-
-    @PostMapping("/{id}/archive")
-    @Transactional
-    public ResponseEntity<?> archiveIssue(@PathVariable Integer id /*, Principal principal */) {
-        Optional<Issue> maybe = issueDAO.findById(id);
-        if (maybe.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Issue non trovata");
-        Issue issue = maybe.get();
-        issue.setArchiviata(true);
-        issue.setArchiviatore(null); // opzionale: impostare archiviatore
-        issue.setDataUltimaModifica(LocalDateTime.now());
-        issueDAO.save(issue);
-        return ResponseEntity.ok(issue);
-    }
-
-    @PostMapping("/{id}/restore")
-    @Transactional
-    public ResponseEntity<?> restoreIssue(@PathVariable Integer id) {
-        Optional<Issue> maybe = issueDAO.findById(id);
-        if (maybe.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Issue non trovata");
-        Issue issue = maybe.get();
-        issue.setArchiviata(false);
-        issue.setDataUltimaModifica(LocalDateTime.now());
-        issueDAO.save(issue);
-        return ResponseEntity.ok(issue);
-    }
-
-    // --- Upload immagine e gestione Allegato -------------------------------
-
-    /**
-     * Upload immagine come allegato ad una issue.
-     * Restituisce Allegato creato.
-     */
-    @PostMapping("/{id}/attachments")
-    @Transactional
-    public ResponseEntity<?> uploadAttachment(@PathVariable Integer id,
-                                              @RequestParam("file") MultipartFile file /*, Principal principal */) {
-        Optional<Issue> maybe = issueDAO.findById(id);
-        if (maybe.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Issue non trovata");
-        Issue issue = maybe.get();
-
+    @PostMapping("/crea")
+    public ResponseEntity<Issue> creaIssue(@RequestBody Map<String, Object> payload) {
         try {
-            Path root = Paths.get(uploadDir).toAbsolutePath().normalize();
+            String titolo = (String) payload.get("titolo");
+            String descrizione = (String) payload.get("descrizione");
+            String prioritaStr = (String) payload.get("priorita");
+            String statoStr = (String) payload.get("stato");
+            String tipoStr = (String) payload.get("tipo");
+            Integer idCreatore = (Integer) payload.get("idCreatore");
 
-            // consigliato: creare sottocartella per issue
-            Path issueFolder = root.resolve("issues").resolve(String.valueOf(id));
-            String savedPath = ImageUtil.uploadImmagine(file, issueFolder, maxFileSizeBytes);
+            if (titolo == null || titolo.isBlank()) {
+                throw new InvalidInputException("Il titolo è obbligatorio");
+            }
 
-            Allegato allegato = new Allegato();
-            allegato.setPercorso(savedPath);
-            allegato.setNomeFile(file.getOriginalFilename());
-            // tipoFile: usiamo estensione senza dot
-            String ext = file.getOriginalFilename() != null && file.getOriginalFilename().contains(".")
-                    ? file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.') + 1).toLowerCase()
-                    : "bin";
-            allegato.setTipoFile(ext);
-            allegato.setDimensione((int) Math.min(file.getSize(), Integer.MAX_VALUE));
-            allegato.setDataCaricamento(LocalDateTime.now());
-            allegato.setIssue(issue);
+            // Verifica se esiste già un'issue con lo stesso titolo
+            Optional<Issue> existing = issueDAO.findByTitolo(titolo);
+            if (existing.isPresent()) {
+                throw new AlreadyExistsException("Esiste già un'issue con questo titolo");
+            }
 
-            Allegato saved = allegatoDAO.save(allegato);
+            // Gestione enum con naming case-sensitive
+            Priorita priorita = parsePriorita(prioritaStr);
+            Stato stato = parseStato(statoStr);
+            Tipo tipo = parseTipo(tipoStr);
+
+            // Recupera l'utente creatore dal database
+            Utenza creatore = utenzaDAO.findById(idCreatore)
+                    .orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idCreatore));
+
+            Issue issue = new Issue(titolo, descrizione, priorita, stato, tipo, creatore);
+            Issue saved = issueDAO.save(issue);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);
-        } catch (IllegalArgumentException iae) {
-            return ResponseEntity.badRequest().body(iae.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Errore upload: " + e.getMessage());
+
+        } catch (IllegalArgumentException e) {
+            throw new InvalidInputException("Valori enum non validi per priorita, stato o tipo");
         }
     }
 
-    // lista allegati per issue
-    @GetMapping("/{id}/attachments")
-    public ResponseEntity<?> listAttachments(@PathVariable Integer id) {
-        Optional<Issue> maybe = issueDAO.findById(id);
-        if (maybe.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Issue non trovata");
-        List<Allegato> files = allegatoDAO.findByIssueIdIssue(id);
-        return ResponseEntity.ok(files);
-    }
+    @PutMapping("/modifica/{id}")
+    public ResponseEntity<Issue> modificaIssue(
+            @PathVariable Integer id,
+            @RequestBody Map<String, Object> payload) {
 
-    // elimina allegato (db + file) — ATTENZIONE: rimuove solo record DB; cancellazione FS opzionale
-    @DeleteMapping("/{id}/attachments/{allegatoId}")
-    @Transactional
-    public ResponseEntity<?> deleteAttachment(@PathVariable Integer id, @PathVariable Integer allegatoId) {
-        Optional<Allegato> maybe = allegatoDAO.findById(allegatoId);
-        if (maybe.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Allegato non trovato");
-        Allegato a = maybe.get();
-        if (!a.getIssue().getIdIssue().equals(id)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Allegato non appartiene a questa issue");
+        Issue issue = issueDAO.findById(id)
+                .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+
+        if (payload.containsKey("titolo")) {
+            issue.setTitolo((String) payload.get("titolo"));
+        }
+        if (payload.containsKey("descrizione")) {
+            issue.setDescrizione((String) payload.get("descrizione"));
+        }
+        if (payload.containsKey("priorita")) {
+            issue.setPriorita(parsePriorita((String) payload.get("priorita")));
+        }
+        if (payload.containsKey("stato")) {
+            issue.setStato(parseStato((String) payload.get("stato")));
+        }
+        if (payload.containsKey("tipo")) {
+            issue.setTipo(parseTipo((String) payload.get("tipo")));
         }
 
-        // cancellazione file FS (silenziosa se non presente)
-        try {
-            Path p = Paths.get(a.getPercorso());
-            java.nio.file.Files.deleteIfExists(p);
-        } catch (Exception ignore) { }
+        issue.setDataUltimaModifica(LocalDateTime.now());
+        Issue updated = issueDAO.save(issue);
 
-        allegatoDAO.deleteById(allegatoId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(updated);
     }
 
-    // --- Filtri/ricerche di esempio (RD-5) -----------------------------------
-    @GetMapping
-    public ResponseEntity<?> listAll(@RequestParam(required = false) String tipo,
-                                     @RequestParam(required = false) String stato,
-                                     @RequestParam(required = false) String priorita) {
-        // per semplicità: supporto alcuni filtri base; puoi estendere collegando Specification/Criteria
-        if (stato != null) {
-            // es: /api/issues?stato=todo
-            try {
-                // supponendo che Stato sia enum con valore toString lowercase o uppercase
-                // adattare se il tuo enum è differente
-                var s = Enum.valueOf((Class<Enum>) Class.forName("it.unina.bugboard.model.Stato"), capitalize(stato));
-                return ResponseEntity.ok(issueDAO.findByStato((Enum) s));
-            } catch (Exception ignored) { /* ignore - fallback */ }
-        }
-        if (priorita != null) {
-            try {
-                var p = Enum.valueOf((Class<Enum>) Class.forName("it.unina.bugboard.model.Priorita"), capitalize(priorita));
-                return ResponseEntity.ok(issueDAO.findByPriorita((Enum) p));
-            } catch (Exception ignored) { /* ignore - fallback */ }
+    @GetMapping("/filtra")
+    public ResponseEntity<List<Issue>> filtraIssue(
+            @RequestParam(required = false) String stato,
+            @RequestParam(required = false) String priorita,
+            @RequestParam(required = false) String tipo) {
+
+        List<Issue> issues;
+
+        if (stato != null && priorita != null) {
+            issues = issueDAO.findByStatoAndPriorita(
+                    parseStato(stato),
+                    parsePriorita(priorita)
+            );
+        } else if (stato != null) {
+            issues = issueDAO.findByStato(parseStato(stato));
+        } else if (priorita != null) {
+            issues = issueDAO.findByPriorita(parsePriorita(priorita));
+        } else if (tipo != null) {
+            issues = issueDAO.findByTipo(parseTipo(tipo));
+        } else {
+            issues = issueDAO.findAll();
         }
 
-        // fallback: tutte
-        return ResponseEntity.ok(issueDAO.findAll());
+        return ResponseEntity.ok(issues);
     }
 
-    private static String capitalize(String s) {
-        if (s == null || s.isEmpty()) return s;
-        String low = s.toLowerCase();
-        return Character.toUpperCase(low.charAt(0)) + low.substring(1);
+    @DeleteMapping("/archivia/{id}")
+    public ResponseEntity<Map<String, String>> archiviaIssue(
+            @PathVariable Integer id,
+            @RequestParam Integer idArchiviatore) {
+
+        Issue issue = issueDAO.findById(id)
+                .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+
+        if (issue.getArchiviata()) {
+            throw new InvalidInputException("L'issue è già archiviata");
+        }
+
+        issue.setArchiviata(true);
+        issue.setDataArchiviazione(LocalDateTime.now());
+
+        // Recupera l'archiviatore dal database
+        Utenza archiviatore = utenzaDAO.findById(idArchiviatore)
+                .orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idArchiviatore));
+        issue.setArchiviatore(archiviatore);
+
+        issueDAO.save(issue);
+
+        return ResponseEntity.ok(Map.of("message", "Issue archiviata con successo"));
+    }
+
+    @GetMapping("/ordina")
+    public ResponseEntity<List<Issue>> ordinaIssue() {
+        List<Issue> issues = issueDAO.findAllByOrderByDataUltimaModificaDesc();
+        return ResponseEntity.ok(issues);
+    }
+
+    @GetMapping("/visualizza/{id}")
+    public ResponseEntity<Issue> visualizzaIssue(@PathVariable Integer id) {
+        Issue issue = issueDAO.findById(id)
+                .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+        return ResponseEntity.ok(issue);
+    }
+
+    @DeleteMapping("/elimina/{id}")
+    public ResponseEntity<Map<String, String>> eliminaIssue(@PathVariable Integer id) {
+        if (!issueDAO.existsById(id)) {
+            throw new NotFoundException("Issue non trovata con id: " + id);
+        }
+
+        // Elimina prima tutti gli allegati associati
+        allegatoDAO.deleteByIssueIdIssue(id);
+
+        // Poi elimina l'issue
+        issueDAO.deleteById(id);
+
+        return ResponseEntity.ok(Map.of("message", "Issue eliminata con successo"));
+    }
+
+    @GetMapping("/visualizza-lista")
+    public ResponseEntity<List<Issue>> visualizzaListaIssue(
+            @RequestParam(required = false) Boolean archiviata) {
+
+        List<Issue> issues;
+        if (archiviata != null) {
+            issues = issueDAO.findByArchiviata(archiviata);
+        } else {
+            issues = issueDAO.findAll();
+        }
+
+        return ResponseEntity.ok(issues);
+    }
+
+    @GetMapping("/urgenti")
+    public ResponseEntity<List<Issue>> visualizzaIssueUrgenti() {
+        List<Issue> issues = issueDAO.findIssueUrgenti();
+        return ResponseEntity.ok(issues);
+    }
+
+    @GetMapping("/cerca")
+    public ResponseEntity<List<Issue>> cercaIssue(@RequestParam String titolo) {
+        List<Issue> issues = issueDAO.findByTitoloContainingIgnoreCase(titolo);
+        return ResponseEntity.ok(issues);
+    }
+
+    @GetMapping("/statistiche")
+    public ResponseEntity<Map<String, Object>> visualizzaStatistiche() {
+        Map<String, Object> stats = new HashMap<>();
+
+        stats.put("totali", issueDAO.count());
+        stats.put("attive", issueDAO.countByArchiviataFalse());
+        stats.put("todo", issueDAO.countByStato(Stato.Todo));
+        stats.put("inProgress", issueDAO.countByStato(Stato.inProgress));
+        stats.put("done", issueDAO.countByStato(Stato.Done));
+        stats.put("risolte", issueDAO.findIssueRisolte().size());
+        stats.put("nonRisolte", issueDAO.findIssueNonRisolte().size());
+
+        return ResponseEntity.ok(stats);
+    }
+
+    // Metodi helper per parsing enum con case-sensitivity
+    private Priorita parsePriorita(String value) {
+        if (value == null) {
+            throw new InvalidInputException("Priorità non può essere null");
+        }
+        return switch (value.toLowerCase()) {
+            case "critical" -> Priorita.critical;
+            case "high" -> Priorita.high;
+            case "medium" -> Priorita.medium;
+            case "low" -> Priorita.low;
+            default -> throw new InvalidInputException("Priorità non valida: " + value);
+        };
+    }
+
+    private Stato parseStato(String value) {
+        if (value == null) {
+            throw new InvalidInputException("Stato non può essere null");
+        }
+        return switch (value.toLowerCase()) {
+            case "todo" -> Stato.Todo;
+            case "inprogress", "in_progress" -> Stato.inProgress;
+            case "done" -> Stato.Done;
+            default -> throw new InvalidInputException("Stato non valido: " + value);
+        };
+    }
+
+    private Tipo parseTipo(String value) {
+        if (value == null) {
+            throw new InvalidInputException("Tipo non può essere null");
+        }
+        return switch (value.toLowerCase()) {
+            case "question" -> Tipo.question;
+            case "features" -> Tipo.features;
+            case "bug" -> Tipo.bug;
+            case "documentation" -> Tipo.documentation;
+            default -> throw new InvalidInputException("Tipo non valido: " + value);
+        };
     }
 }
