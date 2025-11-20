@@ -68,5 +68,11 @@ public interface IssueDAO extends JpaRepository<Issue, Integer> {
 	@Query("SELECT i FROM Issue i WHERE i.priorita IN ('critical', 'high') AND i.archiviata = false")
 	List<Issue> findIssueUrgenti();
 
+	List<Issue> findByStatoAndTipo(Stato stato, Tipo tipo);
+
+	List<Issue> findByPrioritaAndTipo(Priorita priorita, Tipo tipo);
+
+	List<Issue> findByStatoAndPrioritaAndTipo(Stato stato, Priorita priorita, Tipo tipo);
+
 	void deleteByArchiviataAndCreatore(Boolean archiviata, Utenza creatore);
 }

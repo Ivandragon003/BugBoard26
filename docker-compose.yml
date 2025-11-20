@@ -13,6 +13,13 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "1025:1025"   # SMTP finto
+      - "8025:8025"   # Interfaccia web per vedere le email
+
   backend:
     image: maven:3.9-eclipse-temurin-21
     container_name: bugboard-backend
@@ -22,8 +29,18 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/BugBoard26
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: TuaNuovaPassword123
+
+      # 👉 Config SMTP per MailHog
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: 1025
+      SPRING_MAIL_USERNAME:
+      SPRING_MAIL_PASSWORD:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: false
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: false
+
     depends_on:
       - db
+      - mailhog
     ports:
       - "8080:8080"
     volumes:

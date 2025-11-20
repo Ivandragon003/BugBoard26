@@ -7,15 +7,16 @@ import java.security.SecureRandom;
 @Component
 public class PasswordUtil {
 
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12); // RNF-1: password hashate
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
     private static final String CHAR_SET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
     private final SecureRandom random = new SecureRandom();
 
-    public String HashPassword(String rawPassword) {
+    // Usa camelCase coerente con il controller
+    public String hashPassword(String rawPassword) {
         return encoder.encode(rawPassword);
     }
 
-    public boolean verificaPassword(String rawPassword, String hashedPassword) {
+    public boolean checkPassword(String rawPassword, String hashedPassword) {
         return encoder.matches(rawPassword, hashedPassword);
     }
 

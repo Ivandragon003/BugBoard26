@@ -16,233 +16,176 @@ import java.util.*;
 @CrossOrigin(origins = "*")
 public class IssueController {
 
-    @Autowired
-    private IssueDAO issueDAO;
+	@Autowired
+	private IssueDAO issueDAO;
 
-    @Autowired
-    private AllegatoDAO allegatoDAO;
+	@Autowired
+	private AllegatoDAO allegatoDAO;
 
-    @Autowired
-    private UtenzaDAO utenzaDAO;
+	@Autowired
+	private UtenzaDAO utenzaDAO;
 
-    @PostMapping("/crea")
-    public ResponseEntity<Issue> creaIssue(@RequestBody Map<String, Object> payload) {
-        try {
-            String titolo = (String) payload.get("titolo");
-            String descrizione = (String) payload.get("descrizione");
-            String prioritaStr = (String) payload.get("priorita");
-            String statoStr = (String) payload.get("stato");
-            String tipoStr = (String) payload.get("tipo");
-            Integer idCreatore = (Integer) payload.get("idCreatore");
+	@PostMapping("/crea")
+	public Issue creaIssue(@RequestBody Map<String, Object> payload) {
+		String titolo = (String) payload.get("titolo");
+		String descrizione = (String) payload.get("descrizione");
+		String prioritaStr = (String) payload.get("priorita");
+		String statoStr = (String) payload.get("stato");
+		String tipoStr = (String) payload.get("tipo");
+		Integer idCreatore = (Integer) payload.get("idCreatore");
 
-            if (titolo == null || titolo.isBlank()) {
-                throw new InvalidInputException("Il titolo è obbligatorio");
-            }
+		if (titolo == null || titolo.isBlank()) {
+			throw new InvalidInputException("Il titolo è obbligatorio");
+		}
 
-            Optional<Issue> existing = issueDAO.findByTitolo(titolo);
-            if (existing.isPresent()) {
-                throw new AlreadyExistsException("Esiste già un'issue con questo titolo");
-            }
+		issueDAO.findByTitolo(titolo).ifPresent(i -> {
+			throw new AlreadyExistsException("Esiste già un'issue con questo titolo");
+		});
 
-            Priorita priorita = parsePriorita(prioritaStr);
-            Stato stato = parseStato(statoStr);
-            Tipo tipo = parseTipo(tipoStr);
+		Priorita priorita = parsePriorita(prioritaStr);
+		Stato stato = parseStato(statoStr);
+		Tipo tipo = parseTipo(tipoStr);
 
-            Utenza creatore = utenzaDAO.findById(idCreatore)
-                    .orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idCreatore));
+		Utenza creatore = utenzaDAO.findById(idCreatore)
+				.orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idCreatore));
 
-            Issue issue = new Issue(titolo, descrizione, priorita, stato, tipo, creatore);
-            Issue saved = issueDAO.save(issue);
+		Issue issue = new Issue(titolo, descrizione, priorita, stato, tipo, creatore);
+		return issueDAO.save(issue);
+	}
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+	@PutMapping("/modifica/{id}")
+	public Issue modificaIssue(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
-        } catch (IllegalArgumentException e) {
-            throw new InvalidInputException("Valori enum non validi per priorita, stato o tipo");
-        }
-    }
+		if (payload.containsKey("titolo"))
+			issue.setTitolo((String) payload.get("titolo"));
+		if (payload.containsKey("descrizione"))
+			issue.setDescrizione((String) payload.get("descrizione"));
+		if (payload.containsKey("priorita"))
+			issue.setPriorita(parsePriorita((String) payload.get("priorita")));
+		if (payload.containsKey("stato"))
+			issue.setStato(parseStato((String) payload.get("stato")));
+		if (payload.containsKey("tipo"))
+			issue.setTipo(parseTipo((String) payload.get("tipo")));
 
-    @PutMapping("/modifica/{id}")
-    public ResponseEntity<Issue> modificaIssue(
-            @PathVariable Integer id,
-            @RequestBody Map<String, Object> payload) {
+		issue.setDataUltimaModifica(LocalDateTime.now());
+		return issueDAO.save(issue);
+	}
 
-        Issue issue = issueDAO.findById(id)
-                .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+	@GetMapping("/filtra")
+	public List<Issue> filtraIssue(@RequestParam(required = false) String stato,
+			@RequestParam(required = false) String priorita, @RequestParam(required = false) String tipo) {
 
-        if (payload.containsKey("titolo")) {
-            issue.setTitolo((String) payload.get("titolo"));
-        }
-        if (payload.containsKey("descrizione")) {
-            issue.setDescrizione((String) payload.get("descrizione"));
-        }
-        if (payload.containsKey("priorita")) {
-            issue.setPriorita(parsePriorita((String) payload.get("priorita")));
-        }
-        if (payload.containsKey("stato")) {
-            issue.setStato(parseStato((String) payload.get("stato")));
-        }
-        if (payload.containsKey("tipo")) {
-            issue.setTipo(parseTipo((String) payload.get("tipo")));
-        }
+		if (stato != null && priorita != null)
+			return issueDAO.findByStatoAndPriorita(parseStato(stato), parsePriorita(priorita));
+		if (stato != null)
+			return issueDAO.findByStato(parseStato(stato));
+		if (priorita != null)
+			return issueDAO.findByPriorita(parsePriorita(priorita));
+		if (tipo != null)
+			return issueDAO.findByTipo(parseTipo(tipo));
+		return issueDAO.findAll();
+	}
 
-        issue.setDataUltimaModifica(LocalDateTime.now());
-        Issue updated = issueDAO.save(issue);
+	@DeleteMapping("/archivia/{id}")
+	public Map<String, String> archiviaIssue(@PathVariable Integer id, @RequestParam Integer idArchiviatore) {
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
-        return ResponseEntity.ok(updated);
-    }
+		if (issue.getArchiviata())
+			throw new InvalidInputException("L'issue è già archiviata");
 
-    @GetMapping("/filtra")
-    public ResponseEntity<List<Issue>> filtraIssue(
-            @RequestParam(required = false) String stato,
-            @RequestParam(required = false) String priorita,
-            @RequestParam(required = false) String tipo) {
+		issue.setArchiviata(true);
+		issue.setDataArchiviazione(LocalDateTime.now());
 
-        List<Issue> issues;
+		Utenza archiviatore = utenzaDAO.findById(idArchiviatore)
+				.orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idArchiviatore));
+		issue.setArchiviatore(archiviatore);
 
-        if (stato != null && priorita != null) {
-            issues = issueDAO.findByStatoAndPriorita(
-                    parseStato(stato),
-                    parsePriorita(priorita)
-            );
-        } else if (stato != null) {
-            issues = issueDAO.findByStato(parseStato(stato));
-        } else if (priorita != null) {
-            issues = issueDAO.findByPriorita(parsePriorita(priorita));
-        } else if (tipo != null) {
-            issues = issueDAO.findByTipo(parseTipo(tipo));
-        } else {
-            issues = issueDAO.findAll();
-        }
+		issueDAO.save(issue);
+		return Map.of("message", "Issue archiviata con successo");
+	}
 
-        return ResponseEntity.ok(issues);
-    }
+	@GetMapping("/ordina")
+	public List<Issue> ordinaIssue() {
+		return issueDAO.findAllByOrderByDataUltimaModificaDesc();
+	}
 
-    @DeleteMapping("/archivia/{id}")
-    public ResponseEntity<Map<String, String>> archiviaIssue(
-            @PathVariable Integer id,
-            @RequestParam Integer idArchiviatore) {
+	@GetMapping("/visualizza/{id}")
+	public Issue visualizzaIssue(@PathVariable Integer id) {
+		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+	}
 
-        Issue issue = issueDAO.findById(id)
-                .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+	@DeleteMapping("/elimina/{id}")
+	public Map<String, String> eliminaIssue(@PathVariable Integer id) {
+		if (!issueDAO.existsById(id))
+			throw new NotFoundException("Issue non trovata con id: " + id);
+		allegatoDAO.deleteByIssueIdIssue(id);
+		issueDAO.deleteById(id);
+		return Map.of("message", "Issue eliminata con successo");
+	}
 
-        if (issue.getArchiviata()) {
-            throw new InvalidInputException("L'issue è già archiviata");
-        }
+	@GetMapping("/visualizza-lista")
+	public List<Issue> visualizzaListaIssue(@RequestParam(required = false) Boolean archiviata) {
+		return archiviata != null ? issueDAO.findByArchiviata(archiviata) : issueDAO.findAll();
+	}
 
-        issue.setArchiviata(true);
-        issue.setDataArchiviazione(LocalDateTime.now());
+	@GetMapping("/urgenti")
+	public List<Issue> visualizzaIssueUrgenti() {
+		return issueDAO.findIssueUrgenti();
+	}
 
-        Utenza archiviatore = utenzaDAO.findById(idArchiviatore)
-                .orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idArchiviatore));
-        issue.setArchiviatore(archiviatore);
+	@GetMapping("/cerca")
+	public List<Issue> cercaIssue(@RequestParam String titolo) {
+		return issueDAO.findByTitoloContainingIgnoreCase(titolo);
+	}
 
-        issueDAO.save(issue);
+	@GetMapping("/statistiche")
+	public Map<String, Object> visualizzaStatistiche() {
+		Map<String, Object> stats = new HashMap<>();
+		stats.put("totali", issueDAO.count());
+		stats.put("attive", issueDAO.countByArchiviataFalse());
+		stats.put("todo", issueDAO.countByStato(Stato.Todo));
+		stats.put("inProgress", issueDAO.countByStato(Stato.inProgress));
+		stats.put("done", issueDAO.countByStato(Stato.Done));
+		stats.put("risolte", issueDAO.findIssueRisolte().size());
+		stats.put("nonRisolte", issueDAO.findIssueNonRisolte().size());
+		return stats;
+	}
 
-        return ResponseEntity.ok(Map.of("message", "Issue archiviata con successo"));
-    }
+// --- Helper per parsing enum ---
+	private Priorita parsePriorita(String value) {
+		if (value == null)
+			throw new InvalidInputException("Priorità non può essere null");
+		return switch (value.toLowerCase()) {
+		case "critical" -> Priorita.critical;
+		case "high" -> Priorita.high;
+		case "medium" -> Priorita.medium;
+		case "low" -> Priorita.low;
+		default -> throw new InvalidInputException("Priorità non valida: " + value);
+		};
+	}
 
-    @GetMapping("/ordina")
-    public ResponseEntity<List<Issue>> ordinaIssue() {
-        List<Issue> issues = issueDAO.findAllByOrderByDataUltimaModificaDesc();
-        return ResponseEntity.ok(issues);
-    }
+	private Stato parseStato(String value) {
+		if (value == null)
+			throw new InvalidInputException("Stato non può essere null");
+		return switch (value.toLowerCase()) {
+		case "todo" -> Stato.Todo;
+		case "inprogress", "in_progress" -> Stato.inProgress;
+		case "done" -> Stato.Done;
+		default -> throw new InvalidInputException("Stato non valido: " + value);
+		};
+	}
 
-    @GetMapping("/visualizza/{id}")
-    public ResponseEntity<Issue> visualizzaIssue(@PathVariable Integer id) {
-        Issue issue = issueDAO.findById(id)
-                .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
-        return ResponseEntity.ok(issue);
-    }
+	private Tipo parseTipo(String value) {
+		if (value == null)
+			throw new InvalidInputException("Tipo non può essere null");
+		return switch (value.toLowerCase()) {
+		case "question" -> Tipo.question;
+		case "features" -> Tipo.features;
+		case "bug" -> Tipo.bug;
+		case "documentation" -> Tipo.documentation;
+		default -> throw new InvalidInputException("Tipo non valido: " + value);
+		};
+	}
 
-    @DeleteMapping("/elimina/{id}")
-    public ResponseEntity<Map<String, String>> eliminaIssue(@PathVariable Integer id) {
-        if (!issueDAO.existsById(id)) {
-            throw new NotFoundException("Issue non trovata con id: " + id);
-        }
-        allegatoDAO.deleteByIssueIdIssue(id);
-
-        issueDAO.deleteById(id);
-
-        return ResponseEntity.ok(Map.of("message", "Issue eliminata con successo"));
-    }
-
-    @GetMapping("/visualizza-lista")
-    public ResponseEntity<List<Issue>> visualizzaListaIssue(
-            @RequestParam(required = false) Boolean archiviata) {
-
-        List<Issue> issues;
-        if (archiviata != null) {
-            issues = issueDAO.findByArchiviata(archiviata);
-        } else {
-            issues = issueDAO.findAll();
-        }
-
-        return ResponseEntity.ok(issues);
-    }
-
-    @GetMapping("/urgenti")
-    public ResponseEntity<List<Issue>> visualizzaIssueUrgenti() {
-        List<Issue> issues = issueDAO.findIssueUrgenti();
-        return ResponseEntity.ok(issues);
-    }
-
-    @GetMapping("/cerca")
-    public ResponseEntity<List<Issue>> cercaIssue(@RequestParam String titolo) {
-        List<Issue> issues = issueDAO.findByTitoloContainingIgnoreCase(titolo);
-        return ResponseEntity.ok(issues);
-    }
-
-    @GetMapping("/statistiche")
-    public ResponseEntity<Map<String, Object>> visualizzaStatistiche() {
-        Map<String, Object> stats = new HashMap<>();
-
-        stats.put("totali", issueDAO.count());
-        stats.put("attive", issueDAO.countByArchiviataFalse());
-        stats.put("todo", issueDAO.countByStato(Stato.Todo));
-        stats.put("inProgress", issueDAO.countByStato(Stato.inProgress));
-        stats.put("done", issueDAO.countByStato(Stato.Done));
-        stats.put("risolte", issueDAO.findIssueRisolte().size());
-        stats.put("nonRisolte", issueDAO.findIssueNonRisolte().size());
-
-        return ResponseEntity.ok(stats);
-    }
-
-    // Metodi helper per parsing enum con case-sensitivity
-    private Priorita parsePriorita(String value) {
-        if (value == null) {
-            throw new InvalidInputException("Priorità non può essere null");
-        }
-        return switch (value.toLowerCase()) {
-            case "critical" -> Priorita.critical;
-            case "high" -> Priorita.high;
-            case "medium" -> Priorita.medium;
-            case "low" -> Priorita.low;
-            default -> throw new InvalidInputException("Priorità non valida: " + value);
-        };
-    }
-
-    private Stato parseStato(String value) {
-        if (value == null) {
-            throw new InvalidInputException("Stato non può essere null");
-        }
-        return switch (value.toLowerCase()) {
-            case "todo" -> Stato.Todo;
-            case "inprogress", "in_progress" -> Stato.inProgress;
-            case "done" -> Stato.Done;
-            default -> throw new InvalidInputException("Stato non valido: " + value);
-        };
-    }
-
-    private Tipo parseTipo(String value) {
-        if (value == null) {
-            throw new InvalidInputException("Tipo non può essere null");
-        }
-        return switch (value.toLowerCase()) {
-            case "question" -> Tipo.question;
-            case "features" -> Tipo.features;
-            case "bug" -> Tipo.bug;
-            case "documentation" -> Tipo.documentation;
-            default -> throw new InvalidInputException("Tipo non valido: " + value);
-        };
-    }
 }
