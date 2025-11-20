@@ -26,12 +26,7 @@ Thumbs.db
 
 # Database
 *.db
-
-# Non committare i dati del database
 pgdata/
-
 
 # Eclipse Maven integration files
 *.prefs
-.settings/
-.project
