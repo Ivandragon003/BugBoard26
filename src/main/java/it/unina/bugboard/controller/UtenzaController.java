@@ -252,7 +252,7 @@ public class UtenzaController {
             Utenza utenteCorrente = accessTokenUtil.verificaToken(jwtToken);
             
             // Verifica autorizzazione (solo admin o utente stesso)
-            if (!utenteCorrente.getRuolo().equals(Ruolo.AMMINISTRATORE) 
+            if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore) 
                 && !utenteCorrente.getIdUtente().equals(id)) {
                 throw new InvalidFieldException("Non autorizzato");
             }
@@ -323,7 +323,7 @@ public class UtenzaController {
             Utenza utenteCorrente = accessTokenUtil.verificaToken(jwtToken);
             
             // Solo amministratori possono disattivare utenti
-            if (!utenteCorrente.getRuolo().equals(Ruolo.AMMINISTRATORE)) {
+            if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
                 throw new InvalidFieldException("Solo gli amministratori possono disattivare utenti");
             }
             
@@ -361,7 +361,7 @@ public class UtenzaController {
             Utenza utenteCorrente = accessTokenUtil.verificaToken(jwtToken);
             
             // Solo amministratori possono riattivare utenti
-            if (!utenteCorrente.getRuolo().equals(Ruolo.AMMINISTRATORE)) {
+            if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
                 throw new InvalidFieldException("Solo gli amministratori possono riattivare utenti");
             }
             
