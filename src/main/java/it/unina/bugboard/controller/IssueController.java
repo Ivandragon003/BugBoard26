@@ -39,18 +39,15 @@ public class IssueController {
                 throw new InvalidInputException("Il titolo è obbligatorio");
             }
 
-            // Verifica se esiste già un'issue con lo stesso titolo
             Optional<Issue> existing = issueDAO.findByTitolo(titolo);
             if (existing.isPresent()) {
                 throw new AlreadyExistsException("Esiste già un'issue con questo titolo");
             }
 
-            // Gestione enum con naming case-sensitive
             Priorita priorita = parsePriorita(prioritaStr);
             Stato stato = parseStato(statoStr);
             Tipo tipo = parseTipo(tipoStr);
 
-            // Recupera l'utente creatore dal database
             Utenza creatore = utenzaDAO.findById(idCreatore)
                     .orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idCreatore));
 
@@ -135,7 +132,6 @@ public class IssueController {
         issue.setArchiviata(true);
         issue.setDataArchiviazione(LocalDateTime.now());
 
-        // Recupera l'archiviatore dal database
         Utenza archiviatore = utenzaDAO.findById(idArchiviatore)
                 .orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idArchiviatore));
         issue.setArchiviatore(archiviatore);
@@ -163,11 +159,8 @@ public class IssueController {
         if (!issueDAO.existsById(id)) {
             throw new NotFoundException("Issue non trovata con id: " + id);
         }
-
-        // Elimina prima tutti gli allegati associati
         allegatoDAO.deleteByIssueIdIssue(id);
 
-        // Poi elimina l'issue
         issueDAO.deleteById(id);
 
         return ResponseEntity.ok(Map.of("message", "Issue eliminata con successo"));

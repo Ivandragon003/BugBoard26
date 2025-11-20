@@ -15,22 +15,14 @@ public class ImmagineUtil {
     private static final long MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
     private static final String[] ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".doc", ".docx"};
 
-    /**
-     * Upload di un file. Salva il file sul filesystem.
-     * @param file MultipartFile da caricare
-     * @return percorso assoluto del file salvato
-     */
     public String uploadImmagine(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new InvalidInputException("File mancante o vuoto");
         }
 
-        // Validazione dimensione
         if (file.getSize() > MAX_SIZE_BYTES) {
             throw new InvalidInputException("File troppo grande. Massimo 10MB");
         }
-
-        // Validazione estensione
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || originalFilename.isBlank()) {
             throw new InvalidInputException("Nome file non valido");
@@ -42,20 +34,16 @@ public class ImmagineUtil {
         }
 
         try {
-            // Crea la directory se non esiste
             Path uploadDir = Paths.get(UPLOAD_BASE_DIR);
             if (!Files.exists(uploadDir)) {
                 Files.createDirectories(uploadDir);
             }
 
-            // Genera nome file univoco
             String uniqueFilename = UUID.randomUUID().toString() + extension;
             Path filePath = uploadDir.resolve(uniqueFilename);
 
-            // Salva il file
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            // Ritorna il percorso assoluto
             return filePath.toAbsolutePath().toString();
             
         } catch (IOException e) {
@@ -63,9 +51,6 @@ public class ImmagineUtil {
         }
     }
 
-    /**
-     * Elimina un file dal filesystem
-     */
     public void deleteImmagine(String percorso) {
         if (percorso == null || percorso.isBlank()) {
             throw new InvalidInputException("Percorso non valido");
@@ -81,9 +66,6 @@ public class ImmagineUtil {
         }
     }
 
-    /**
-     * Verifica se un file esiste
-     */
     public boolean fileExists(String percorso) {
         if (percorso == null || percorso.isBlank()) {
             return false;
@@ -91,9 +73,6 @@ public class ImmagineUtil {
         return Files.exists(Paths.get(percorso));
     }
 
-    /**
-     * Legge i byte di un file per il download
-     */
     public byte[] getImageBytes(String percorso) {
         if (percorso == null || percorso.isBlank()) {
             throw new InvalidInputException("Percorso non valido");
@@ -110,9 +89,6 @@ public class ImmagineUtil {
         }
     }
 
-    /**
-     * Determina il content type dall'estensione del file
-     */
     public String getContentType(String percorso) {
         if (percorso == null || percorso.isBlank()) {
             return "application/octet-stream";
@@ -139,9 +115,6 @@ public class ImmagineUtil {
         return "application/octet-stream";
     }
 
-    /**
-     * Estrae l'estensione dal nome file
-     */
     private String getFileExtension(String filename) {
         int lastDotIndex = filename.lastIndexOf('.');
         if (lastDotIndex == -1) {
@@ -150,9 +123,6 @@ public class ImmagineUtil {
         return filename.substring(lastDotIndex).toLowerCase();
     }
 
-    /**
-     * Verifica se l'estensione è supportata
-     */
     private boolean isAllowedExtension(String extension) {
         for (String allowed : ALLOWED_EXTENSIONS) {
             if (allowed.equalsIgnoreCase(extension)) {

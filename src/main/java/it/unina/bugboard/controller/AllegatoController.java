@@ -29,15 +29,11 @@ public class AllegatoController {
     @Autowired
     private ImmagineUtil immagineUtil;
 
-    /**
-     * Upload di un allegato per una issue specifica
-     */
     @PostMapping("/upload")
     public ResponseEntity<Allegato> uploadAllegato(
             @RequestParam("file") MultipartFile file,
             @RequestParam("idIssue") Integer idIssue) {
 
-        // Verifica che l'issue esista
         Issue issue = issueDAO.findById(idIssue)
                 .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
 
@@ -45,10 +41,8 @@ public class AllegatoController {
             throw new InvalidInputException("File mancante o vuoto");
         }
 
-        // Salva il file usando ImmagineUtil
         String percorso = immagineUtil.uploadImmagine(file);
 
-        // Crea l'entità Allegato
         String nomeFile = file.getOriginalFilename();
         String tipoFile = file.getContentType();
         Integer dimensione = (int) file.getSize();
@@ -59,9 +53,6 @@ public class AllegatoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    /**
-     * Download di un allegato
-     */
     @GetMapping("/download/{id}")
     public ResponseEntity<ByteArrayResource> downloadAllegato(@PathVariable Integer id) {
         Allegato allegato = allegatoDAO.findById(id)
@@ -79,9 +70,6 @@ public class AllegatoController {
                 .body(resource);
     }
 
-    /**
-     * Ottiene tutti gli allegati di una issue
-     */
     @GetMapping("/issue/{idIssue}")
     public ResponseEntity<List<Allegato>> getAllegatiByIssue(@PathVariable Integer idIssue) {
         if (!issueDAO.existsById(idIssue)) {
@@ -92,9 +80,6 @@ public class AllegatoController {
         return ResponseEntity.ok(allegati);
     }
 
-    /**
-     * Ottiene allegati ordinati per dimensione
-     */
     @GetMapping("/issue/{idIssue}/ordinati-dimensione")
     public ResponseEntity<List<Allegato>> getAllegatiOrderByDimensione(@PathVariable Integer idIssue) {
         if (!issueDAO.existsById(idIssue)) {
@@ -105,9 +90,6 @@ public class AllegatoController {
         return ResponseEntity.ok(allegati);
     }
 
-    /**
-     * Ottiene la somma delle dimensioni degli allegati di una issue
-     */
     @GetMapping("/issue/{idIssue}/dimensione-totale")
     public ResponseEntity<Map<String, Object>> getDimensioneTotale(@PathVariable Integer idIssue) {
         if (!issueDAO.existsById(idIssue)) {
@@ -126,9 +108,6 @@ public class AllegatoController {
         ));
     }
 
-    /**
-     * Conta gli allegati di una issue
-     */
     @GetMapping("/issue/{idIssue}/count")
     public ResponseEntity<Map<String, Object>> countAllegati(@PathVariable Integer idIssue) {
         if (!issueDAO.existsById(idIssue)) {
@@ -139,18 +118,12 @@ public class AllegatoController {
         return ResponseEntity.ok(Map.of("idIssue", idIssue, "numeroAllegati", count));
     }
 
-    /**
-     * Filtra allegati per tipo file
-     */
     @GetMapping("/tipo/{tipoFile}")
     public ResponseEntity<List<Allegato>> getAllegatiByTipo(@PathVariable String tipoFile) {
         List<Allegato> allegati = allegatoDAO.findByTipoFile(tipoFile);
         return ResponseEntity.ok(allegati);
     }
 
-    /**
-     * Filtra allegati per tipo e issue
-     */
     @GetMapping("/tipo/{tipoFile}/issue/{idIssue}")
     public ResponseEntity<List<Allegato>> getAllegatiByTipoAndIssue(
             @PathVariable String tipoFile,
@@ -164,27 +137,18 @@ public class AllegatoController {
         return ResponseEntity.ok(allegati);
     }
 
-    /**
-     * Cerca allegati per nome file
-     */
     @GetMapping("/cerca")
     public ResponseEntity<List<Allegato>> cercaAllegati(@RequestParam String nomeFile) {
         List<Allegato> allegati = allegatoDAO.findByNomeFileContainingIgnoreCase(nomeFile);
         return ResponseEntity.ok(allegati);
     }
 
-    /**
-     * Ottiene tutti gli allegati ordinati per data di caricamento
-     */
     @GetMapping("/recenti")
     public ResponseEntity<List<Allegato>> getAllegatiRecenti() {
         List<Allegato> allegati = allegatoDAO.findAllByOrderByDataCaricamentoDesc();
         return ResponseEntity.ok(allegati);
     }
 
-    /**
-     * Ottiene allegati di una issue ordinati per data
-     */
     @GetMapping("/issue/{idIssue}/recenti")
     public ResponseEntity<List<Allegato>> getAllegatiRecentiByIssue(@PathVariable Integer idIssue) {
         if (!issueDAO.existsById(idIssue)) {
@@ -195,9 +159,6 @@ public class AllegatoController {
         return ResponseEntity.ok(allegati);
     }
 
-    /**
-     * Filtra allegati per dimensione
-     */
     @GetMapping("/dimensione")
     public ResponseEntity<List<Allegato>> filtraPerDimensione(
             @RequestParam(required = false) Integer min,
@@ -218,32 +179,23 @@ public class AllegatoController {
         return ResponseEntity.ok(allegati);
     }
 
-    /**
-     * Elimina un allegato
-     */
     @DeleteMapping("/{id}")
     @Transactional
     public ResponseEntity<Map<String, String>> eliminaAllegato(@PathVariable Integer id) {
         Allegato allegato = allegatoDAO.findById(id)
                 .orElseThrow(() -> new NotFoundException("Allegato non trovato con id: " + id));
 
-        // Elimina il file dal filesystem
         try {
             immagineUtil.deleteImmagine(allegato.getPercorso());
         } catch (Exception e) {
-            // Log dell'errore ma continua con l'eliminazione dal DB
             System.err.println("Errore eliminazione file: " + e.getMessage());
         }
 
-        // Elimina dal database
         allegatoDAO.delete(allegato);
 
         return ResponseEntity.ok(Map.of("message", "Allegato eliminato con successo"));
     }
 
-    /**
-     * Elimina tutti gli allegati di una issue
-     */
     @DeleteMapping("/issue/{idIssue}")
     @Transactional
     public ResponseEntity<Map<String, Object>> eliminaAllegatiByIssue(@PathVariable Integer idIssue) {
@@ -251,7 +203,6 @@ public class AllegatoController {
             throw new NotFoundException("Issue non trovata con id: " + idIssue);
         }
 
-        // Recupera gli allegati per eliminare i file
         List<Allegato> allegati = allegatoDAO.findByIssueIdIssue(idIssue);
         
         for (Allegato allegato : allegati) {
@@ -262,7 +213,6 @@ public class AllegatoController {
             }
         }
 
-        // Elimina dal database
         allegatoDAO.deleteByIssueIdIssue(idIssue);
 
         return ResponseEntity.ok(Map.of(
@@ -271,16 +221,13 @@ public class AllegatoController {
         ));
     }
 
-    /**
-     * Ottiene le statistiche generali sugli allegati
-     */
+
     @GetMapping("/statistiche")
     public ResponseEntity<Map<String, Object>> getStatistiche() {
         Map<String, Object> stats = new HashMap<>();
 
         stats.put("totaleAllegati", allegatoDAO.count());
         
-        // Tipi di file più comuni
         Map<String, Long> tipiCount = new HashMap<>();
         List<Allegato> tutti = allegatoDAO.findAll();
         for (Allegato a : tutti) {

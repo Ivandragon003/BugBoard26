@@ -43,13 +43,10 @@ public class UtenzaController {
             String password = credentials.get("password");
             String ruoloStr = credentials.get("ruolo");
             
-            // Valida email
             validationUtil.validaEmailFormat(email);
             
-            // Converti ruolo
             Ruolo ruolo = Ruolo.valueOf(ruoloStr.toUpperCase());
             
-            // Cerca utente per email
             Optional<Utenza> utenzaOpt = utenzaDAO.findByEmail(email);
             
             if (utenzaOpt.isEmpty()) {
@@ -58,22 +55,18 @@ public class UtenzaController {
             
             Utenza utenza = utenzaOpt.get();
             
-            // Verifica ruolo
             if (!utenza.getRuolo().equals(ruolo)) {
                 throw new InvalidFieldException("Credenziali non valide");
             }
             
-            // Verifica che l'account sia attivo
             if (!utenza.getStato()) {
                 throw new InvalidFieldException("Account disattivato");
             }
             
-            // Verifica password
             if (!passwordUtil.HashPassword(password).equals(utenza.getPassword())) {
                 throw new InvalidFieldException("Credenziali non valide");
             }
             
-            // Genera token
             String token = accessTokenUtil.generaToken(utenza);
             
             return ResponseEntity.ok(Map.of(
@@ -96,48 +89,34 @@ public class UtenzaController {
         }
     }
 
-    /**
-     * Creazione di una nuova utenza
-     * @param utenzaData dati della nuova utenza
-     * @param token JWT token dell'utente che sta creando
-     * @return ResponseEntity con utenza creata o messaggio di errore
-     */
     @PostMapping("/crea")
     public ResponseEntity<?> creaUtenza(
             @RequestBody Map<String, Object> utenzaData,
             @RequestHeader("Authorization") String token) {
         try {
-            // Estrai e verifica il token
             String jwtToken = token.replace("Bearer ", "");
             Utenza creatore = accessTokenUtil.verificaToken(jwtToken);
             
-            // Verifica che il creatore sia attivo
             if (!creatore.getStato()) {
                 throw new InvalidFieldException("Account creatore non attivo");
             }
             
-            // Estrai i dati dalla richiesta
             String nome = (String) utenzaData.get("nome");
             String cognome = (String) utenzaData.get("cognome");
             String email = (String) utenzaData.get("email");
             String password = (String) utenzaData.get("password");
             Ruolo ruolo = Ruolo.valueOf(((String) utenzaData.get("ruolo")).toUpperCase());
             
-            // Valida email unica usando il metodo del DAO
             validationUtil.validaUniqueEmail(email);
             
-            // Verifica se email esiste già usando il metodo esistente
             if (utenzaDAO.existsByEmail(email)) {
                 throw new InvalidFieldException("Email già registrata");
             }
             
-            // Hash della password
             String hashedPassword = passwordUtil.HashPassword(password);
             
-            // Crea nuova utenza
             Utenza nuovaUtenza = new Utenza(nome, cognome, email, hashedPassword, ruolo, creatore);
             
-            // Salva nel database
             Utenza utenzaSalvata = utenzaDAO.save(nuovaUtenza);
             
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -161,20 +140,13 @@ public class UtenzaController {
         }
     }
 
-    /**
-     * Recupero password
-     * @param data contiene l'email dell'utente
-     * @return ResponseEntity con messaggio di conferma
-     */
     @PostMapping("/recupera-password")
     public ResponseEntity<?> recuperaPassword(@RequestBody Map<String, String> data) {
         try {
             String email = data.get("email");
             
-            // Valida email
             validationUtil.validaEmailFormat(email);
             
-            // Cerca utente per email
             Optional<Utenza> utenzaOpt = utenzaDAO.findByEmail(email);
             
             if (utenzaOpt.isEmpty()) {
@@ -183,15 +155,12 @@ public class UtenzaController {
             
             Utenza utenza = utenzaOpt.get();
             
-            // Genera nuova password temporanea
             String nuovaPassword = passwordUtil.generaPassword();
             String hashedPassword = passwordUtil.HashPassword(nuovaPassword);
             
-            // Aggiorna password
             utenza.setPassword(hashedPassword);
             utenzaDAO.save(utenza);
             
-            // Invia email
             emailUtil.sendEmail(
                 email,
                 "Recupero Password - BugBoard",
@@ -210,11 +179,6 @@ public class UtenzaController {
         }
     }
 
-    /**
-     * Ottieni informazioni utente autenticato
-     * @param token JWT token
-     * @return ResponseEntity con dati utente
-     */
     @GetMapping("/me")
     public ResponseEntity<?> getUtenteCorrente(@RequestHeader("Authorization") String token) {
         try {
@@ -235,13 +199,6 @@ public class UtenzaController {
         }
     }
 
-    /**
-     * Aggiorna informazioni utente
-     * @param id ID dell'utente da aggiornare
-     * @param utenzaData nuovi dati
-     * @param token JWT token
-     * @return ResponseEntity con utenza aggiornata
-     */
     @PutMapping("/{id}")
     public ResponseEntity<?> aggiornaUtenza(
             @PathVariable Integer id,
@@ -251,22 +208,18 @@ public class UtenzaController {
             String jwtToken = token.replace("Bearer ", "");
             Utenza utenteCorrente = accessTokenUtil.verificaToken(jwtToken);
             
-            // Verifica autorizzazione (solo admin o utente stesso)
             if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore) 
                 && !utenteCorrente.getIdUtente().equals(id)) {
                 throw new InvalidFieldException("Non autorizzato");
             }
             
-            // Verifica esistenza utente usando il metodo del DAO
             if (!utenzaDAO.existsByIdUtente(id)) {
                 throw new InvalidFieldException("Utente non trovato");
             }
             
-            // Cerca utente da aggiornare
             Optional<Utenza> utenzaOpt = utenzaDAO.findById(id);
             Utenza utenza = utenzaOpt.get();
             
-            // Aggiorna campi se presenti
             if (utenzaData.containsKey("nome")) {
                 utenza.setNome(utenzaData.get("nome"));
             }
@@ -275,7 +228,6 @@ public class UtenzaController {
             }
             if (utenzaData.containsKey("email")) {
                 String nuovaEmail = utenzaData.get("email");
-                // Verifica che la nuova email non sia già usata
                 Optional<Utenza> emailEsistente = utenzaDAO.findByEmail(nuovaEmail);
                 if (emailEsistente.isPresent() && !emailEsistente.get().getIdUtente().equals(id)) {
                     throw new InvalidFieldException("Email già in uso");
@@ -287,7 +239,6 @@ public class UtenzaController {
                 utenza.setPassword(hashedPassword);
             }
             
-            // Salva modifiche
             Utenza utenzaAggiornata = utenzaDAO.save(utenza);
             
             return ResponseEntity.ok(Map.of(
@@ -308,12 +259,6 @@ public class UtenzaController {
         }
     }
 
-    /**
-     * Disattiva un'utenza (soft delete)
-     * @param id ID dell'utenza da disattivare
-     * @param token JWT token
-     * @return ResponseEntity con messaggio di conferma
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> disattivaUtenza(
             @PathVariable Integer id,
@@ -322,21 +267,17 @@ public class UtenzaController {
             String jwtToken = token.replace("Bearer ", "");
             Utenza utenteCorrente = accessTokenUtil.verificaToken(jwtToken);
             
-            // Solo amministratori possono disattivare utenti
             if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
                 throw new InvalidFieldException("Solo gli amministratori possono disattivare utenti");
             }
             
-            // Verifica esistenza
             if (!utenzaDAO.existsByIdUtente(id)) {
                 throw new InvalidFieldException("Utente non trovato");
             }
             
-            // Cerca utente
             Optional<Utenza> utenzaOpt = utenzaDAO.findById(id);
             Utenza utenza = utenzaOpt.get();
             
-            // Disattiva (soft delete)
             utenza.setStato(false);
             utenzaDAO.save(utenza);
             
@@ -360,21 +301,17 @@ public class UtenzaController {
             String jwtToken = token.replace("Bearer ", "");
             Utenza utenteCorrente = accessTokenUtil.verificaToken(jwtToken);
             
-            // Solo amministratori possono riattivare utenti
             if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
                 throw new InvalidFieldException("Solo gli amministratori possono riattivare utenti");
             }
             
-            // Verifica esistenza
             if (!utenzaDAO.existsByIdUtente(id)) {
                 throw new InvalidFieldException("Utente non trovato");
             }
             
-            // Cerca utente
             Optional<Utenza> utenzaOpt = utenzaDAO.findById(id);
             Utenza utenza = utenzaOpt.get();
             
-            // Riattiva
             utenza.setStato(true);
             utenzaDAO.save(utenza);
             
