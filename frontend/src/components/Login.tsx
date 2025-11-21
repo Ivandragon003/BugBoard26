@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+// Se vuoi collegare davvero al backend, inserisci anche:
+import axios from 'axios'; // Rimuovi questa riga se vuoi solo la versione demo
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -6,20 +8,46 @@ function Login() {
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
 
-const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
+  // VERSIONE CON COLLEGAMENTO AL BACKEND
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setMessage('');
+    setIsError(false);
 
-  // Simula un login riuscito
-  setMessage("Login riuscito! (modalità demo)");
-  setIsError(false);
+    try {
+      // Chiamata API al backend. Modifica l'URL secondo le tue API REST!
+      const response = await axios.post('http://localhost:8080/api/auth/login', {
+        username,
+        password
+      }); // Assicurati che questo endpoint sia esposto dal backend!
+      if (response.data && response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
+        setMessage("Login riuscito!");
+        setIsError(false);
+        setTimeout(() => {
+          window.location.href = "/home";
+        }, 500);
+      } else {
+        setMessage("Login fallito: risposta backend non valida");
+        setIsError(true);
+      }
+    } catch (error) {
+      setMessage("Login fallito: credenziali errate o errore di rete");
+      setIsError(true);
+    }
+  };
 
-  // Simula navigazione verso la home
-  setTimeout(() => {
-    window.location.href = "/home"; // oppure navigate("/home") con React Router
-  }, 500);
-};
-
-
+  // VERSIONE SOLO DEMO (decommenta questa e commenta la versione sopra per test locale)
+  /*
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setMessage("Login riuscito! (modalità demo)");
+    setIsError(false);
+    setTimeout(() => {
+      window.location.href = "/home";
+    }, 500);
+  };
+  */
 
   return (
     <div style={{
