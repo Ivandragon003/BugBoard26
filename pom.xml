@@ -10,7 +10,7 @@
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>3.2.2</version>
-    <relativePath/> <!-- lookup parent from repository -->
+    <relativePath/>
   </parent>
 
   <groupId>it.unina.bugboard</groupId>
@@ -84,29 +84,24 @@
       <optional>true</optional>
     </dependency>
 
-    <!-- ========== NUOVE DIPENDENZE PER RNF-1: SICUREZZA ========== -->
-    
-    <!-- Spring Security per BCrypt Password Encoding - RNF-1: password hashate -->
+    <!-- Spring Security -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
-    <!-- JWT - JSON Web Token per autenticazione - RNF-1: sessioni 30 min -->
-    <!-- API -->
+    <!-- JWT -->
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-api</artifactId>
       <version>${jwt.version}</version>
     </dependency>
-    <!-- Implementazione -->
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-impl</artifactId>
       <version>${jwt.version}</version>
       <scope>runtime</scope>
     </dependency>
-    <!-- JSON serialization con Jackson -->
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-jackson</artifactId>
@@ -114,13 +109,13 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- Spring Boot Mail per invio email recupero password -->
+    <!-- Spring Boot Mail -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-mail</artifactId>
     </dependency>
 
-    <!-- Jackson JSON per gestione JSON nelle API REST -->
+    <!-- Jackson JSON -->
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
@@ -130,18 +125,19 @@
 
   <build>
     <plugins>
-      <!-- Plugin Maven standard -->
+      <!-- Maven Compiler Plugin -->
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <release>21</release>
         </configuration>
       </plugin>
-      
-      <!-- Spring Boot Maven Plugin per creare jar eseguibile -->
+
+      <!-- Spring Boot Maven Plugin -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>3.2.2</version>
         <executions>
           <execution>
             <goals>
@@ -149,6 +145,9 @@
             </goals>
           </execution>
         </executions>
+        <configuration>
+          <mainClass>it.unina.bugboard.BugBoard26Application</mainClass>
+        </configuration>
       </plugin>
     </plugins>
   </build>

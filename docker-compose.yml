@@ -1,18 +1,6 @@
 version: '3.9'
 
 services:
-  db:
-    image: postgres:15
-    container_name: bugboard-db
-    environment:
-      POSTGRES_DB: BugBoard26
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: TuaNuovaPassword123
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
   mailhog:
     image: mailhog/mailhog
     container_name: mailhog
@@ -26,9 +14,10 @@ services:
     working_dir: /app
     command: mvn spring-boot:run
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/BugBoard26
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: TuaNuovaPassword123
+      # 👉 DATABASE RENDER
+      SPRING_DATASOURCE_URL: jdbc:postgresql://dpg-d4g9bhe3jp1c73dgg2t0-a.frankfurt-postgres.render.com:5432/bugboard26
+      SPRING_DATASOURCE_USERNAME: bugboard26_user
+      SPRING_DATASOURCE_PASSWORD: RKOQcH7jpcIr01Clz7nGZFCvQE45Z2xC
 
       # 👉 Config SMTP per MailHog
       SPRING_MAIL_HOST: mailhog
@@ -38,8 +27,10 @@ services:
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: false
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: false
 
+      # Profilo Spring (opzionale)
+      SPRING_PROFILES_ACTIVE: dev
+
     depends_on:
-      - db
       - mailhog
     ports:
       - "8080:8080"
@@ -48,5 +39,4 @@ services:
       - maven-cache:/root/.m2
 
 volumes:
-  pgdata:
   maven-cache:
