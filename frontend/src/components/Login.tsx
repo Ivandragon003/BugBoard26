@@ -1,53 +1,34 @@
 import React, { useState } from 'react';
-// Se vuoi collegare davvero al backend, inserisci anche:
-import axios from 'axios'; // Rimuovi questa riga se vuoi solo la versione demo
+import { authService } from '../services/authService';
 
 function Login() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // VERSIONE CON COLLEGAMENTO AL BACKEND
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage('');
     setIsError(false);
+    setIsLoading(true);
 
     try {
-      // Chiamata API al backend. Modifica l'URL secondo le tue API REST!
-      const response = await axios.post('http://localhost:8080/api/auth/login', {
-        username,
-        password
-      }); // Assicurati che questo endpoint sia esposto dal backend!
-      if (response.data && response.data.token) {
-        localStorage.setItem('authToken', response.data.token);
-        setMessage("Login riuscito!");
-        setIsError(false);
-        setTimeout(() => {
-          window.location.href = "/home";
-        }, 500);
-      } else {
-        setMessage("Login fallito: risposta backend non valida");
-        setIsError(true);
-      }
-    } catch (error) {
-      setMessage("Login fallito: credenziali errate o errore di rete");
+      const response = await authService.login(email, password);
+      setMessage('Login riuscito!');
+      setIsError(false);
+      setTimeout(() => {
+        window.location.href = '/home';
+      }, 500);
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Credenziali non valide o errore di rete';
+      setMessage(errorMsg);
       setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // VERSIONE SOLO DEMO (decommenta questa e commenta la versione sopra per test locale)
-  /*
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setMessage("Login riuscito! (modalità demo)");
-    setIsError(false);
-    setTimeout(() => {
-      window.location.href = "/home";
-    }, 500);
-  };
-  */
 
   return (
     <div style={{
@@ -56,7 +37,7 @@ function Login() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'
     }}>
       <div style={{
         backgroundColor: 'white',
@@ -66,7 +47,6 @@ function Login() {
         width: '100%',
         maxWidth: '420px'
       }}>
-        {/* Logo e Header */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{
             width: '64px',
@@ -83,24 +63,14 @@ function Login() {
           }}>
             BB
           </div>
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: '600',
-            color: '#1f2937',
-            margin: '0 0 8px 0'
-          }}>
+          <h1 style={{ fontSize: '28px', fontWeight: '600', color: '#1f2937', margin: '0 0 8px 0' }}>
             BugBoard
           </h1>
-          <p style={{
-            fontSize: '14px',
-            color: '#6b7280',
-            margin: 0
-          }}>
+          <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
             Issue Management System
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px' }}>
             <label style={{
@@ -110,13 +80,13 @@ function Login() {
               color: '#374151',
               marginBottom: '8px'
             }}>
-              Username
+              Email
             </label>
             <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="Inserisci username"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="Inserisci email"
               required
               style={{
                 width: '100%',
@@ -124,12 +94,8 @@ function Login() {
                 fontSize: '14px',
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',
-                boxSizing: 'border-box',
-                outline: 'none',
-                transition: 'border-color 0.2s'
+                boxSizing: 'border-box'
               }}
-              onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.target.style.borderColor = '#0d9488'}
-              onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.target.style.borderColor = '#d1d5db'}
             />
           </div>
 
@@ -155,37 +121,30 @@ function Login() {
                 fontSize: '14px',
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',
-                boxSizing: 'border-box',
-                outline: 'none',
-                transition: 'border-color 0.2s'
+                boxSizing: 'border-box'
               }}
-              onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.target.style.borderColor = '#0d9488'}
-              onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.target.style.borderColor = '#d1d5db'}
             />
           </div>
 
           <button
             type="submit"
+            disabled={isLoading}
             style={{
               width: '100%',
               padding: '12px 24px',
-              backgroundColor: '#0d9488',
+              backgroundColor: isLoading ? '#9ca3af' : '#0d9488',
               color: 'white',
               fontSize: '14px',
               fontWeight: '600',
               border: 'none',
               borderRadius: '8px',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
               marginBottom: '16px'
             }}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.backgroundColor = '#0f766e'}
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.backgroundColor = '#0d9488'}
           >
-            Accedi
+            {isLoading ? 'Accesso in corso...' : 'Accedi'}
           </button>
 
-          {/* Messaggio di feedback */}
           {message && (
             <div style={{
               padding: '12px 16px',
@@ -200,25 +159,16 @@ function Login() {
           )}
         </form>
 
-        {/* Footer */}
         <div style={{
           marginTop: '24px',
           paddingTop: '24px',
           borderTop: '1px solid #e5e7eb',
           textAlign: 'center'
         }}>
-          <p style={{
-            fontSize: '13px',
-            color: '#6b7280',
-            margin: 0
-          }}>
-            Non hai un account?{' '}
-            <a href="#" style={{
-              color: '#0d9488',
-              textDecoration: 'none',
-              fontWeight: '500'
-            }}>
-              Registrati
+          <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+            Password dimenticata?{' '}
+            <a href="/recupera-password" style={{ color: '#0d9488', textDecoration: 'none', fontWeight: '500' }}>
+              Recuperala
             </a>
           </p>
         </div>
