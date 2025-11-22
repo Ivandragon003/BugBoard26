@@ -19,7 +19,7 @@ public class Utenza {
 	private Integer idUtente;  
 
 	@ManyToOne
-	@JoinColumn(name = "idcreatore", nullable = false)
+	@JoinColumn(name = "idcreatore", nullable = true)  
 	private Utenza creatore;
 
 	@Column(nullable = false)
