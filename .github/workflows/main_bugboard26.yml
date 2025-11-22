@@ -61,7 +61,8 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'BugBoard26'
+          app-name: 'bugboard26'
           slot-name: 'Production'
           package: '*.jar'
+
 
