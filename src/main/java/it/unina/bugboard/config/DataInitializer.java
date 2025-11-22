@@ -3,16 +3,20 @@ package it.unina.bugboard.config;
 import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.Ruolo;
 import it.unina.bugboard.model.Utenza;
+import it.unina.bugboard.util.PasswordUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 public class DataInitializer {
 
+    @Autowired
+    private PasswordUtil passwordUtil;
+
     @Bean
-    CommandLineRunner initDatabase(UtenzaDAO utenzaDAO, PasswordEncoder passwordEncoder) {
+    CommandLineRunner initDatabase(UtenzaDAO utenzaDAO) {
         return args -> {
             // Verifica se esiste già un utente
             if (utenzaDAO.count() == 0) {
@@ -23,7 +27,7 @@ public class DataInitializer {
                     "Mario",                              // nome
                     "Rossi",                              // cognome
                     "admin@bugboard.it",                  // email
-                    passwordEncoder.encode("admin123"),   // password hashata
+                    passwordUtil.hashPassword("admin123"), // password hashata con PasswordUtil
                     Ruolo.Amministratore,                 // ruolo
                     null                                  // creatore (temporaneo)
                 );
