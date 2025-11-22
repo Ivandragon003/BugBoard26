@@ -15,14 +15,15 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await authService.login(email, password);
+      await authService.login(email, password);
       setMessage('Login riuscito!');
       setIsError(false);
       setTimeout(() => {
         window.location.href = '/home';
       }, 500);
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Credenziali non valide o errore di rete';
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      const errorMsg = err.response?.data?.message || 'Credenziali non valide o errore di rete';
       setMessage(errorMsg);
       setIsError(true);
     } finally {
@@ -37,7 +38,7 @@ function Login() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif"
     }}>
       <div style={{
         backgroundColor: 'white',
@@ -167,9 +168,9 @@ function Login() {
         }}>
           <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
             Password dimenticata?{' '}
-            <a href="/recupera-password" style={{ color: '#0d9488', textDecoration: 'none', fontWeight: '500' }}>
+            <span style={{ color: '#0d9488', textDecoration: 'none', fontWeight: '500', cursor: 'pointer' }}>
               Recuperala
-            </a>
+            </span>
           </p>
         </div>
       </div>
