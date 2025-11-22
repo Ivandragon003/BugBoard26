@@ -37,33 +37,26 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Origini permesse
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:5173"
-        ));
-        
-        // Permetti tutte le origini (per sviluppo - rimuovi in produzione)
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        
-        // Metodi HTTP permessi
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        
-        // Headers permessi
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        
-        // Permetti credenziali
-        configuration.setAllowCredentials(true);
-        
-        // Esponi header Authorization
-        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+   @Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+    
+    configuration.setAllowedOrigins(Arrays.asList(
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://bugboard26-frontend-cxe2arfsa9hpgxhz.italynorth-01.azurewebsites.net"
+    ));
+    
+    // RIMUOVI questa riga in produzione
+    // configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+    
+    configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+    configuration.setAllowedHeaders(Arrays.asList("*"));
+    configuration.setAllowCredentials(true);
+    configuration.setExposedHeaders(Arrays.asList("Authorization"));
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+    return source;
+}
 }
