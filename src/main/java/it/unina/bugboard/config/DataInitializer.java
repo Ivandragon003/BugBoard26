@@ -24,7 +24,7 @@ public class DataInitializer {
                     "Rossi",                              // cognome
                     "admin@bugboard.it",                  // email
                     passwordEncoder.encode("admin123"),   // password hashata
-                    Ruolo.Amministratore,                          // ruolo
+                    Ruolo.Amministratore,                 // ruolo
                     null                                  // creatore (temporaneo)
                 );
                 

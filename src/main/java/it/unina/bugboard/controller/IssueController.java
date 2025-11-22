@@ -6,7 +6,6 @@ import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.*;
 import it.unina.bugboard.exception.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.*;
