@@ -30,5 +30,15 @@ export const authService = {
 
   isAuthenticated: () => {
     return !!localStorage.getItem('authToken');
+  },
+
+  isAdmin: () => {
+    const user = authService.getUser();
+    return user?.ruolo === 'Amministratore';
+  },
+
+  isUtente: () => {
+    const user = authService.getUser();
+    return user?.ruolo === 'Utente';
   }
 };
