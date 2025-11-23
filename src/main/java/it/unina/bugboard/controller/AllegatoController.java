@@ -17,7 +17,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/allegato")
-@CrossOrigin(origins = "*")
 public class AllegatoController {
 
 	@Autowired

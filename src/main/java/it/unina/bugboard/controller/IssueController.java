@@ -12,7 +12,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/issue")
-@CrossOrigin(origins = "*")
 public class IssueController {
 
 	@Autowired
@@ -151,7 +150,7 @@ public class IssueController {
 		return stats;
 	}
 
-// --- Helper per parsing enum ---
+	// --- Helper per parsing enum ---
 	private Priorita parsePriorita(String value) {
 		if (value == null)
 			throw new InvalidInputException("Priorità non può essere null");
