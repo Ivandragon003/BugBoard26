@@ -170,14 +170,14 @@ function Home() {
         flexDirection: "column",
         position: "relative"
       }}>
-        {/* Linea verticale di separazione */}
+        {/* Linea verticale di separazione sul bordo destro */}
         <div style={{
           position: "absolute",
           right: 0,
           top: 0,
           bottom: 0,
-          width: "1px",
-          backgroundColor: "rgba(255,255,255,0.2)"
+          width: "2px",
+          backgroundColor: "rgba(255,255,255,0.3)"
         }} />
         
         <div style={{ padding: "20px", color: "white" }}>
@@ -187,7 +187,7 @@ function Home() {
             gap: "10px",
             marginBottom: "20px",
             paddingBottom: "20px",
-            borderBottom: "1px solid rgba(255,255,255,0.15)"
+            borderBottom: "2px solid rgba(255,255,255,0.25)"
           }}>
             <div style={{
               width: "36px",
@@ -235,7 +235,7 @@ function Home() {
                   left: 0,
                   top: 0,
                   bottom: 0,
-                  width: "3px",
+                  width: "4px",
                   backgroundColor: "white",
                   borderRadius: "0 3px 3px 0"
                 }} />
@@ -266,8 +266,8 @@ function Home() {
                   left: 0,
                   top: 0,
                   bottom: 0,
-                  width: "3px",
-                  backgroundColor: "rgba(255,255,255,0.7)",
+                  width: "4px",
+                  backgroundColor: "white",
                   borderRadius: "0 3px 3px 0"
                 }} />
               )}
@@ -297,8 +297,8 @@ function Home() {
                   left: 0,
                   top: 0,
                   bottom: 0,
-                  width: "3px",
-                  backgroundColor: "rgba(255,255,255,0.7)",
+                  width: "4px",
+                  backgroundColor: "white",
                   borderRadius: "0 3px 3px 0"
                 }} />
               )}
@@ -312,7 +312,7 @@ function Home() {
         
         <div style={{ 
           padding: "20px", 
-          borderTop: "1px solid rgba(255,255,255,0.15)",
+          borderTop: "2px solid rgba(255,255,255,0.25)",
           color: "white"
         }}>
           <a 
@@ -340,8 +340,8 @@ function Home() {
                 left: 0,
                 top: 0,
                 bottom: 0,
-                width: "3px",
-                backgroundColor: "rgba(255,255,255,0.7)",
+                width: "4px",
+                backgroundColor: "white",
                 borderRadius: "0 3px 3px 0"
               }} />
             )}
@@ -371,8 +371,8 @@ function Home() {
                 left: 0,
                 top: 0,
                 bottom: 0,
-                width: "3px",
-                backgroundColor: "rgba(255,255,255,0.7)",
+                width: "4px",
+                backgroundColor: "white",
                 borderRadius: "0 3px 3px 0"
               }} />
             )}

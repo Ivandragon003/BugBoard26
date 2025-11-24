@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import { allegatoService } from "../services/allegatoService";
+import { authService } from "../services/authService";
 
 interface FormData {
   titolo: string;
@@ -19,13 +20,23 @@ function CreaIssue() {
   const [success, setSuccess] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
 
+  // Recupera l'utente loggato
+  const user = authService.getUser();
+
+  // Redirect al login se non autenticato
+  useEffect(() => {
+    if (!user || !user.id) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
+
   const [formData, setFormData] = useState<FormData>({
     titolo: "",
     descrizione: "",
     priorita: "medium",
     stato: "todo",
     tipo: "bug",
-    idCreatore: 1 // TODO: prendere dall'utente loggato
+    idCreatore: user?.id || 0  // Usa l'ID reale dell'utente loggato
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -49,17 +60,38 @@ function CreaIssue() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Verifica che l'utente sia loggato
+    if (!user || !user.id) {
+      setError("Devi essere autenticato per creare un'issue");
+      navigate('/login');
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
+      // Assicurati che idCreatore sia impostato correttamente
+      const dataToSend = {
+        ...formData,
+        idCreatore: user.id
+      };
+
+      console.log("Invio dati:", dataToSend);
+      
       // 1. Crea l'issue
-      const newIssue = await issueService.createIssue(formData);
+      const newIssue = await issueService.createIssue(dataToSend);
+      console.log("Issue creata:", newIssue);
 
       // 2. Upload allegati se presenti
-      if (files.length > 0) {
+      if (files.length > 0 && newIssue.idIssue) {
         for (const file of files) {
-          await allegatoService.uploadAllegato(file, newIssue.idIssue);
+          try {
+            await allegatoService.uploadAllegato(file, newIssue.idIssue);
+          } catch (fileError: any) {
+            console.error("Errore upload file:", file.name, fileError);
+          }
         }
       }
 
@@ -69,12 +101,30 @@ function CreaIssue() {
       }, 1500);
 
     } catch (err: any) {
-      console.error("Errore creazione issue:", err);
-      setError(err.response?.data?.message || "Errore durante la creazione dell'issue");
+      console.error("Errore completo:", err);
+      console.error("Response data:", err.response?.data);
+      console.error("Status:", err.response?.status);
+      
+      let errorMessage = "Errore durante la creazione dell'issue";
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data) {
+        errorMessage = JSON.stringify(err.response.data);
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  // Se non c'è un utente, non renderizzare il form
+  if (!user) {
+    return null;
+  }
 
   return (
     <div style={{ 
@@ -126,11 +176,14 @@ function CreaIssue() {
             borderRadius: "8px",
             marginBottom: "24px",
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             gap: "8px"
           }}>
             <span style={{ fontSize: "20px" }}>⚠️</span>
-            {error}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, marginBottom: "4px" }}>Errore</div>
+              <div>{error}</div>
+            </div>
           </div>
         )}
 
@@ -152,6 +205,19 @@ function CreaIssue() {
         )}
 
         <form onSubmit={handleSubmit} style={{ backgroundColor: "white", borderRadius: "12px", padding: "32px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          {/* Info utente */}
+          <div style={{ 
+            backgroundColor: "#f0fdf4", 
+            border: "1px solid #bbf7d0",
+            padding: "12px 16px", 
+            borderRadius: "8px", 
+            marginBottom: "24px",
+            fontSize: "14px",
+            color: "#166534"
+          }}>
+            <strong>Creatore:</strong> {user.nome} {user.cognome} (ID: {user.id})
+          </div>
+
           {/* Titolo */}
           <div style={{ marginBottom: "24px" }}>
             <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#374151" }}>
@@ -400,7 +466,7 @@ function CreaIssue() {
               disabled={loading}
               style={{
                 padding: "12px 24px",
-                backgroundColor: loading ? "#9ca3af" : "#3b82f6",
+                backgroundColor: loading ? "#9ca3af" : "#0d9488",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",

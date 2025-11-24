@@ -5,10 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import it.unina.bugboard.exception.InvalidFieldException;
 
 @Entity
 @Table(name = "utenza")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  
 public class Utenza {
 
 	private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -18,8 +20,9 @@ public class Utenza {
 	@Column(name = "idutente")
 	private Integer idUtente;  
 
-	@ManyToOne
-	@JoinColumn(name = "idcreatore", nullable = true)  
+	@ManyToOne(fetch = FetchType.LAZY)  
+	@JoinColumn(name = "idcreatore", nullable = true)
+	@JsonIgnore  
 	private Utenza creatore;
 
 	@Column(nullable = false)
