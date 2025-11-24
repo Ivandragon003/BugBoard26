@@ -13,15 +13,12 @@ interface Issue {
 }
 
 function Home() {
-  // Sidebar
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  // Issue state
   const [issues, setIssues] = useState<Issue[]>([]);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
+  const [filterType, setFilterType] = useState<string>("all");
 
-  // Carica le issue dal backend all'avvio
   useEffect(() => {
     const loadIssues = async () => {
       try {
@@ -36,11 +33,16 @@ function Home() {
         setLoading(false);
       }
     };
-
     loadIssues();
   }, []);
 
-  // Stili issue
+  const issueStats = {
+    totali: issues.length,
+    todo: issues.filter(i => i.stato.toLowerCase() === 'todo').length,
+    inProgress: issues.filter(i => i.stato.toLowerCase() === 'inprogress' || i.stato.toLowerCase() === 'in_progress').length,
+    done: issues.filter(i => i.stato.toLowerCase() === 'done').length,
+  };
+
   const getStatoStyle = (stato: string) => {
     switch (stato.toLowerCase()) {
       case "todo":
@@ -59,6 +61,7 @@ function Home() {
     switch (tipo.toLowerCase()) {
       case "documentation":
         return { backgroundColor: "#d1fae5", color: "#065f46" };
+      case "feature":
       case "features":
         return { backgroundColor: "#dbeafe", color: "#1e40af" };
       case "bug":
@@ -100,7 +103,6 @@ function Home() {
     return stato.charAt(0).toUpperCase() + stato.slice(1);
   };
 
-  // RENDER
   return (
     <div style={{ 
       display: "flex", 
@@ -110,37 +112,108 @@ function Home() {
     }}>
       {/* Sidebar */}
       <div style={{
-        width: sidebarOpen ? "250px" : "0",
-        backgroundColor: "#1f2937",
+        width: sidebarOpen ? "200px" : "0",
+        backgroundColor: "#0d9488",
         transition: "width 0.3s",
-        overflow: "hidden"
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column"
       }}>
-        <div style={{ padding: "24px", color: "white" }}>
-          <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "32px" }}>
-            BugBoard
-          </h1>
+        <div style={{ padding: "20px", color: "white", flex: 1 }}>
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "10px",
+            marginBottom: "40px" 
+          }}>
+            <div style={{
+              width: "36px",
+              height: "36px",
+              backgroundColor: "white",
+              borderRadius: "6px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: "bold",
+              color: "#0d9488",
+              fontSize: "14px"
+            }}>
+              BB
+            </div>
+            <div>
+              <div style={{ fontSize: "14px", fontWeight: "600" }}>BugBoard</div>
+              <div style={{ fontSize: "11px", opacity: 0.8 }}>Dashboard</div>
+            </div>
+          </div>
           <nav>
             <a href="/home" style={{ 
-              display: "block", 
-              padding: "12px 16px", 
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "10px 12px", 
               color: "white", 
               textDecoration: "none",
-              borderRadius: "8px",
-              backgroundColor: "#374151",
-              marginBottom: "8px"
+              borderRadius: "6px",
+              backgroundColor: "rgba(255,255,255,0.15)",
+              marginBottom: "6px",
+              fontSize: "13px"
             }}>
-              Dashboard
+              <span style={{ fontSize: "16px" }}>📊</span> Dashboard
             </a>
             <a href="/issues" style={{ 
-              display: "block", 
-              padding: "12px 16px", 
-              color: "#9ca3af", 
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "10px 12px", 
+              color: "rgba(255,255,255,0.7)", 
               textDecoration: "none",
-              borderRadius: "8px"
+              borderRadius: "6px",
+              fontSize: "13px"
             }}>
-              Issue
+              <span style={{ fontSize: "16px" }}>📋</span> Lista Issue
+            </a>
+            <a href="/issues/nuova" style={{ 
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "10px 12px", 
+              color: "rgba(255,255,255,0.7)", 
+              textDecoration: "none",
+              borderRadius: "6px",
+              fontSize: "13px"
+            }}>
+              <span style={{ fontSize: "16px" }}>➕</span> Nuova Issue
             </a>
           </nav>
+        </div>
+        
+        {/* Footer Sidebar */}
+        <div style={{ 
+          padding: "20px", 
+          borderTop: "1px solid rgba(255,255,255,0.1)",
+          color: "white"
+        }}>
+          <a href="/profilo" style={{ 
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            color: "rgba(255,255,255,0.7)",
+            textDecoration: "none",
+            fontSize: "13px",
+            marginBottom: "6px"
+          }}>
+            <span style={{ fontSize: "16px" }}>👤</span> Profilo
+          </a>
+          <a href="/logout" style={{ 
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            color: "rgba(255,255,255,0.7)",
+            textDecoration: "none",
+            fontSize: "13px"
+          }}>
+            <span style={{ fontSize: "16px" }}>🚪</span> Logout
+          </a>
         </div>
       </div>
 
@@ -154,21 +227,63 @@ function Home() {
           justifyContent: "space-between",
           alignItems: "center"
         }}>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#f3f4f6",
-              border: "none",
-              borderRadius: "6px",
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                padding: "8px 12px",
+                backgroundColor: "transparent",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "20px",
+                color: "#374151"
+              }}
+            >
+              ☰
+            </button>
+            <div>
+              <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
+                BugBoard Dashboard
+              </h2>
+              <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "2px" }}>
+                Issue Management System
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <a 
+              href="/issues/nuova"
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#0d9488",
+                color: "white",
+                textDecoration: "none",
+                borderRadius: "6px",
+                fontSize: "13px",
+                fontWeight: 500,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+            >
+              + Nuova Issue
+            </a>
+            <div style={{ 
+              width: "36px",
+              height: "36px",
+              backgroundColor: "#0d9488",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              fontSize: "16px",
               cursor: "pointer"
-            }}
-          >
-            ☰
-          </button>
-          <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937" }}>
-            Dashboard
-          </h2>
+            }}>
+              👤
+            </div>
+          </div>
         </header>
 
         {/* Main Content */}
@@ -179,43 +294,231 @@ function Home() {
               backgroundColor: "#fee2e2",
               padding: "12px 16px",
               borderRadius: "8px",
-              marginBottom: "16px", 
-              fontSize: "16px",
+              marginBottom: "24px", 
+              fontSize: "14px",
               border: "1px solid #fecaca"
             }}>
               {error}
             </div>
           )}
 
+          {/* Dropdown Filter */}
+          <div style={{ marginBottom: "24px" }}>
+            <div style={{ 
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "8px 16px",
+              backgroundColor: "white",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "14px",
+              color: "#374151"
+            }}>
+              <span>📅</span>
+              <select 
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                style={{
+                  border: "none",
+                  outline: "none",
+                  backgroundColor: "transparent",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  color: "#374151"
+                }}
+              >
+                <option value="all">Tutte le issue</option>
+                <option value="todo">Todo</option>
+                <option value="inprogress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Cards Statistiche */}
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: "20px",
+            marginBottom: "32px"
+          }}>
+            {/* Card Issue Totali */}
+            <div style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              padding: "20px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              border: "1px solid #e5e7eb"
+            }}>
+              <div style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "flex-start",
+                marginBottom: "12px"
+              }}>
+                <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
+                  Issue Totali
+                </div>
+                <div style={{
+                  width: "36px",
+                  height: "36px",
+                  backgroundColor: "#dbeafe",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "18px"
+                }}>
+                  ≡
+                </div>
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
+                {issueStats.totali}
+              </div>
+            </div>
+
+            {/* Card Issue Todo */}
+            <div style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              padding: "20px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              border: "1px solid #e5e7eb"
+            }}>
+              <div style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "flex-start",
+                marginBottom: "12px"
+              }}>
+                <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
+                  Issue Todo
+                </div>
+                <div style={{
+                  width: "36px",
+                  height: "36px",
+                  backgroundColor: "#f3f4f6",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "18px"
+                }}>
+                  ⏰
+                </div>
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
+                {issueStats.todo}
+              </div>
+            </div>
+
+            {/* Card Issue In Progress */}
+            <div style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              padding: "20px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              border: "1px solid #e5e7eb"
+            }}>
+              <div style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "flex-start",
+                marginBottom: "12px"
+              }}>
+                <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
+                  Issue In Progress
+                </div>
+                <div style={{
+                  width: "36px",
+                  height: "36px",
+                  backgroundColor: "#fed7aa",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "18px"
+                }}>
+                  📈
+                </div>
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
+                {issueStats.inProgress}
+              </div>
+            </div>
+
+            {/* Card Issue Done */}
+            <div style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              padding: "20px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              border: "1px solid #e5e7eb"
+            }}>
+              <div style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "flex-start",
+                marginBottom: "12px"
+              }}>
+                <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
+                  Issue Done
+                </div>
+                <div style={{
+                  width: "36px",
+                  height: "36px",
+                  backgroundColor: "#86efac",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "20px",
+                  fontWeight: "bold",
+                  color: "#166534"
+                }}>
+                  ✓
+                </div>
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
+                {issueStats.done}
+              </div>
+            </div>
+          </div>
+
+          {/* Tabella Issue Recenti */}
           <div style={{ 
             backgroundColor: "white", 
             borderRadius: "12px", 
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)", 
-            overflow: "hidden" 
+            overflow: "hidden",
+            border: "1px solid #e5e7eb"
           }}>
             <div style={{ 
-              padding: "24px", 
+              padding: "20px 24px", 
               borderBottom: "1px solid #e5e7eb", 
               display: "flex", 
               justifyContent: "space-between", 
               alignItems: "center" 
             }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
+              <h2 style={{ fontSize: "16px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
                 Issue Recenti
               </h2>
               <a 
-                href="/issues/nuova"
+                href="/issues"
                 style={{
                   padding: "8px 16px",
-                  backgroundColor: "#3b82f6",
-                  color: "white",
+                  backgroundColor: "white",
+                  color: "#0d9488",
                   textDecoration: "none",
                   borderRadius: "6px",
-                  fontSize: "14px",
-                  fontWeight: 500
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  border: "1px solid #0d9488"
                 }}
               >
-                + Nuova Issue
+                Visualizza Tutte
               </a>
             </div>
 
@@ -233,9 +536,9 @@ function Home() {
                   <thead>
                     <tr style={{ backgroundColor: "#f9fafb" }}>
                       <th style={{ 
-                        padding: "16px 24px", 
+                        padding: "14px 24px", 
                         textAlign: "left",
-                        fontSize: "12px",
+                        fontSize: "11px",
                         fontWeight: 600,
                         color: "#6b7280",
                         textTransform: "uppercase",
@@ -244,9 +547,9 @@ function Home() {
                         Titolo
                       </th>
                       <th style={{ 
-                        padding: "16px 24px", 
+                        padding: "14px 24px", 
                         textAlign: "left",
-                        fontSize: "12px",
+                        fontSize: "11px",
                         fontWeight: 600,
                         color: "#6b7280",
                         textTransform: "uppercase",
@@ -255,9 +558,9 @@ function Home() {
                         Stato
                       </th>
                       <th style={{ 
-                        padding: "16px 24px", 
+                        padding: "14px 24px", 
                         textAlign: "left",
-                        fontSize: "12px",
+                        fontSize: "11px",
                         fontWeight: 600,
                         color: "#6b7280",
                         textTransform: "uppercase",
@@ -266,9 +569,9 @@ function Home() {
                         Tipo
                       </th>
                       <th style={{ 
-                        padding: "16px 24px", 
+                        padding: "14px 24px", 
                         textAlign: "left",
-                        fontSize: "12px",
+                        fontSize: "11px",
                         fontWeight: 600,
                         color: "#6b7280",
                         textTransform: "uppercase",
@@ -277,9 +580,9 @@ function Home() {
                         Priorità
                       </th>
                       <th style={{ 
-                        padding: "16px 24px", 
+                        padding: "14px 24px", 
                         textAlign: "left",
-                        fontSize: "12px",
+                        fontSize: "11px",
                         fontWeight: 600,
                         color: "#6b7280",
                         textTransform: "uppercase",
@@ -303,47 +606,48 @@ function Home() {
                         onClick={() => window.location.href = `/issues/${issue.idIssue}`}
                       >
                         <td style={{ 
-                          padding: "16px 24px", 
+                          padding: "14px 24px", 
                           color: "#1f2937",
-                          fontWeight: 500
+                          fontWeight: 500,
+                          fontSize: "14px"
                         }}>
                           {issue.titolo}
                         </td>
-                        <td style={{ padding: "16px 24px" }}>
+                        <td style={{ padding: "14px 24px" }}>
                           <span style={{ 
                             padding: "4px 12px", 
                             borderRadius: "12px", 
                             fontWeight: 500,
-                            fontSize: "14px",
+                            fontSize: "13px",
                             ...getStatoStyle(issue.stato) 
                           }}>
                             {formatStato(issue.stato)}
                           </span>
                         </td>
-                        <td style={{ padding: "16px 24px" }}>
+                        <td style={{ padding: "14px 24px" }}>
                           <span style={{ 
                             padding: "4px 12px", 
                             borderRadius: "12px", 
                             fontWeight: 500,
-                            fontSize: "14px",
+                            fontSize: "13px",
                             ...getTipoStyle(issue.tipo) 
                           }}>
                             {issue.tipo}
                           </span>
                         </td>
-                        <td style={{ padding: "16px 24px" }}>
+                        <td style={{ padding: "14px 24px" }}>
                           <span style={{ 
                             padding: "4px 12px", 
                             borderRadius: "12px", 
                             fontWeight: 500,
-                            fontSize: "14px",
-                            textTransform: "capitalize",
+                            fontSize: "13px",
+                            textTransform: "lowercase",
                             ...getPrioritaStyle(issue.priorita) 
                           }}>
                             {issue.priorita}
                           </span>
                         </td>
-                        <td style={{ padding: "16px 24px", color: "#6b7280" }}>
+                        <td style={{ padding: "14px 24px", color: "#6b7280", fontSize: "14px" }}>
                           {formatDate(issue.dataCreazione)}
                         </td>
                       </tr>
