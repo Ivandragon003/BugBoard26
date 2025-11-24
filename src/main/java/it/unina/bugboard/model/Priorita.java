@@ -1,9 +1,9 @@
 package it.unina.bugboard.model;
 
-public enum Priorita {
-    none,      
+public enum Priorita {      
     critical,
     high,
     medium,
-    low
+    low,
+    none
 }
