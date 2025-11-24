@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { issueService } from "../services/issueService";
 
 interface Issue {
@@ -16,6 +16,7 @@ interface Issue {
 
 function ListaIssue() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<Issue[]>([]);
@@ -65,6 +66,9 @@ function ListaIssue() {
     }
     setFilteredIssues(filtered);
   }, [searchTerm, filterStato, filterTipo, filterPriorita, issues]);
+
+  // Evidenziazione corretta in base al percorso
+  const currentPath = location.pathname;
 
   // Stili pill
   const getStatoStyle = (stato: string) => {
@@ -175,8 +179,13 @@ function ListaIssue() {
               href="/home"
               style={{
                 display: "flex", alignItems: "center", gap: "10px",
-                padding: "10px 12px", color: "white", textDecoration: "none",
-                borderRadius: "6px", backgroundColor: "rgba(255,255,255,0.15)", marginBottom: "6px", fontSize: "13px", transition: "background-color 0.2s", position: "relative"
+                padding: "10px 12px", textDecoration: "none", borderRadius: "6px",
+                fontSize: "13px", fontWeight: currentPath === "/home" ? 600 : 400,
+                color: currentPath === "/home" ? "#FFF" : "white",
+                backgroundColor: currentPath === "/home"
+                  ? "#059669"
+                  : "rgba(255,255,255,0.15)",
+                marginBottom: "6px", transition: "background-color 0.2s", position: "relative"
               }}
               onMouseEnter={() => setHoveredItem("dashboard")}
               onMouseLeave={() => setHoveredItem("")}
@@ -187,9 +196,13 @@ function ListaIssue() {
               href="/issues"
               style={{
                 display: "flex", alignItems: "center", gap: "10px",
-                padding: "10px 12px", color: "#FFF", textDecoration: "none",
-                borderRadius: "6px", backgroundColor: "#059669", fontWeight: 600,
-                fontSize: "13px", transition: "background-color 0.2s", position: "relative"
+                padding: "10px 12px", textDecoration: "none", borderRadius: "6px",
+                fontSize: "13px", fontWeight: currentPath.startsWith("/issues") && !currentPath.endsWith("/nuova") ? 600 : 400,
+                color: currentPath.startsWith("/issues") && !currentPath.endsWith("/nuova") ? "#FFF" : "white",
+                backgroundColor: currentPath.startsWith("/issues") && !currentPath.endsWith("/nuova")
+                  ? "#059669"
+                  : "rgba(255,255,255,0.15)",
+                marginBottom: "6px", transition: "background-color 0.2s", position: "relative"
               }}
               onMouseEnter={() => setHoveredItem("lista")}
               onMouseLeave={() => setHoveredItem("")}
@@ -200,8 +213,13 @@ function ListaIssue() {
               href="/issues/nuova"
               style={{
                 display: "flex", alignItems: "center", gap: "10px",
-                padding: "10px 12px", color: "rgba(255,255,255,0.7)", textDecoration: "none",
-                borderRadius: "6px", fontSize: "13px", backgroundColor: hoveredItem === "nuova" ? "rgba(255,255,255,0.1)" : "transparent", transition: "all 0.2s", position: "relative"
+                padding: "10px 12px", textDecoration: "none", borderRadius: "6px",
+                fontSize: "13px", fontWeight: currentPath === "/issues/nuova" ? 600 : 400,
+                color: currentPath === "/issues/nuova" ? "#FFF" : "rgba(255,255,255,0.7)",
+                backgroundColor: currentPath === "/issues/nuova"
+                  ? "#059669"
+                  : "transparent",
+                marginBottom: "6px", transition: "background-color 0.2s", position: "relative"
               }}
               onMouseEnter={() => setHoveredItem("nuova")}
               onMouseLeave={() => setHoveredItem("")}
@@ -211,7 +229,6 @@ function ListaIssue() {
           </nav>
         </div>
       </div>
-
       {/* MAIN CONTENT */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* HEADER */}
@@ -223,7 +240,6 @@ function ListaIssue() {
           <div style={{ fontSize: "28px", fontWeight: 700, color: "#18181b" }}>Lista Issue</div>
           <div style={{ fontSize: "15px", color: "#747b8c", marginTop: "2px" }}>Visualizza e gestisci tutte le issue</div>
         </header>
-
         {/* FILTRI E TABELLA */}
         <div style={{ maxWidth: 1400, margin: "32px auto", width: "100%" }}>
           <div style={{
@@ -267,7 +283,6 @@ function ListaIssue() {
                 Reset
               </button>
             </div>
-
             {/* TABELLA */}
             <div style={{ width: "100%", overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
