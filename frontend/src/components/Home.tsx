@@ -18,6 +18,7 @@ function Home() {
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [filterType, setFilterType] = useState<string>("all");
+  const [hoveredItem, setHoveredItem] = useState<string>("");
 
   useEffect(() => {
     const loadIssues = async () => {
@@ -42,6 +43,55 @@ function Home() {
     inProgress: issues.filter(i => i.stato.toLowerCase() === 'inprogress' || i.stato.toLowerCase() === 'in_progress').length,
     done: issues.filter(i => i.stato.toLowerCase() === 'done').length,
   };
+
+  // Componenti SVG Icons
+  const ListIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 6H21" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M8 12H21" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M8 18H21" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M3 6H3.01" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M3 12H3.01" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M3 18H3.01" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round"/>
+    </svg>
+  );
+
+  const ClockIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="9" stroke="#6B7280" strokeWidth="2"/>
+      <path d="M12 7V12L15 15" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+
+  const TrendUpIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 17L9 11L13 15L21 7" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M15 7H21V13" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
+  const CheckCircleIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="9" stroke="#10B981" strokeWidth="2"/>
+      <path d="M8 12L11 15L16 9" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
+  const UserIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="8" r="4" stroke="#0d9488" strokeWidth="2"/>
+      <path d="M6 21C6 17.686 8.686 15 12 15C15.314 15 18 17.686 18 21" stroke="#0d9488" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+
+  const CalendarIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="6" width="18" height="15" rx="2" stroke="#6B7280" strokeWidth="2"/>
+      <path d="M3 10H21" stroke="#6B7280" strokeWidth="2"/>
+      <path d="M8 3V7" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M16 3V7" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
 
   const getStatoStyle = (stato: string) => {
     switch (stato.toLowerCase()) {
@@ -117,14 +167,27 @@ function Home() {
         transition: "width 0.3s",
         overflow: "hidden",
         display: "flex",
-        flexDirection: "column"
+        flexDirection: "column",
+        position: "relative"
       }}>
-        <div style={{ padding: "20px", color: "white", flex: 1 }}>
+        {/* Linea verticale di separazione */}
+        <div style={{
+          position: "absolute",
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: "1px",
+          backgroundColor: "rgba(255,255,255,0.2)"
+        }} />
+        
+        <div style={{ padding: "20px", color: "white" }}>
           <div style={{ 
             display: "flex", 
             alignItems: "center", 
             gap: "10px",
-            marginBottom: "40px" 
+            marginBottom: "20px",
+            paddingBottom: "20px",
+            borderBottom: "1px solid rgba(255,255,255,0.15)"
           }}>
             <div style={{
               width: "36px",
@@ -145,73 +208,174 @@ function Home() {
               <div style={{ fontSize: "11px", opacity: 0.8 }}>Dashboard</div>
             </div>
           </div>
+          
           <nav>
-            <a href="/home" style={{ 
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              padding: "10px 12px", 
-              color: "white", 
-              textDecoration: "none",
-              borderRadius: "6px",
-              backgroundColor: "rgba(255,255,255,0.15)",
-              marginBottom: "6px",
-              fontSize: "13px"
-            }}>
+            <a 
+              href="/home" 
+              style={{ 
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 12px", 
+                color: "white", 
+                textDecoration: "none",
+                borderRadius: "6px",
+                backgroundColor: hoveredItem === "dashboard" ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.15)",
+                marginBottom: "6px",
+                fontSize: "13px",
+                transition: "background-color 0.2s",
+                position: "relative"
+              }}
+              onMouseEnter={() => setHoveredItem("dashboard")}
+              onMouseLeave={() => setHoveredItem("")}
+            >
+              {hoveredItem === "dashboard" && (
+                <div style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "3px",
+                  backgroundColor: "white",
+                  borderRadius: "0 3px 3px 0"
+                }} />
+              )}
               <span style={{ fontSize: "16px" }}>📊</span> Dashboard
             </a>
-            <a href="/issues" style={{ 
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              padding: "10px 12px", 
-              color: "rgba(255,255,255,0.7)", 
-              textDecoration: "none",
-              borderRadius: "6px",
-              fontSize: "13px"
-            }}>
+            <a 
+              href="/issues" 
+              style={{ 
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 12px", 
+                color: "rgba(255,255,255,0.7)", 
+                textDecoration: "none",
+                borderRadius: "6px",
+                fontSize: "13px",
+                backgroundColor: hoveredItem === "lista" ? "rgba(255,255,255,0.1)" : "transparent",
+                transition: "all 0.2s",
+                position: "relative"
+              }}
+              onMouseEnter={() => setHoveredItem("lista")}
+              onMouseLeave={() => setHoveredItem("")}
+            >
+              {hoveredItem === "lista" && (
+                <div style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "3px",
+                  backgroundColor: "rgba(255,255,255,0.7)",
+                  borderRadius: "0 3px 3px 0"
+                }} />
+              )}
               <span style={{ fontSize: "16px" }}>📋</span> Lista Issue
             </a>
-            <a href="/issues/nuova" style={{ 
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              padding: "10px 12px", 
-              color: "rgba(255,255,255,0.7)", 
-              textDecoration: "none",
-              borderRadius: "6px",
-              fontSize: "13px"
-            }}>
+            <a 
+              href="/issues/nuova" 
+              style={{ 
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 12px", 
+                color: "rgba(255,255,255,0.7)", 
+                textDecoration: "none",
+                borderRadius: "6px",
+                fontSize: "13px",
+                backgroundColor: hoveredItem === "nuova" ? "rgba(255,255,255,0.1)" : "transparent",
+                transition: "all 0.2s",
+                position: "relative"
+              }}
+              onMouseEnter={() => setHoveredItem("nuova")}
+              onMouseLeave={() => setHoveredItem("")}
+            >
+              {hoveredItem === "nuova" && (
+                <div style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "3px",
+                  backgroundColor: "rgba(255,255,255,0.7)",
+                  borderRadius: "0 3px 3px 0"
+                }} />
+              )}
               <span style={{ fontSize: "16px" }}>➕</span> Nuova Issue
             </a>
           </nav>
         </div>
         
-        {/* Footer Sidebar */}
+        {/* Spacer per spingere profilo/logout in basso */}
+        <div style={{ flex: 1 }} />
+        
         <div style={{ 
           padding: "20px", 
-          borderTop: "1px solid rgba(255,255,255,0.1)",
+          borderTop: "1px solid rgba(255,255,255,0.15)",
           color: "white"
         }}>
-          <a href="/profilo" style={{ 
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            color: "rgba(255,255,255,0.7)",
-            textDecoration: "none",
-            fontSize: "13px",
-            marginBottom: "6px"
-          }}>
+          <a 
+            href="/profilo" 
+            style={{ 
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              color: "rgba(255,255,255,0.7)",
+              textDecoration: "none",
+              fontSize: "13px",
+              marginBottom: "6px",
+              padding: "8px 12px",
+              borderRadius: "6px",
+              backgroundColor: hoveredItem === "profilo" ? "rgba(255,255,255,0.1)" : "transparent",
+              transition: "all 0.2s",
+              position: "relative"
+            }}
+            onMouseEnter={() => setHoveredItem("profilo")}
+            onMouseLeave={() => setHoveredItem("")}
+          >
+            {hoveredItem === "profilo" && (
+              <div style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: "3px",
+                backgroundColor: "rgba(255,255,255,0.7)",
+                borderRadius: "0 3px 3px 0"
+              }} />
+            )}
             <span style={{ fontSize: "16px" }}>👤</span> Profilo
           </a>
-          <a href="/logout" style={{ 
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            color: "rgba(255,255,255,0.7)",
-            textDecoration: "none",
-            fontSize: "13px"
-          }}>
+          <a 
+            href="/logout" 
+            style={{ 
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              color: "rgba(255,255,255,0.7)",
+              textDecoration: "none",
+              fontSize: "13px",
+              padding: "8px 12px",
+              borderRadius: "6px",
+              backgroundColor: hoveredItem === "logout" ? "rgba(255,255,255,0.1)" : "transparent",
+              transition: "all 0.2s",
+              position: "relative"
+            }}
+            onMouseEnter={() => setHoveredItem("logout")}
+            onMouseLeave={() => setHoveredItem("")}
+          >
+            {hoveredItem === "logout" && (
+              <div style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: "3px",
+                backgroundColor: "rgba(255,255,255,0.7)",
+                borderRadius: "0 3px 3px 0"
+              }} />
+            )}
             <span style={{ fontSize: "16px" }}>🚪</span> Logout
           </a>
         </div>
@@ -272,16 +436,14 @@ function Home() {
             <div style={{ 
               width: "36px",
               height: "36px",
-              backgroundColor: "#0d9488",
+              backgroundColor: "#e0f2f1",
               borderRadius: "50%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "white",
-              fontSize: "16px",
               cursor: "pointer"
             }}>
-              👤
+              <UserIcon />
             </div>
           </div>
         </header>
@@ -308,15 +470,15 @@ function Home() {
               display: "inline-flex",
               alignItems: "center",
               gap: "8px",
-              padding: "8px 16px",
+              padding: "8px 12px",
               backgroundColor: "white",
-              border: "1px solid #e5e7eb",
+              border: "1px solid #d1d5db",
               borderRadius: "6px",
               cursor: "pointer",
               fontSize: "14px",
               color: "#374151"
             }}>
-              <span>📅</span>
+              <CalendarIcon />
               <select 
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
@@ -326,7 +488,8 @@ function Home() {
                   backgroundColor: "transparent",
                   cursor: "pointer",
                   fontSize: "14px",
-                  color: "#374151"
+                  color: "#374151",
+                  paddingRight: "20px"
                 }}
               >
                 <option value="all">Tutte le issue</option>
@@ -334,6 +497,7 @@ function Home() {
                 <option value="inprogress">In Progress</option>
                 <option value="done">Done</option>
               </select>
+              <span style={{ color: "#9ca3af", fontSize: "12px" }}>▼</span>
             </div>
           </div>
 
@@ -362,16 +526,15 @@ function Home() {
                   Issue Totali
                 </div>
                 <div style={{
-                  width: "36px",
-                  height: "36px",
+                  width: "40px",
+                  height: "40px",
                   backgroundColor: "#dbeafe",
                   borderRadius: "8px",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "18px"
+                  justifyContent: "center"
                 }}>
-                  ≡
+                  <ListIcon />
                 </div>
               </div>
               <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
@@ -397,16 +560,15 @@ function Home() {
                   Issue Todo
                 </div>
                 <div style={{
-                  width: "36px",
-                  height: "36px",
+                  width: "40px",
+                  height: "40px",
                   backgroundColor: "#f3f4f6",
                   borderRadius: "8px",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "18px"
+                  justifyContent: "center"
                 }}>
-                  ⏰
+                  <ClockIcon />
                 </div>
               </div>
               <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
@@ -432,16 +594,15 @@ function Home() {
                   Issue In Progress
                 </div>
                 <div style={{
-                  width: "36px",
-                  height: "36px",
-                  backgroundColor: "#fed7aa",
+                  width: "40px",
+                  height: "40px",
+                  backgroundColor: "#fef3c7",
                   borderRadius: "8px",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "18px"
+                  justifyContent: "center"
                 }}>
-                  📈
+                  <TrendUpIcon />
                 </div>
               </div>
               <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
@@ -467,18 +628,15 @@ function Home() {
                   Issue Done
                 </div>
                 <div style={{
-                  width: "36px",
-                  height: "36px",
-                  backgroundColor: "#86efac",
+                  width: "40px",
+                  height: "40px",
+                  backgroundColor: "#d1fae5",
                   borderRadius: "8px",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "20px",
-                  fontWeight: "bold",
-                  color: "#166534"
+                  justifyContent: "center"
                 }}>
-                  ✓
+                  <CheckCircleIcon />
                 </div>
               </div>
               <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
