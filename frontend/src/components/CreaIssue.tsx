@@ -1,290 +1,422 @@
 import React, { useState } from "react";
-import axios from "axios";
-import { Upload, X, CheckCircle, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { issueService } from "../services/issueService";
+import { allegatoService } from "../services/allegatoService";
 
-const APIBASEURL = "http://localhost:8080/api";
+interface FormData {
+  titolo: string;
+  descrizione: string;
+  priorita: string;
+  stato: string;
+  tipo: string;
+  idCreatore: number;
+}
 
-export default function CreaIssue() {
+function CreaIssue() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+
+  const [formData, setFormData] = useState<FormData>({
     titolo: "",
     descrizione: "",
-    tipo: "",
     priorita: "medium",
-  });
-  const [file, setFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: string; text: string }>({
-    type: "",
-    text: "",
+    stato: "todo",
+    tipo: "bug",
+    idCreatore: 1 // TODO: prendere dall'utente loggato
   });
 
-  // Tipo e priorità
-  const tipiIssue = [
-    { value: "bug", label: "Bug" },
-    { value: "features", label: "Features" },
-    { value: "question", label: "Question" },
-    { value: "documentation", label: "Documentation" },
-  ];
-  const prioritaOptions = [
-    { value: "low", label: "Low" },
-    { value: "medium", label: "Medium" },
-    { value: "high", label: "High" },
-    { value: "critical", label: "Critical" },
-  ];
-
-  // Input form
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: value
     }));
   };
 
-  // Input file
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-      if (!validTypes.includes(selectedFile.type)) {
-        setMessage({ type: "error", text: "Formato non supportato. Usa JPEG, PNG, GIF o WebP." });
-        return;
-      }
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        setMessage({ type: "error", text: "Il file supera i 5MB." });
-        return;
-      }
-      setFile(selectedFile);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFilePreview(reader.result as string);
-      };
-      reader.readAsDataURL(selectedFile);
-      setMessage({ type: "", text: "" });
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...newFiles]);
     }
   };
 
-  const removeFile = () => {
-    setFile(null);
-    setFilePreview(null);
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Submit
-  const handleSubmit = async () => {
-    if (!formData.titolo.trim()) {
-      setMessage({ type: "error", text: "Il titolo è obbligatorio" });
-      return;
-    }
-    if (!formData.descrizione.trim()) {
-      setMessage({ type: "error", text: "La descrizione è obbligatoria" });
-      return;
-    }
-    if (!formData.tipo) {
-      setMessage({ type: "error", text: "Seleziona un tipo di issue" });
-      return;
-    }
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
-    setMessage({ type: "", text: "" });
+    setError("");
 
     try {
       // 1. Crea l'issue
-      const issueResponse = await axios.post(
-        `${APIBASEURL}/issue/crea`,
-        {
-          titolo: formData.titolo,
-          descrizione: formData.descrizione,
-          tipo: formData.tipo,
-          priorita: formData.priorita,
-          stato: "todo",
-          idCreatore: 1, // TODO: sostituire con utente loggato
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            "Content-Type": "application/json",
-          },
+      const newIssue = await issueService.createIssue(formData);
+
+      // 2. Upload allegati se presenti
+      if (files.length > 0) {
+        for (const file of files) {
+          await allegatoService.uploadAllegato(file, newIssue.idIssue);
         }
-      );
-
-      const createdIssue = issueResponse.data;
-
-      // 2. Upload allegato se presente
-      if (file && createdIssue.idIssue) {
-        const fd = new FormData();
-        fd.append("file", file);
-        fd.append("idIssue", createdIssue.idIssue);
-        await axios.post(`${APIBASEURL}/allegato/upload`, fd, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            "Content-Type": "multipart/form-data",
-          },
-        });
       }
 
-      setMessage({ type: "success", text: "Issue creata con successo!" });
-      setTimeout(() => navigate("/lista-issue"), 1500);
-    } catch (error: any) {
-      setMessage({ type: "error", text: error?.response?.data?.message || "Errore di connessione al server" });
+      setSuccess(true);
+      setTimeout(() => {
+        navigate("/issues");
+      }, 1500);
+
+    } catch (err: any) {
+      console.error("Errore creazione issue:", err);
+      setError(err.response?.data?.message || "Errore durante la creazione dell'issue");
     } finally {
       setLoading(false);
     }
   };
 
-  // Resetta
-  const handleReset = () => {
-    setFormData({ titolo: "", descrizione: "", tipo: "", priorita: "medium" });
-    setFile(null);
-    setFilePreview(null);
-    setMessage({ type: "", text: "" });
-  };
-
-  // RENDER
   return (
-    <div className="flex-1 p-8">
-      <div className="max-w-3xl">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Crea Nuova Issue</h1>
-        <p className="text-gray-500 mb-8">
-          Add a new issue to track bugs, features, or questions
-        </p>
-        {/* Message Alert */}
-        {message.text && (
-          <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
-            message.type === "success"
-              ? "bg-green-50 text-green-800 border border-green-200"
-              : "bg-red-50 text-red-800 border border-red-200"
-          }`}>
-            {message.type === "success" ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-            <span>{message.text}</span>
+    <div style={{ 
+      minHeight: "100vh", 
+      backgroundColor: "#f5f7fa",
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
+      {/* Header */}
+      <header style={{
+        backgroundColor: "white",
+        borderBottom: "1px solid #e5e7eb",
+        padding: "16px 32px",
+        marginBottom: "32px"
+      }}>
+        <div style={{ 
+          maxWidth: "1200px", 
+          margin: "0 auto",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px"
+        }}>
+          <button
+            onClick={() => navigate("/issues")}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#f3f4f6",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "14px"
+            }}
+          >
+            ← Indietro
+          </button>
+          <h1 style={{ fontSize: "24px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
+            Crea Nuova Issue
+          </h1>
+        </div>
+      </header>
+
+      {/* Form */}
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 32px" }}>
+        {error && (
+          <div style={{
+            backgroundColor: "#fee2e2",
+            border: "1px solid #fecaca",
+            color: "#dc2626",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            marginBottom: "24px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
+          }}>
+            <span style={{ fontSize: "20px" }}>⚠️</span>
+            {error}
           </div>
         )}
 
-        {/* Form Card */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Dettagli Issue</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            Fill in the details for your new issue
-          </p>
-          
+        {success && (
+          <div style={{
+            backgroundColor: "#d1fae5",
+            border: "1px solid #a7f3d0",
+            color: "#065f46",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            marginBottom: "24px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
+          }}>
+            <span style={{ fontSize: "20px" }}>✅</span>
+            Issue creata con successo! Reindirizzamento in corso...
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ backgroundColor: "white", borderRadius: "12px", padding: "32px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
           {/* Titolo */}
-          <div className="mb-5">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Titolo <span className="text-red-500">*</span>
+          <div style={{ marginBottom: "24px" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#374151" }}>
+              Titolo *
             </label>
             <input
               type="text"
               name="titolo"
               value={formData.titolo}
               onChange={handleInputChange}
-              placeholder="Enter issue title"
-              maxLength={200}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              required
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                fontSize: "16px",
+                boxSizing: "border-box"
+              }}
+              placeholder="Inserisci il titolo dell'issue"
             />
-            <div className="text-xs text-gray-400 text-right mt-1">{formData.titolo.length}/200</div>
           </div>
 
           {/* Descrizione */}
-          <div className="mb-5">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Descrizione <span className="text-red-500">*</span>
+          <div style={{ marginBottom: "24px" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#374151" }}>
+              Descrizione
             </label>
             <textarea
               name="descrizione"
               value={formData.descrizione}
               onChange={handleInputChange}
-              placeholder="Enter detailed description"
-              maxLength={5000}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+              rows={6}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                fontSize: "16px",
+                resize: "vertical",
+                fontFamily: "inherit",
+                boxSizing: "border-box"
+              }}
+              placeholder="Descrivi l'issue in dettaglio..."
             />
-            <div className="text-xs text-gray-400 text-right mt-1">{formData.descrizione.length}/5000</div>
           </div>
 
-          {/* Tipo e Priorità */}
-          <div className="grid grid-cols-2 gap-4 mb-5">
+          {/* Row: Tipo e Priorità */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+            {/* Tipo */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Tipo <span className="text-red-500">*</span>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#374151" }}>
+                Tipo *
               </label>
               <select
                 name="tipo"
                 value={formData.tipo}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  fontSize: "16px",
+                  backgroundColor: "white",
+                  cursor: "pointer"
+                }}
               >
-                <option value="">Select issue type</option>
-                {tipiIssue.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
+                <option value="bug">🐛 Bug</option>
+                <option value="features">✨ Feature</option>
+                <option value="documentation">📚 Documentation</option>
+                <option value="question">❓ Question</option>
               </select>
             </div>
+
+            {/* Priorità */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Priorità (facoltativo)
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#374151" }}>
+                Priorità *
               </label>
               <select
                 name="priorita"
                 value={formData.priorita}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  fontSize: "16px",
+                  backgroundColor: "white",
+                  cursor: "pointer"
+                }}
               >
-                {prioritaOptions.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
+                <option value="low">🟢 Bassa</option>
+                <option value="medium">🟡 Media</option>
+                <option value="high">🟠 Alta</option>
+                <option value="critical">🔴 Critica</option>
               </select>
             </div>
           </div>
 
-          {/* Upload Allegato */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Allegato Immagine (facoltativo)</label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              {filePreview ? (
-                <div className="relative inline-block">
-                  <img src={filePreview} alt="Preview" className="max-h-32 rounded" />
-                  <button type="button" onClick={removeFile} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
-                    <X size={14} />
-                  </button>
-                  <p className="text-sm text-gray-600 mt-2">{file?.name}</p>
-                </div>
-              ) : (
-                <>
-                  <label className="cursor-pointer">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50">
-                      <Upload size={16} /> Upload Image
-                    </div>
-                    <input type="file" accept=".jpg,.jpeg,.png,.gif,.webp" onChange={handleFileChange} className="hidden" />
-                  </label>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Formati supportati: JPEG (.jpg, .jpeg), PNG (.png), GIF (.gif), WebP (.webp) - Max 5MB
-                  </p>
-                </>
-              )}
+          {/* Stato */}
+          <div style={{ marginBottom: "24px" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#374151" }}>
+              Stato *
+            </label>
+            <select
+              name="stato"
+              value={formData.stato}
+              onChange={handleInputChange}
+              required
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                fontSize: "16px",
+                backgroundColor: "white",
+                cursor: "pointer"
+              }}
+            >
+              <option value="todo">📋 To Do</option>
+              <option value="inprogress">🔄 In Progress</option>
+              <option value="done">✅ Done</option>
+            </select>
+          </div>
+
+          {/* Upload Allegati */}
+          <div style={{ marginBottom: "32px" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#374151" }}>
+              Allegati
+            </label>
+            <div style={{
+              border: "2px dashed #d1d5db",
+              borderRadius: "8px",
+              padding: "24px",
+              textAlign: "center",
+              backgroundColor: "#f9fafb",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.borderColor = "#3b82f6";
+              e.currentTarget.style.backgroundColor = "#eff6ff";
+            }}
+            onDragLeave={(e) => {
+              e.currentTarget.style.borderColor = "#d1d5db";
+              e.currentTarget.style.backgroundColor = "#f9fafb";
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.borderColor = "#d1d5db";
+              e.currentTarget.style.backgroundColor = "#f9fafb";
+              if (e.dataTransfer.files) {
+                const newFiles = Array.from(e.dataTransfer.files);
+                setFiles(prev => [...prev, ...newFiles]);
+              }
+            }}>
+              <input
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+                id="file-upload"
+              />
+              <label htmlFor="file-upload" style={{ cursor: "pointer" }}>
+                <div style={{ fontSize: "48px", marginBottom: "8px" }}>📎</div>
+                <p style={{ color: "#6b7280", marginBottom: "4px" }}>
+                  Clicca per selezionare o trascina i file qui
+                </p>
+                <p style={{ color: "#9ca3af", fontSize: "14px" }}>
+                  Puoi caricare più file contemporaneamente
+                </p>
+              </label>
             </div>
+
+            {/* Lista file selezionati */}
+            {files.length > 0 && (
+              <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                {files.map((file, index) => (
+                  <div key={index} style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px",
+                    backgroundColor: "#f9fafb",
+                    borderRadius: "6px",
+                    border: "1px solid #e5e7eb"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+                      <span style={{ fontSize: "20px" }}>📄</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 500, color: "#1f2937" }}>{file.name}</div>
+                        <div style={{ fontSize: "14px", color: "#6b7280" }}>
+                          {(file.size / 1024).toFixed(2)} KB
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      style={{
+                        padding: "4px 8px",
+                        backgroundColor: "#fee2e2",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        color: "#dc2626",
+                        fontSize: "18px"
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Buttons */}
-          <div className="flex gap-3">
+          <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
             <button
-              onClick={handleSubmit}
+              type="button"
+              onClick={() => navigate("/issues")}
               disabled={loading}
-              className="flex-1 bg-teal-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              style={{
+                padding: "12px 24px",
+                backgroundColor: "#f3f4f6",
+                color: "#374151",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "16px",
+                fontWeight: 500,
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.5 : 1
+              }}
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: "12px 24px",
+                backgroundColor: loading ? "#9ca3af" : "#3b82f6",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "16px",
+                fontWeight: 500,
+                cursor: loading ? "not-allowed" : "pointer",
+                transition: "background-color 0.2s"
+              }}
             >
               {loading ? "Creazione in corso..." : "Crea Issue"}
             </button>
-            <button
-              onClick={handleReset}
-              disabled={loading}
-              className="px-6 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
-            >
-              Reset
-            </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
 }
+
+export default CreaIssue;
