@@ -150,11 +150,12 @@ public class IssueController {
 		return stats;
 	}
 
-	// --- Helper per parsing enum ---
 	private Priorita parsePriorita(String value) {
-		if (value == null)
-			throw new InvalidInputException("Priorità non può essere null");
+		if (value == null || value.isBlank()) {
+			return Priorita.none;
+		}
 		return switch (value.toLowerCase()) {
+		case "none" -> Priorita.none;
 		case "critical" -> Priorita.critical;
 		case "high" -> Priorita.high;
 		case "medium" -> Priorita.medium;

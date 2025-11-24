@@ -7,8 +7,19 @@ const getAuthHeader = () => ({
 });
 
 export const allegatoService = {
-  // Upload un nuovo allegato
   uploadAllegato: async (file: File, idIssue: number) => {
+    // Validazione dimensione (max 5MB)
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > MAX_SIZE) {
+      throw new Error('Il file supera il limite di 5MB');
+    }
+
+    // Validazione formato
+    const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedFormats.includes(file.type)) {
+      throw new Error('Formato file non supportato. Usa JPEG, PNG, GIF o WebP');
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('idIssue', idIssue.toString());
@@ -26,7 +37,6 @@ export const allegatoService = {
     return response.data;
   },
 
-  // Ottieni tutti gli allegati di un'issue
   getAllegatiByIssue: async (idIssue: number) => {
     const response = await axios.get(
       `${API_BASE_URL}/allegato/issue/${idIssue}`,
@@ -37,7 +47,6 @@ export const allegatoService = {
     return response.data;
   },
 
-  // Download allegato
   downloadAllegato: async (id: number) => {
     const response = await axios.get(
       `${API_BASE_URL}/allegato/download/${id}`,
@@ -49,7 +58,6 @@ export const allegatoService = {
     return response;
   },
 
-  // Elimina allegato
   deleteAllegato: async (id: number) => {
     const response = await axios.delete(
       `${API_BASE_URL}/allegato/${id}`,
@@ -60,7 +68,6 @@ export const allegatoService = {
     return response.data;
   },
 
-  // Ottieni conteggio allegati
   countAllegati: async (idIssue: number) => {
     const response = await axios.get(
       `${API_BASE_URL}/allegato/issue/${idIssue}/count`,
@@ -71,7 +78,6 @@ export const allegatoService = {
     return response.data;
   },
 
-  // Ottieni dimensione totale
   getDimensioneTotale: async (idIssue: number) => {
     const response = await axios.get(
       `${API_BASE_URL}/allegato/issue/${idIssue}/dimensione-totale`,
