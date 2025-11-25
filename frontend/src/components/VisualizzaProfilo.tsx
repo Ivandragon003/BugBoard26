@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { authService } from "../services/authService";
 import API_BASE_URL from "../config";
 import axios from "axios";
+import Sidebar from "./Sidebar";
 
 export default function VisualizzaProfilo() {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState<{ email: string; ruolo: string }>({ email: "", ruolo: "" });
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
@@ -44,55 +46,273 @@ export default function VisualizzaProfilo() {
   };
 
   return (
-    <div style={{ maxWidth: 500, margin: "64px auto", background: "#fff", borderRadius: 12, padding: 32 }}>
-      <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 20 }}>Profilo utente</h2>
-      <div style={{ marginBottom: 20 }}>
-        <div><strong>Email:</strong> {user.email}</div>
-        <div><strong>Ruolo:</strong> {user.ruolo}</div>
-      </div>
+    <div style={{ 
+      display: "flex", 
+      minHeight: "100vh", 
+      backgroundColor: "#f5f7fa",
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' 
+    }}>
+      {/* Sidebar condivisa */}
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      {isAdmin && !edit && (
-        <button onClick={() => setEdit(true)} style={{ marginBottom: 20, background: "#0d9488", color: "#fff", fontWeight: 600, borderRadius: 8, padding: "8px 16px" }}>
-          Modifica dati
-        </button>
-      )}
-
-      {edit && (
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 16 }}>
-            <label>Nuova email:</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              required
-              onChange={handleChange}
-              style={{ width: "100%", padding: 8, marginTop: 4 }}
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label>Nuova password: (opzionale)</label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              style={{ width: "100%", padding: 8, marginTop: 4 }}
-            />
-          </div>
-          {message.text && (
-            <div style={{ color: message.type === "success" ? "#16a34a" : "#e11d48", marginBottom: 12, fontWeight: 600 }}>
-              {message.text}
+      {/* Main content */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Header */}
+        <header style={{
+          backgroundColor: "white",
+          borderBottom: "1px solid #e5e7eb",
+          padding: "16px 32px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px"
+        }}>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{
+              padding: "8px 12px",
+              backgroundColor: "transparent",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "20px",
+              color: "#374151"
+            }}
+          >
+            ☰
+          </button>
+          <div>
+            <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
+              Profilo Utente
+            </h2>
+            <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "2px" }}>
+              Visualizza e gestisci le informazioni del tuo account
             </div>
-          )}
-          <button type="submit" style={{ background: "#0d9488", color: "#fff", fontWeight: 600, borderRadius: 8, padding: "8px 24px", marginRight: 10 }}>
-            Salva
-          </button>
-          <button type="button" onClick={() => setEdit(false)} style={{ borderRadius: 8, background: "#eee", fontWeight: 600, padding: "8px 24px" }}>
-            Annulla
-          </button>
-        </form>
-      )}
+          </div>
+        </header>
+
+        {/* Content */}
+        <div style={{ padding: "32px", maxWidth: 600, margin: "0 auto", width: "100%" }}>
+          <div style={{ 
+            background: "#fff", 
+            borderRadius: 12, 
+            padding: 32, 
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            border: "1px solid #e5e7eb"
+          }}>
+            {/* User Info */}
+            {!edit && (
+              <>
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "16px",
+                    marginBottom: "24px",
+                    paddingBottom: "24px",
+                    borderBottom: "1px solid #e5e7eb"
+                  }}>
+                    <div style={{
+                      width: "64px",
+                      height: "64px",
+                      backgroundColor: "#e0f2f1",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "28px"
+                    }}>
+                      👤
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "18px", fontWeight: 600, color: "#1f2937" }}>
+                        {user.email}
+                      </div>
+                      <div style={{ fontSize: "14px", color: "#6b7280", marginTop: "4px" }}>
+                        Ruolo: <span style={{ 
+                          fontWeight: 600, 
+                          color: isAdmin ? "#0d9488" : "#6b7280" 
+                        }}>
+                          {user.ruolo}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div style={{ 
+                      padding: "12px 16px",
+                      backgroundColor: "#f9fafb",
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>
+                        Email
+                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 500, color: "#1f2937" }}>
+                        {user.email}
+                      </div>
+                    </div>
+
+                    <div style={{ 
+                      padding: "12px 16px",
+                      backgroundColor: "#f9fafb",
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>
+                        Ruolo
+                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 500, color: "#1f2937" }}>
+                        {user.ruolo}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {isAdmin && (
+                  <button 
+                    onClick={() => setEdit(true)} 
+                    style={{ 
+                      width: "100%",
+                      background: "#0d9488", 
+                      color: "#fff", 
+                      border: "none",
+                      fontWeight: 600, 
+                      borderRadius: 8, 
+                      padding: "12px 16px",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      transition: "background-color 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0f766e"}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#0d9488"}
+                  >
+                    ✏️ Modifica dati
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Edit Form */}
+            {edit && (
+              <form onSubmit={handleSubmit}>
+                <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#1f2937", marginBottom: "20px" }}>
+                  Modifica Profilo
+                </h3>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ 
+                    display: "block", 
+                    fontSize: "13px", 
+                    fontWeight: 500, 
+                    color: "#374151",
+                    marginBottom: "6px"
+                  }}>
+                    Nuova email:
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    required
+                    onChange={handleChange}
+                    style={{ 
+                      width: "100%", 
+                      padding: "10px 14px", 
+                      border: "1px solid #d1d5db",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ 
+                    display: "block", 
+                    fontSize: "13px", 
+                    fontWeight: 500, 
+                    color: "#374151",
+                    marginBottom: "6px"
+                  }}>
+                    Nuova password (opzionale):
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="Lascia vuoto per non modificare"
+                    style={{ 
+                      width: "100%", 
+                      padding: "10px 14px", 
+                      border: "1px solid #d1d5db",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+
+                {message.text && (
+                  <div style={{ 
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    marginBottom: 16,
+                    color: message.type === "success" ? "#16a34a" : "#e11d48",
+                    backgroundColor: message.type === "success" ? "#f0fdf4" : "#fef2f2",
+                    border: `1px solid ${message.type === "success" ? "#bbf7d0" : "#fecaca"}`,
+                    fontWeight: 600,
+                    fontSize: "14px"
+                  }}>
+                    {message.text}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: "12px" }}>
+                  <button 
+                    type="submit" 
+                    style={{ 
+                      flex: 1,
+                      background: "#0d9488", 
+                      color: "#fff", 
+                      border: "none",
+                      fontWeight: 600, 
+                      borderRadius: 8, 
+                      padding: "10px 24px",
+                      fontSize: "14px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    💾 Salva
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setEdit(false);
+                      setMessage({ type: "", text: "" });
+                      setForm({ email: user.email, password: "" });
+                    }} 
+                    style={{ 
+                      flex: 1,
+                      borderRadius: 8, 
+                      background: "#f3f4f6", 
+                      color: "#374151",
+                      border: "1px solid #d1d5db",
+                      fontWeight: 600, 
+                      padding: "10px 24px",
+                      fontSize: "14px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    ❌ Annulla
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
