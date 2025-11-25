@@ -26,6 +26,7 @@ function ListaIssue() {
   const [filterStato, setFilterStato] = useState("");
   const [filterTipo, setFilterTipo] = useState("");
   const [filterPriorita, setFilterPriorita] = useState("");
+  const [sortType, setSortType] = useState("date_desc");
   const [hoveredItem, setHoveredItem] = useState("");
 
   useEffect(() => {
@@ -64,10 +65,47 @@ function ListaIssue() {
     if (filterPriorita) {
       filtered = filtered.filter(issue => issue.priorita.toLowerCase() === filterPriorita.toLowerCase());
     }
-    setFilteredIssues(filtered);
-  }, [searchTerm, filterStato, filterTipo, filterPriorita, issues]);
 
-  // Evidenziazione corretta in base al percorso
+    // Sorting, con gestione TS type-safe
+    let ordered = [...filtered];
+    switch (sortType) {
+      case "date_asc":
+        ordered.sort((a, b) => a.dataCreazione.localeCompare(b.dataCreazione));
+        break;
+      case "date_desc":
+        ordered.sort((a, b) => b.dataCreazione.localeCompare(a.dataCreazione));
+        break;
+      case "titolo_asc":
+        ordered.sort((a, b) => a.titolo.localeCompare(b.titolo));
+        break;
+      case "titolo_desc":
+        ordered.sort((a, b) => b.titolo.localeCompare(a.titolo));
+        break;
+      case "prio_asc": {
+        const prioOrder: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+        ordered.sort(
+          (a, b) =>
+            (prioOrder[a.priorita.toLowerCase()] || 0) -
+            (prioOrder[b.priorita.toLowerCase()] || 0)
+        );
+        break;
+      }
+      case "prio_desc": {
+        const prioOrder: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+        ordered.sort(
+          (a, b) =>
+            (prioOrder[b.priorita.toLowerCase()] || 0) -
+            (prioOrder[a.priorita.toLowerCase()] || 0)
+        );
+        break;
+      }
+      default:
+        break;
+    }
+
+    setFilteredIssues(ordered);
+  }, [searchTerm, filterStato, filterTipo, filterPriorita, sortType, issues]);
+
   const currentPath = location.pathname;
 
   // Stili pill
@@ -129,11 +167,22 @@ function ListaIssue() {
     return stato.charAt(0).toUpperCase() + stato.slice(1);
   };
 
+  // eliminazione CON conferma
+  const handleDelete = async (id: number) => {
+    try {
+      await issueService.deleteIssue(id);
+      loadIssues();
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Errore durante l'eliminazione");
+    }
+  };
+
   const resetFilters = () => {
     setSearchTerm("");
     setFilterStato("");
     setFilterTipo("");
     setFilterPriorita("");
+    setSortType("date_desc");
   };
 
   return (
@@ -235,10 +284,31 @@ function ListaIssue() {
         <header style={{
           backgroundColor: "white",
           borderBottom: "1px solid #e5e7eb",
-          padding: "24px 48px 12px 48px"
+          padding: "24px 48px 12px 48px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between"
         }}>
-          <div style={{ fontSize: "28px", fontWeight: 700, color: "#18181b" }}>Lista Issue</div>
-          <div style={{ fontSize: "15px", color: "#747b8c", marginTop: "2px" }}>Visualizza e gestisci tutte le issue</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                padding: "8px 12px",
+                backgroundColor: "transparent",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "20px",
+                color: "#374151"
+              }}
+            >
+              ☰
+            </button>
+            <div>
+              <span style={{ fontSize: "28px", fontWeight: 700, color: "#18181b" }}>Lista Issue</span>
+              <div style={{ fontSize: "15px", color: "#747b8c", marginTop: "2px" }}>Visualizza e gestisci tutte le issue</div>
+            </div>
+          </div>
         </header>
         {/* FILTRI E TABELLA */}
         <div style={{ maxWidth: 1400, margin: "32px auto", width: "100%" }}>
@@ -247,29 +317,41 @@ function ListaIssue() {
             padding: 32, marginBottom: 18
           }}>
             {/* FILTRI */}
-            <div style={{ display: "flex", gap: 14, marginBottom: 22 }}>
+            <div style={{ display: "flex", gap: 14, marginBottom: 22, flexWrap: "wrap" }}>
               <input type="text"
-                style={{ flex: 2, borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 180, fontSize: 15 }}
+                style={{ flex: 2, borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 140, fontSize: 15 }}
                 placeholder="Cerca issue..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-              <select value={filterStato} onChange={e => setFilterStato(e.target.value)} style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 120 }}>
+              <select value={filterStato} onChange={e => setFilterStato(e.target.value)} style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 110 }}>
                 <option value="">Tutti gli stati</option>
                 <option value="todo">To Do</option>
                 <option value="inprogress">In Progress</option>
                 <option value="done">Done</option>
               </select>
-              <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 110 }}>
+              <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 100 }}>
                 <option value="">Tutti i tipi</option>
                 <option value="documentation">Documentation</option>
                 <option value="features">Feature</option>
                 <option value="bug">Bug</option>
                 <option value="question">Question</option>
               </select>
-              <select value={filterPriorita} onChange={e => setFilterPriorita(e.target.value)} style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 120 }}>
+              <select value={filterPriorita} onChange={e => setFilterPriorita(e.target.value)} style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 100 }}>
                 <option value="">Tutte le priorità</option>
                 <option value="low">Bassa</option>
                 <option value="medium">Media</option>
                 <option value="high">Alta</option>
                 <option value="critical">Critica</option>
+              </select>
+              <select
+                value={sortType}
+                onChange={e => setSortType(e.target.value)}
+                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 170 }}
+              >
+                <option value="date_desc">Data (più recente)</option>
+                <option value="date_asc">Data (più vecchio)</option>
+                <option value="titolo_asc">Titolo (A-Z)</option>
+                <option value="titolo_desc">Titolo (Z-A)</option>
+                <option value="prio_desc">Priorità (alta-bassa)</option>
+                <option value="prio_asc">Priorità (bassa-alta)</option>
               </select>
               <button onClick={resetFilters} style={{
                 padding: "10px 16px",
@@ -353,21 +435,33 @@ function ListaIssue() {
                           {formatDate(issue.dataCreazione)}
                         </td>
                         <td style={{ padding: "14px 24px", textAlign: "center" }}>
-                          <button title="Vedi" style={{
+                          {/* Nuova icona Dettagli: info/documento, NO occhio */}
+                          <button title="Dettagli" style={{
                             background: "none",
                             border: "none",
                             cursor: "pointer",
                             color: "#2462de",
                             fontSize: 18,
                             marginRight: 14
-                          }} onClick={() => navigate(`/issues/${issue.idIssue}`)}>👁️</button>
+                          }} onClick={() => navigate(`/issues/${issue.idIssue}`)}>
+                            {/* SVG Info */}
+                            <svg width="20" height="20" fill="none" stroke="#2462de" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                              <circle cx="12" cy="12" r="10" />
+                              <line x1="12" y1="16" x2="12" y2="12" />
+                              <line x1="12" y1="8" x2="12.01" y2="8" />
+                            </svg>
+                          </button>
+                          {/* Elimina CON conferma */}
                           <button title="Elimina" style={{
                             background: "none",
                             border: "none",
                             cursor: "pointer",
                             color: "#dc2626",
                             fontSize: 18
-                          }} onClick={() => alert("Funzione elimina qui!")}>🗑️</button>
+                          }} onClick={() => {
+                            if (window.confirm("Sei sicuro di voler eliminare questa issue?"))
+                              handleDelete(issue.idIssue);
+                          }}>🗑️</button>
                         </td>
                       </tr>
                     ))
