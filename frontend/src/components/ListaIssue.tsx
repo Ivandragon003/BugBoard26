@@ -17,21 +17,20 @@ interface Issue {
 function ListaIssue() {
   const navigate = useNavigate();
   const location = useLocation();
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStato, setFilterStato] = useState("");
   const [filterTipo, setFilterTipo] = useState("");
   const [filterPriorita, setFilterPriorita] = useState("");
   const [sortType, setSortType] = useState("date_desc");
-  const [hoveredItem, setHoveredItem] = useState("");
 
   useEffect(() => {
     loadIssues();
-    // eslint-disable-next-line
   }, []);
 
   const loadIssues = async () => {
@@ -40,9 +39,8 @@ function ListaIssue() {
       const data = await issueService.getAllIssues();
       setIssues(data);
       setFilteredIssues(data);
-      setError("");
     } catch (err: any) {
-      setError(err.response?.data?.message || "Errore nel caricamento delle issue");
+      alert(err.response?.data?.message || "Errore nel caricamento delle issue");
     } finally {
       setLoading(false);
     }
@@ -50,24 +48,28 @@ function ListaIssue() {
 
   useEffect(() => {
     let filtered = [...issues];
+
     if (searchTerm) {
       filtered = filtered.filter(issue =>
         issue.titolo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         issue.descrizione?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
+
     if (filterStato) {
       filtered = filtered.filter(issue => issue.stato.toLowerCase() === filterStato.toLowerCase());
     }
+
     if (filterTipo) {
       filtered = filtered.filter(issue => issue.tipo.toLowerCase() === filterTipo.toLowerCase());
     }
+
     if (filterPriorita) {
       filtered = filtered.filter(issue => issue.priorita.toLowerCase() === filterPriorita.toLowerCase());
     }
 
-    // Sorting, con gestione TS type-safe
     let ordered = [...filtered];
+
     switch (sortType) {
       case "date_asc":
         ordered.sort((a, b) => a.dataCreazione.localeCompare(b.dataCreazione));
@@ -99,8 +101,6 @@ function ListaIssue() {
         );
         break;
       }
-      default:
-        break;
     }
 
     setFilteredIssues(ordered);
@@ -108,66 +108,55 @@ function ListaIssue() {
 
   const currentPath = location.pathname;
 
-  // Stili pill
   const getStatoStyle = (stato: string) => {
     switch (stato.toLowerCase()) {
-      case "todo":
-        return { backgroundColor: "#e5e7eb", color: "#374151" };
+      case "todo": return { backgroundColor: "#e5e7eb", color: "#374151" };
       case "inprogress":
-      case "in_progress":
-        return { backgroundColor: "#fed7aa", color: "#9a3412" };
-      case "done":
-        return { backgroundColor: "#86efac", color: "#166534" };
-      default:
-        return { backgroundColor: "#e5e7eb", color: "#374151" };
+      case "in_progress": return { backgroundColor: "#fed7aa", color: "#9a3412" };
+      case "done": return { backgroundColor: "#86efac", color: "#166534" };
+      default: return { backgroundColor: "#e5e7eb", color: "#374151" };
     }
   };
+
   const getTipoStyle = (tipo: string) => {
     switch (tipo.toLowerCase()) {
-      case "documentation":
-        return { backgroundColor: "#d1fae5", color: "#065f46" };
+      case "documentation": return { backgroundColor: "#d1fae5", color: "#065f46" };
       case "feature":
-      case "features":
-        return { backgroundColor: "#dbeafe", color: "#1e40af" };
-      case "bug":
-        return { backgroundColor: "#fee2e2", color: "#991b1b" };
-      case "question":
-        return { backgroundColor: "#e9d5ff", color: "#6b21a8" };
-      default:
-        return { backgroundColor: "#e5e7eb", color: "#374151" };
+      case "features": return { backgroundColor: "#dbeafe", color: "#1e40af" };
+      case "bug": return { backgroundColor: "#fee2e2", color: "#991b1b" };
+      case "question": return { backgroundColor: "#e9d5ff", color: "#6b21a8" };
+      default: return { backgroundColor: "#e5e7eb", color: "#374151" };
     }
   };
+
   const getPrioritaStyle = (priorita: string) => {
     switch (priorita.toLowerCase()) {
-      case "critical":
-        return { backgroundColor: "#fecaca", color: "#7f1d1d" };
-      case "high":
-        return { backgroundColor: "#fee2e2", color: "#991b1b" };
-      case "medium":
-        return { backgroundColor: "#fef3c7", color: "#92400e" };
-      case "low":
-        return { backgroundColor: "#f3f4f6", color: "#374151" };
-      default:
-        return { backgroundColor: "#f3f4f6", color: "#374151" };
+      case "critical": return { backgroundColor: "#fecaca", color: "#7f1d1d" };
+      case "high": return { backgroundColor: "#fee2e2", color: "#991b1b" };
+      case "medium": return { backgroundColor: "#fef3c7", color: "#92400e" };
+      case "low": return { backgroundColor: "#f3f4f6", color: "#374151" };
+      default: return { backgroundColor: "#f3f4f6", color: "#374151" };
     }
   };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
     return date.toLocaleDateString("it-IT", {
       day: "2-digit",
       month: "2-digit",
-      year: "numeric",
+      year: "numeric"
     });
   };
+
   const formatStato = (stato: string) => {
-    if (stato.toLowerCase() === "inprogress" || stato.toLowerCase() === "in_progress") return "In Progress";
-    if (stato.toLowerCase() === "todo") return "To Do";
-    if (stato.toLowerCase() === "done") return "Done";
+    const s = stato.toLowerCase();
+    if (s === "inprogress" || s === "in_progress") return "In Progress";
+    if (s === "todo") return "To Do";
+    if (s === "done") return "Done";
     return stato.charAt(0).toUpperCase() + stato.slice(1);
   };
 
-  // eliminazione CON conferma
   const handleDelete = async (id: number) => {
     try {
       await issueService.deleteIssue(id);
@@ -186,26 +175,25 @@ function ListaIssue() {
   };
 
   return (
-    <div style={{
-      display: "flex",
-      minHeight: "100vh",
-      backgroundColor: "#f5f7fa",
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-    }}>
-      {/* Sidebar */}
+    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
+      {/* SIDEBAR */}
       <div style={{
         width: sidebarOpen ? "200px" : "0",
         backgroundColor: "#0d9488",
         transition: "width 0.3s",
         overflow: "hidden",
         display: "flex",
-        flexDirection: "column",
-        position: "relative"
+        flexDirection: "column"
       }}>
-        <div style={{
-          padding: "20px", color: "white"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid rgba(255,255,255,0.15)" }}>
+        <div style={{ padding: "20px", color: "white" }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            marginBottom: "20px",
+            paddingBottom: "20px",
+            borderBottom: "1px solid rgba(255,255,255,0.15)"
+          }}>
             <div style={{
               width: "36px",
               height: "36px",
@@ -215,72 +203,88 @@ function ListaIssue() {
               alignItems: "center",
               justifyContent: "center",
               fontWeight: "bold",
-              color: "#0d9488",
-              fontSize: "14px"
-            }}>BB</div>
+              color: "#0d9488"
+            }}>
+              BB
+            </div>
+
             <div>
-              <div style={{ fontSize: "14px", fontWeight: "600" }}>BugBoard</div>
+              <div style={{ fontSize: "14px", fontWeight: 600 }}>BugBoard</div>
               <div style={{ fontSize: "11px", opacity: 0.8 }}>Dashboard</div>
             </div>
           </div>
+
           <nav>
             <a
               href="/home"
               style={{
-                display: "flex", alignItems: "center", gap: "10px",
-                padding: "10px 12px", textDecoration: "none", borderRadius: "6px",
-                fontSize: "13px", fontWeight: currentPath === "/home" ? 600 : 400,
-                color: currentPath === "/home" ? "#FFF" : "white",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 12px",
+                textDecoration: "none",
+                borderRadius: "6px",
+                fontSize: "13px",
+                fontWeight: currentPath === "/home" ? 600 : 400,
+                color: "white",
                 backgroundColor: currentPath === "/home"
                   ? "#059669"
                   : "rgba(255,255,255,0.15)",
-                marginBottom: "6px", transition: "background-color 0.2s", position: "relative"
+                marginBottom: "6px"
               }}
-              onMouseEnter={() => setHoveredItem("dashboard")}
-              onMouseLeave={() => setHoveredItem("")}
             >
-              <span style={{ fontSize: "16px" }}>📊</span> Dashboard
+              <span>📊</span> Dashboard
             </a>
+
             <a
               href="/issues"
               style={{
-                display: "flex", alignItems: "center", gap: "10px",
-                padding: "10px 12px", textDecoration: "none", borderRadius: "6px",
-                fontSize: "13px", fontWeight: currentPath.startsWith("/issues") && !currentPath.endsWith("/nuova") ? 600 : 400,
-                color: currentPath.startsWith("/issues") && !currentPath.endsWith("/nuova") ? "#FFF" : "white",
-                backgroundColor: currentPath.startsWith("/issues") && !currentPath.endsWith("/nuova")
-                  ? "#059669"
-                  : "rgba(255,255,255,0.15)",
-                marginBottom: "6px", transition: "background-color 0.2s", position: "relative"
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 12px",
+                textDecoration: "none",
+                borderRadius: "6px",
+                fontSize: "13px",
+                fontWeight:
+                  currentPath.startsWith("/issues") && !currentPath.endsWith("/nuova")
+                    ? 600 : 400,
+                color: "white",
+                backgroundColor:
+                  currentPath.startsWith("/issues") && !currentPath.endsWith("/nuova")
+                    ? "#059669"
+                    : "rgba(255,255,255,0.15)",
+                marginBottom: "6px"
               }}
-              onMouseEnter={() => setHoveredItem("lista")}
-              onMouseLeave={() => setHoveredItem("")}
             >
-              <span style={{ fontSize: "16px" }}>📋</span> Lista Issue
+              <span>📋</span> Lista Issue
             </a>
+
             <a
               href="/issues/nuova"
               style={{
-                display: "flex", alignItems: "center", gap: "10px",
-                padding: "10px 12px", textDecoration: "none", borderRadius: "6px",
-                fontSize: "13px", fontWeight: currentPath === "/issues/nuova" ? 600 : 400,
-                color: currentPath === "/issues/nuova" ? "#FFF" : "rgba(255,255,255,0.7)",
-                backgroundColor: currentPath === "/issues/nuova"
-                  ? "#059669"
-                  : "transparent",
-                marginBottom: "6px", transition: "background-color 0.2s", position: "relative"
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 12px",
+                textDecoration: "none",
+                borderRadius: "6px",
+                fontSize: "13px",
+                fontWeight: currentPath === "/issues/nuova" ? 600 : 400,
+                color: "white",
+                backgroundColor:
+                  currentPath === "/issues/nuova" ? "#059669" : "transparent",
+                marginBottom: "6px"
               }}
-              onMouseEnter={() => setHoveredItem("nuova")}
-              onMouseLeave={() => setHoveredItem("")}
             >
-              <span style={{ fontSize: "16px" }}>➕</span> Nuova Issue
+              <span>➕</span> Nuova Issue
             </a>
           </nav>
         </div>
       </div>
+
       {/* MAIN CONTENT */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* HEADER */}
         <header style={{
           backgroundColor: "white",
           borderBottom: "1px solid #e5e7eb",
@@ -296,55 +300,86 @@ function ListaIssue() {
                 padding: "8px 12px",
                 backgroundColor: "transparent",
                 border: "none",
-                borderRadius: "6px",
                 cursor: "pointer",
-                fontSize: "20px",
-                color: "#374151"
+                fontSize: "20px"
               }}
             >
               ☰
             </button>
+
             <div>
-              <span style={{ fontSize: "28px", fontWeight: 700, color: "#18181b" }}>Lista Issue</span>
-              <div style={{ fontSize: "15px", color: "#747b8c", marginTop: "2px" }}>Visualizza e gestisci tutte le issue</div>
+              <span style={{ fontSize: "28px", fontWeight: 700 }}>Lista Issue</span>
+              <div style={{ fontSize: "15px", color: "#747b8c" }}>
+                Visualizza e gestisci tutte le issue
+              </div>
             </div>
           </div>
         </header>
-        {/* FILTRI E TABELLA */}
+
+        {/* FILTRI + TABELLA */}
         <div style={{ maxWidth: 1400, margin: "32px auto", width: "100%" }}>
           <div style={{
-            background: "#fff", borderRadius: "12px", boxShadow: "0 1px 4px #0001",
-            padding: 32, marginBottom: 18
+            background: "#fff",
+            borderRadius: "12px",
+            boxShadow: "0 1px 4px #0001",
+            padding: 32,
+            marginBottom: 18
           }}>
             {/* FILTRI */}
             <div style={{ display: "flex", gap: 14, marginBottom: 22, flexWrap: "wrap" }}>
-              <input type="text"
-                style={{ flex: 2, borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 140, fontSize: 15 }}
-                placeholder="Cerca issue..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-              <select value={filterStato} onChange={e => setFilterStato(e.target.value)} style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 110 }}>
+              <input
+                type="text"
+                style={{
+                  flex: 2,
+                  borderRadius: 8,
+                  border: "1px solid #ddd",
+                  padding: 10,
+                  minWidth: 140
+                }}
+                placeholder="Cerca issue..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+
+              <select
+                value={filterStato}
+                onChange={e => setFilterStato(e.target.value)}
+                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10 }}
+              >
                 <option value="">Tutti gli stati</option>
                 <option value="todo">To Do</option>
                 <option value="inprogress">In Progress</option>
                 <option value="done">Done</option>
               </select>
-              <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 100 }}>
+
+              <select
+                value={filterTipo}
+                onChange={e => setFilterTipo(e.target.value)}
+                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10 }}
+              >
                 <option value="">Tutti i tipi</option>
                 <option value="documentation">Documentation</option>
                 <option value="features">Feature</option>
                 <option value="bug">Bug</option>
                 <option value="question">Question</option>
               </select>
-              <select value={filterPriorita} onChange={e => setFilterPriorita(e.target.value)} style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 100 }}>
+
+              <select
+                value={filterPriorita}
+                onChange={e => setFilterPriorita(e.target.value)}
+                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10 }}
+              >
                 <option value="">Tutte le priorità</option>
                 <option value="low">Bassa</option>
                 <option value="medium">Media</option>
                 <option value="high">Alta</option>
                 <option value="critical">Critica</option>
               </select>
+
               <select
                 value={sortType}
                 onChange={e => setSortType(e.target.value)}
-                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, minWidth: 170 }}
+                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10 }}
               >
                 <option value="date_desc">Data (più recente)</option>
                 <option value="date_asc">Data (più vecchio)</option>
@@ -353,127 +388,143 @@ function ListaIssue() {
                 <option value="prio_desc">Priorità (alta-bassa)</option>
                 <option value="prio_asc">Priorità (bassa-alta)</option>
               </select>
-              <button onClick={resetFilters} style={{
-                padding: "10px 16px",
-                backgroundColor: "#f3f4f6",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: 500
-              }}>
+
+              <button
+                onClick={resetFilters}
+                style={{
+                  padding: "10px 16px",
+                  backgroundColor: "#f3f4f6",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "14px"
+                }}
+              >
                 Reset
               </button>
             </div>
+
             {/* TABELLA */}
             <div style={{ width: "100%", overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#f9fafb" }}>
-                    <th style={{ padding: "14px 24px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#6b7280", textTransform: "uppercase" }}>Titolo</th>
-                    <th style={{ padding: "14px 24px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#6b7280", textTransform: "uppercase" }}>Stato</th>
-                    <th style={{ padding: "14px 24px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#6b7280", textTransform: "uppercase" }}>Tipo</th>
-                    <th style={{ padding: "14px 24px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#6b7280", textTransform: "uppercase" }}>Priorità</th>
-                    <th style={{ padding: "14px 24px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#6b7280", textTransform: "uppercase" }}>Data Creazione</th>
-                    <th style={{ padding: "14px 24px", textAlign: "center", fontSize: "13px", fontWeight: 600, color: "#6b7280", textTransform: "uppercase" }}>Azioni</th>
+                    <th style={thStyle}>Titolo</th>
+                    <th style={thStyle}>Stato</th>
+                    <th style={thStyle}>Tipo</th>
+                    <th style={thStyle}>Priorità</th>
+                    <th style={thStyle}>Data Creazione</th>
+                    <th style={{ ...thStyle, textAlign: "center" }}>Azioni</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={6} style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
-                        Caricamento in corso...
-                      </td>
+                      <td colSpan={6} style={loadingStyle}>Caricamento...</td>
                     </tr>
                   ) : filteredIssues.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
-                        Nessuna issue trovata
-                      </td>
+                      <td colSpan={6} style={loadingStyle}>Nessuna issue trovata</td>
                     </tr>
                   ) : (
                     filteredIssues.map(issue => (
-                      <tr key={issue.idIssue} style={{ borderTop: "1px solid #e5e7eb", background: "#fff" }}>
-                        <td style={{ padding: "14px 24px", color: "#1f2937", fontWeight: 500 }}>
-                          {issue.titolo}
+                      <tr key={issue.idIssue} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={tdStyle}>
+                          <strong
+                            style={{ cursor: "pointer" }}
+                            onClick={() => navigate(`/issues/${issue.idIssue}`)}
+                          >
+                            {issue.titolo}
+                          </strong>
                         </td>
-                        <td style={{ padding: "14px 24px" }}>
-                          <span style={{
-                            padding: "4px 12px",
-                            borderRadius: "12px",
-                            fontWeight: 500,
-                            fontSize: "13px",
-                            ...getStatoStyle(issue.stato)
-                          }}>
+
+                        <td style={tdStyle}>
+                          <span style={pill(getStatoStyle(issue.stato))}>
                             {formatStato(issue.stato)}
                           </span>
                         </td>
-                        <td style={{ padding: "14px 24px" }}>
-                          <span style={{
-                            padding: "4px 12px",
-                            borderRadius: "12px",
-                            fontWeight: 500,
-                            fontSize: "13px",
-                            ...getTipoStyle(issue.tipo)
-                          }}>
+
+                        <td style={tdStyle}>
+                          <span style={pill(getTipoStyle(issue.tipo))}>
                             {issue.tipo}
                           </span>
                         </td>
-                        <td style={{ padding: "14px 24px" }}>
-                          <span style={{
-                            padding: "4px 12px",
-                            borderRadius: "12px",
-                            fontWeight: 500,
-                            fontSize: "13px",
-                            textTransform: "lowercase",
-                            ...getPrioritaStyle(issue.priorita)
-                          }}>
+
+                        <td style={tdStyle}>
+                          <span style={pill(getPrioritaStyle(issue.priorita))}>
                             {issue.priorita}
                           </span>
                         </td>
-                        <td style={{ padding: "14px 24px", color: "#6b7280", fontSize: "14px" }}>
-                          {formatDate(issue.dataCreazione)}
-                        </td>
-                        <td style={{ padding: "14px 24px", textAlign: "center" }}>
-                          {/* Nuova icona Dettagli: info/documento, NO occhio */}
-                          <button title="Dettagli" style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: "#2462de",
-                            fontSize: 18,
-                            marginRight: 14
-                          }} onClick={() => navigate(`/issues/${issue.idIssue}`)}>
-                            {/* SVG Info */}
-                            <svg width="20" height="20" fill="none" stroke="#2462de" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                              <circle cx="12" cy="12" r="10" />
-                              <line x1="12" y1="16" x2="12" y2="12" />
-                              <line x1="12" y1="8" x2="12.01" y2="8" />
-                            </svg>
+
+                        <td style={tdStyle}>{formatDate(issue.dataCreazione)}</td>
+
+                        <td style={{ ...tdStyle, textAlign: "center" }}>
+                          <button
+                            onClick={() => navigate(`/issues/${issue.idIssue}`)}
+                            style={actionBtn}
+                          >
+                            ✏️
                           </button>
-                          {/* Elimina CON conferma */}
-                          <button title="Elimina" style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: "#dc2626",
-                            fontSize: 18
-                          }} onClick={() => {
-                            if (window.confirm("Sei sicuro di voler eliminare questa issue?"))
-                              handleDelete(issue.idIssue);
-                          }}>🗑️</button>
+
+                          <button
+                            onClick={() => handleDelete(issue.idIssue)}
+                            style={actionBtn}
+                          >
+                            🗑️
+                          </button>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
+
               </table>
             </div>
+
           </div>
         </div>
+
       </div>
     </div>
   );
 }
+
+const thStyle = {
+  padding: "14px 24px",
+  textAlign: "left" as const,
+  fontSize: "13px",
+  fontWeight: 600,
+  color: "#6b7280",
+  textTransform: "uppercase" as const
+};
+
+const tdStyle = {
+  padding: "12px 24px",
+  fontSize: "15px",
+  color: "#1f2937"
+};
+
+const loadingStyle = {
+  padding: "48px",
+  textAlign: "center" as const,
+  color: "#6b7280"
+};
+
+const pill = (style: any) => ({
+  padding: "6px 12px",
+  borderRadius: "20px",
+  fontSize: "13px",
+  fontWeight: 600,
+  ...style
+});
+
+const actionBtn = {
+  padding: "6px",
+  margin: "0 4px",
+  cursor: "pointer",
+  background: "transparent",
+  border: "none",
+  fontSize: "18px"
+};
 
 export default ListaIssue;
