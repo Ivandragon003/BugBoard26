@@ -34,7 +34,7 @@ function CreaIssue() {
     titolo: "",
     descrizione: "",
     priorita: "none",
-    stato: "todo",
+    stato: "Todo",
     tipo: "bug",
     idCreatore: user?.id || 0
   });
@@ -75,6 +75,8 @@ function CreaIssue() {
         ...formData,
         idCreatore: user.id
       };
+
+      console.log("Dati inviati:", dataToSend); // Debug
 
       const newIssue = await issueService.createIssue(dataToSend);
 
@@ -123,7 +125,7 @@ function CreaIssue() {
       backgroundColor: "#f5f7fa", 
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' 
     }}>
-      {/* Sidebar - IDENTICA A HOME */}
+      {/* Sidebar */}
       <div style={{
         width: sidebarOpen ? "200px" : "0",
         backgroundColor: "#0d9488",
@@ -133,7 +135,6 @@ function CreaIssue() {
         flexDirection: "column",
         position: "relative"
       }}>
-        {/* Linea verticale di separazione sul bordo destro */}
         <div style={{
           position: "absolute",
           right: 0,
@@ -267,7 +268,6 @@ function CreaIssue() {
           </nav>
         </div>
         
-        {/* Spacer per spingere profilo/logout in basso */}
         <div style={{ flex: 1 }} />
         
         <div style={{ 
@@ -348,7 +348,7 @@ function CreaIssue() {
       </div>
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header - STESSO STILE DI HOME */}
+        {/* Header */}
         <header style={{
           backgroundColor: "white",
           borderBottom: "1px solid #e5e7eb",
@@ -377,7 +377,7 @@ function CreaIssue() {
                 Crea Nuova Issue
               </h2>
               <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "2px" }}>
-                Add a new issue to track bugs, features, or questions
+                Aggiungi una nuova issue per tracciare bug, feature o domande
               </div>
             </div>
           </div>
@@ -453,7 +453,7 @@ function CreaIssue() {
               borderBottom: "1px solid #e5e7eb"
             }}>
               <h2 style={{ fontSize: "16px", fontWeight: 600, color: "#1f2937", margin: "0 0 4px 0" }}>
-                Crea Issue
+                Dettagli Issue
               </h2>
               <p style={{ fontSize: "14px", color: "#6b7280", margin: 0 }}>
                 Compila il form per la creazione di un issue
@@ -480,7 +480,7 @@ function CreaIssue() {
                   onChange={handleInputChange}
                   maxLength={200}
                   required
-                  placeholder="Inserisci il titolo "
+                  placeholder="Inserisci il titolo"
                   style={{
                     width: "100%",
                     padding: "10px 14px",
@@ -513,7 +513,7 @@ function CreaIssue() {
                   color: "#374151",
                   marginBottom: "8px"
                 }}>
-                  Descrizione <span style={{ color: "#ef4444" }}>*</span>  
+                  Descrizione <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <textarea
                   name="descrizione"
@@ -521,7 +521,7 @@ function CreaIssue() {
                   onChange={handleInputChange}
                   maxLength={5000}
                   rows={5}
-                  required 
+                  required
                   placeholder="Inserisci la descrizione dettagliata dell'issue"
                   style={{
                     width: "100%",
@@ -670,7 +670,7 @@ function CreaIssue() {
                     accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                     onChange={handleFileChange}
                     style={{ display: "none" }}
-                    id="allega file"
+                    id="file-upload"
                   />
                   <label htmlFor="file-upload" style={{ cursor: "pointer" }}>
                     <div style={{
@@ -692,14 +692,14 @@ function CreaIssue() {
                       color: "#0d9488",
                       margin: "0 0 4px 0"
                     }}>
-                      Upload Image
+                      Carica File
                     </p>
                     <p style={{
                       fontSize: "12px",
                       color: "#6b7280",
                       margin: 0
                     }}>
-                      Formati supportati: JPEG (.jpg, .jpeg), PNG (.png), GIF (.gif), WebP (.webp) - Max 5MB
+                      Formati supportati: JPEG, PNG, GIF, WebP - Max 5MB
                     </p>
                   </label>
                 </div>
@@ -783,8 +783,8 @@ function CreaIssue() {
                     setFormData({
                       titolo: "",
                       descrizione: "",
-                      priorita: "medium",
-                      stato: "todo",
+                      priorita: "none",
+                      stato: "Todo",
                       tipo: "bug",
                       idCreatore: user?.id || 0
                     });
