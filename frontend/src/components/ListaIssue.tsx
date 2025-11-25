@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
+import Sidebar from "./Sidebar";
 
 interface Issue {
   idIssue: number;
@@ -16,7 +17,6 @@ interface Issue {
 
 function ListaIssue() {
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -106,8 +106,6 @@ function ListaIssue() {
     setFilteredIssues(ordered);
   }, [searchTerm, filterStato, filterTipo, filterPriorita, sortType, issues]);
 
-  const currentPath = location.pathname;
-
   const getStatoStyle = (stato: string) => {
     switch (stato.toLowerCase()) {
       case "todo": return { backgroundColor: "#e5e7eb", color: "#374151" };
@@ -158,6 +156,7 @@ function ListaIssue() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!window.confirm("Sei sicuro di voler eliminare questa issue?")) return;
     try {
       await issueService.deleteIssue(id);
       loadIssues();
@@ -176,112 +175,8 @@ function ListaIssue() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-      {/* SIDEBAR */}
-      <div style={{
-        width: sidebarOpen ? "200px" : "0",
-        backgroundColor: "#0d9488",
-        transition: "width 0.3s",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column"
-      }}>
-        <div style={{ padding: "20px", color: "white" }}>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            marginBottom: "20px",
-            paddingBottom: "20px",
-            borderBottom: "1px solid rgba(255,255,255,0.15)"
-          }}>
-            <div style={{
-              width: "36px",
-              height: "36px",
-              backgroundColor: "white",
-              borderRadius: "6px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: "bold",
-              color: "#0d9488"
-            }}>
-              BB
-            </div>
-
-            <div>
-              <div style={{ fontSize: "14px", fontWeight: 600 }}>BugBoard</div>
-              <div style={{ fontSize: "11px", opacity: 0.8 }}>Dashboard</div>
-            </div>
-          </div>
-
-          <nav>
-            <a
-              href="/home"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 12px",
-                textDecoration: "none",
-                borderRadius: "6px",
-                fontSize: "13px",
-                fontWeight: currentPath === "/home" ? 600 : 400,
-                color: "white",
-                backgroundColor: currentPath === "/home"
-                  ? "#059669"
-                  : "rgba(255,255,255,0.15)",
-                marginBottom: "6px"
-              }}
-            >
-              <span>📊</span> Dashboard
-            </a>
-
-            <a
-              href="/issues"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 12px",
-                textDecoration: "none",
-                borderRadius: "6px",
-                fontSize: "13px",
-                fontWeight:
-                  currentPath.startsWith("/issues") && !currentPath.endsWith("/nuova")
-                    ? 600 : 400,
-                color: "white",
-                backgroundColor:
-                  currentPath.startsWith("/issues") && !currentPath.endsWith("/nuova")
-                    ? "#059669"
-                    : "rgba(255,255,255,0.15)",
-                marginBottom: "6px"
-              }}
-            >
-              <span>📋</span> Lista Issue
-            </a>
-
-            <a
-              href="/issues/nuova"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 12px",
-                textDecoration: "none",
-                borderRadius: "6px",
-                fontSize: "13px",
-                fontWeight: currentPath === "/issues/nuova" ? 600 : 400,
-                color: "white",
-                backgroundColor:
-                  currentPath === "/issues/nuova" ? "#059669" : "transparent",
-                marginBottom: "6px"
-              }}
-            >
-              <span>➕</span> Nuova Issue
-            </a>
-          </nav>
-        </div>
-      </div>
+      {/* Sidebar condivisa */}
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       {/* MAIN CONTENT */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -301,15 +196,16 @@ function ListaIssue() {
                 backgroundColor: "transparent",
                 border: "none",
                 cursor: "pointer",
-                fontSize: "20px"
+                fontSize: "20px",
+                color: "#374151"
               }}
             >
               ☰
             </button>
 
             <div>
-              <span style={{ fontSize: "28px", fontWeight: 700 }}>Lista Issue</span>
-              <div style={{ fontSize: "15px", color: "#747b8c" }}>
+              <span style={{ fontSize: "28px", fontWeight: 700, color: "#18181b" }}>Lista Issue</span>
+              <div style={{ fontSize: "15px", color: "#747b8c", marginTop: "2px" }}>
                 Visualizza e gestisci tutte le issue
               </div>
             </div>
@@ -334,7 +230,8 @@ function ListaIssue() {
                   borderRadius: 8,
                   border: "1px solid #ddd",
                   padding: 10,
-                  minWidth: 140
+                  minWidth: 140,
+                  fontSize: 14
                 }}
                 placeholder="Cerca issue..."
                 value={searchTerm}
@@ -344,7 +241,7 @@ function ListaIssue() {
               <select
                 value={filterStato}
                 onChange={e => setFilterStato(e.target.value)}
-                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10 }}
+                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, fontSize: 14 }}
               >
                 <option value="">Tutti gli stati</option>
                 <option value="todo">To Do</option>
@@ -355,7 +252,7 @@ function ListaIssue() {
               <select
                 value={filterTipo}
                 onChange={e => setFilterTipo(e.target.value)}
-                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10 }}
+                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, fontSize: 14 }}
               >
                 <option value="">Tutti i tipi</option>
                 <option value="documentation">Documentation</option>
@@ -367,7 +264,7 @@ function ListaIssue() {
               <select
                 value={filterPriorita}
                 onChange={e => setFilterPriorita(e.target.value)}
-                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10 }}
+                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, fontSize: 14 }}
               >
                 <option value="">Tutte le priorità</option>
                 <option value="low">Bassa</option>
@@ -379,7 +276,7 @@ function ListaIssue() {
               <select
                 value={sortType}
                 onChange={e => setSortType(e.target.value)}
-                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10 }}
+                style={{ borderRadius: 8, border: "1px solid #ddd", padding: 10, fontSize: 14 }}
               >
                 <option value="date_desc">Data (più recente)</option>
                 <option value="date_asc">Data (più vecchio)</option>
@@ -394,9 +291,11 @@ function ListaIssue() {
                 style={{
                   padding: "10px 16px",
                   backgroundColor: "#f3f4f6",
+                  border: "none",
                   borderRadius: "8px",
                   cursor: "pointer",
-                  fontSize: "14px"
+                  fontSize: "14px",
+                  fontWeight: 500
                 }}
               >
                 Reset
@@ -431,7 +330,7 @@ function ListaIssue() {
                       <tr key={issue.idIssue} style={{ borderBottom: "1px solid #e5e7eb" }}>
                         <td style={tdStyle}>
                           <strong
-                            style={{ cursor: "pointer" }}
+                            style={{ cursor: "pointer", color: "#0d9488" }}
                             onClick={() => navigate(`/issues/${issue.idIssue}`)}
                           >
                             {issue.titolo}
@@ -462,6 +361,7 @@ function ListaIssue() {
                           <button
                             onClick={() => navigate(`/issues/${issue.idIssue}`)}
                             style={actionBtn}
+                            title="Modifica"
                           >
                             ✏️
                           </button>
@@ -469,6 +369,7 @@ function ListaIssue() {
                           <button
                             onClick={() => handleDelete(issue.idIssue)}
                             style={actionBtn}
+                            title="Elimina"
                           >
                             🗑️
                           </button>

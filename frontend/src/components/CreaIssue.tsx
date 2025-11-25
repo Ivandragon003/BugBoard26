@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import { allegatoService } from "../services/allegatoService";
 import { authService } from "../services/authService";
+import Sidebar from "./Sidebar";
 
 interface FormData {
   titolo: string;
@@ -20,7 +21,6 @@ function CreaIssue() {
   const [success, setSuccess] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [hoveredItem, setHoveredItem] = useState<string>("");
 
   const user = authService.getUser();
 
@@ -76,7 +76,7 @@ function CreaIssue() {
         idCreatore: user.id
       };
 
-      console.log("Dati inviati:", dataToSend); // Debug
+      console.log("Dati inviati:", dataToSend);
 
       const newIssue = await issueService.createIssue(dataToSend);
 
@@ -125,227 +125,8 @@ function CreaIssue() {
       backgroundColor: "#f5f7fa", 
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' 
     }}>
-      {/* Sidebar */}
-      <div style={{
-        width: sidebarOpen ? "200px" : "0",
-        backgroundColor: "#0d9488",
-        transition: "width 0.3s",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        position: "relative"
-      }}>
-        <div style={{
-          position: "absolute",
-          right: 0,
-          top: 0,
-          bottom: 0,
-          width: "2px",
-          backgroundColor: "rgba(255,255,255,0.3)"
-        }} />
-        
-        <div style={{ padding: "20px", color: "white" }}>
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: "10px",
-            marginBottom: "20px",
-            paddingBottom: "20px",
-            borderBottom: "2px solid rgba(255,255,255,0.25)"
-          }}>
-            <div style={{
-              width: "36px",
-              height: "36px",
-              backgroundColor: "white",
-              borderRadius: "6px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: "bold",
-              color: "#0d9488",
-              fontSize: "14px"
-            }}>
-              BB
-            </div>
-            <div>
-              <div style={{ fontSize: "14px", fontWeight: "600" }}>BugBoard</div>
-              <div style={{ fontSize: "11px", opacity: 0.8 }}>Dashboard</div>
-            </div>
-          </div>
-          
-          <nav>
-            <a 
-              href="/home" 
-              style={{ 
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 12px", 
-                color: "rgba(255,255,255,0.7)", 
-                textDecoration: "none",
-                borderRadius: "6px",
-                backgroundColor: hoveredItem === "dashboard" ? "rgba(255,255,255,0.1)" : "transparent",
-                marginBottom: "6px",
-                fontSize: "13px",
-                transition: "all 0.2s",
-                position: "relative"
-              }}
-              onMouseEnter={() => setHoveredItem("dashboard")}
-              onMouseLeave={() => setHoveredItem("")}
-            >
-              {hoveredItem === "dashboard" && (
-                <div style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: "4px",
-                  backgroundColor: "white",
-                  borderRadius: "0 3px 3px 0"
-                }} />
-              )}
-              <span style={{ fontSize: "16px" }}>📊</span> Dashboard
-            </a>
-            <a 
-              href="/issues" 
-              style={{ 
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 12px", 
-                color: "rgba(255,255,255,0.7)", 
-                textDecoration: "none",
-                borderRadius: "6px",
-                fontSize: "13px",
-                backgroundColor: hoveredItem === "lista" ? "rgba(255,255,255,0.1)" : "transparent",
-                transition: "all 0.2s",
-                position: "relative"
-              }}
-              onMouseEnter={() => setHoveredItem("lista")}
-              onMouseLeave={() => setHoveredItem("")}
-            >
-              {hoveredItem === "lista" && (
-                <div style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: "4px",
-                  backgroundColor: "white",
-                  borderRadius: "0 3px 3px 0"
-                }} />
-              )}
-              <span style={{ fontSize: "16px" }}>📋</span> Lista Issue
-            </a>
-            <a 
-              href="/issues/nuova" 
-              style={{ 
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 12px", 
-                color: "white", 
-                textDecoration: "none",
-                borderRadius: "6px",
-                fontSize: "13px",
-                backgroundColor: "rgba(255,255,255,0.15)",
-                marginBottom: "6px",
-                transition: "all 0.2s",
-                position: "relative"
-              }}
-            >
-              <div style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: "4px",
-                backgroundColor: "white",
-                borderRadius: "0 3px 3px 0"
-              }} />
-              <span style={{ fontSize: "16px" }}>➕</span> Nuova Issue
-            </a>
-          </nav>
-        </div>
-        
-        <div style={{ flex: 1 }} />
-        
-        <div style={{ 
-          padding: "20px", 
-          borderTop: "2px solid rgba(255,255,255,0.25)",
-          color: "white"
-        }}>
-          <a 
-            href="/profilo" 
-            style={{ 
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              color: "rgba(255,255,255,0.7)",
-              textDecoration: "none",
-              fontSize: "13px",
-              marginBottom: "6px",
-              padding: "8px 12px",
-              borderRadius: "6px",
-              backgroundColor: hoveredItem === "profilo" ? "rgba(255,255,255,0.1)" : "transparent",
-              transition: "all 0.2s",
-              position: "relative"
-            }}
-            onMouseEnter={() => setHoveredItem("profilo")}
-            onMouseLeave={() => setHoveredItem("")}
-          >
-            {hoveredItem === "profilo" && (
-              <div style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: "4px",
-                backgroundColor: "white",
-                borderRadius: "0 3px 3px 0"
-              }} />
-            )}
-            <span style={{ fontSize: "16px" }}>👤</span> Profilo
-          </a>
-          <a 
-            href="/logout" 
-            onClick={(e) => {
-              e.preventDefault();
-              authService.logout();
-              navigate('/login');
-            }}
-            style={{ 
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              color: "rgba(255,255,255,0.7)",
-              textDecoration: "none",
-              fontSize: "13px",
-              padding: "8px 12px",
-              borderRadius: "6px",
-              backgroundColor: hoveredItem === "logout" ? "rgba(255,255,255,0.1)" : "transparent",
-              transition: "all 0.2s",
-              position: "relative",
-              cursor: "pointer"
-            }}
-            onMouseEnter={() => setHoveredItem("logout")}
-            onMouseLeave={() => setHoveredItem("")}
-          >
-            {hoveredItem === "logout" && (
-              <div style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: "4px",
-                backgroundColor: "white",
-                borderRadius: "0 3px 3px 0"
-              }} />
-            )}
-            <span style={{ fontSize: "16px" }}>🚪</span> Logout
-          </a>
-        </div>
-      </div>
+      {/* Sidebar condivisa */}
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Header */}
