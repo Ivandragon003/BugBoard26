@@ -10,17 +10,24 @@ public class EmailUtil {
 
     @Autowired
     private JavaMailSender mailSender;
- 
+
     public void sendEmail(String destinatario, String oggetto, String testo) {
+
+        System.out.println("=== INVIO EMAIL ===");
+        System.out.println("Destinatario: " + destinatario);
+        System.out.println("Oggetto: " + oggetto);
+
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(destinatario);
         message.setSubject(oggetto);
         message.setText(testo);
-        message.setFrom("[email protected]");
-        
+        message.setFrom("noreply@bugboard.it");
+
         mailSender.send(message);
+
+        System.out.println("✅ Email inviata con successo!");
     }
- 
+
     public void sendRecuperoPassword(String email, String nuovaPassword) {
         String testo = String.format(
             "Gentile utente,\n\n" +
@@ -29,6 +36,7 @@ public class EmailUtil {
             "BugBoard Team",
             nuovaPassword
         );
+
         sendEmail(email, "Recupero Password - BugBoard", testo);
     }
 }

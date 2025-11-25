@@ -14,6 +14,13 @@ export const authService = {
     return response.data;
   },
 
+  recuperaPassword: async (email: string) => {
+    const response = await axios.post(`${API_BASE_URL}/utenza/recupera-password`, { 
+      email 
+    });
+    return response.data;
+  },
+
   logout: () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
