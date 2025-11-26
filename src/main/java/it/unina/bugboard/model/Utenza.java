@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import it.unina.bugboard.exception.InvalidFieldException;
+import it.unina.bugboard.converter.RuoloConverter;
 
 @Entity
 @Table(name = "utenza")
@@ -38,7 +39,7 @@ public class Utenza {
 	@Column(nullable = false)
 	private String password;
 
-	@Enumerated(EnumType.STRING)
+	@Convert(converter = RuoloConverter.class)
 	@Column(nullable = false)
 	private Ruolo ruolo;
 
@@ -61,7 +62,7 @@ public class Utenza {
 		this.creatore = creatore;
 	}
 
-	// getter e setter con validazioni
+
 	public Integer getIdUtente() {
 		return idUtente;
 	}

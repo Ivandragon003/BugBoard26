@@ -65,8 +65,10 @@ public interface IssueDAO extends JpaRepository<Issue, Integer> {
 
 	List<Issue> findAllByOrderByDataUltimaModificaDesc();
 
-	@Query("SELECT i FROM Issue i WHERE i.priorita IN ('critical', 'high') AND i.archiviata = false")
-	List<Issue> findIssueUrgenti();
+	@Query("SELECT i FROM Issue i WHERE i.priorita IN :priorita AND i.archiviata = false")
+	List<Issue> findIssueUrgenti(@Param("priorita") List<Priorita> priorita);
+
+
 
 	List<Issue> findByStatoAndTipo(Stato stato, Tipo tipo);
 
