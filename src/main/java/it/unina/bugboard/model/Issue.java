@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import it.unina.bugboard.exception.InvalidFieldException;
 
@@ -50,7 +49,7 @@ public class Issue {
 	private LocalDateTime dataRisoluzione;
 
 	@ManyToOne
-	@JoinColumn(name = "idcreatore", nullable = false)
+	@JoinColumn(name = "idcreatore")
 	private Utenza creatore;
 
 	@ManyToOne
@@ -63,7 +62,7 @@ public class Issue {
 	private List<Utenza> utentiAssegnati = new ArrayList<>();
 
 	@OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
-	@JsonManagedReference
+	@JsonIgnore
 	private List<Allegato> allegati = new ArrayList<>();
 
 	public Issue() {
