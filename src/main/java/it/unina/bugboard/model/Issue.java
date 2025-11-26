@@ -71,6 +71,7 @@ public class Issue {
 		this.dataUltimaModifica = LocalDateTime.now();
 	}
 
+	// costruttore completo
 	public Issue(String titolo, String descrizione, Priorita priorita, Stato stato, Tipo tipo, Utenza creatore) {
 		this();
 		setTitolo(titolo);
@@ -81,6 +82,7 @@ public class Issue {
 		setCreatore(creatore);
 	}
 
+	// getter e setter con validazione
 	public Integer getIdIssue() {
 		return idIssue;
 	}
@@ -216,61 +218,4 @@ public class Issue {
 	public void setAllegati(List<Allegato> allegati) {
 		this.allegati = allegati;
 	}
-
-	public String toStringTitolo() {
-		return "Titolo: " + titolo;
-	}
-
-	public String toStringDescrizione() {
-		return "Descrizione: " + descrizione;
-	}
-
-	public String toStringPriorita() {
-		return "Priorita: " + priorita;
-	}
-
-	public String toStringStato() {
-		return "Stato: " + stato;
-	}
-
-	public String toStringTipo() {
-		return "Tipo: " + tipo;
-	}
-
-	public String toStringArchiviata() {
-		return "Archiviata: " + archiviata;
-	}
-
-	public String toStringDataArchiviazione() {
-		return "Data archiviazione: " + dataArchiviazione;
-	}
-
-	public String toStringDataCreazione() {
-		return "Data creazione: " + dataCreazione;
-	}
-
-	public String toStringDataUltimaModifica() {
-		return "Data ultima modifica: " + dataUltimaModifica;
-	}
-
-	public String toStringDataRisoluzione() {
-		return "Data risoluzione: " + dataRisoluzione;
-	}
-
-	public String toStringCreatore() {
-		return "Creatore: " + (creatore != null ? creatore.getIdUtente() : "null");
-	}
-
-	public String toStringArchiviatore() {
-		return "Archiviatore: " + (archiviatore != null ? archiviatore.getIdUtente() : "null");
-	}
-
-	public String toStringUtentiAssegnati() {
-		return "Utenti assegnati: " + utentiAssegnati.size();
-	}
-
-	public String toStringAllegati() {
-		return "Numero allegati: " + allegati.size();
-	}
-
 }

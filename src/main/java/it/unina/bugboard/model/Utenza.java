@@ -10,19 +10,19 @@ import it.unina.bugboard.exception.InvalidFieldException;
 
 @Entity
 @Table(name = "utenza")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Utenza {
 
 	private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)  
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "idutente")
-	private Integer idUtente;  
+	private Integer idUtente;
 
-	@ManyToOne(fetch = FetchType.LAZY)  
-	@JoinColumn(name = "idcreatore", nullable = true)
-	@JsonIgnore  
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "idcreatore")
+	@JsonIgnore
 	private Utenza creatore;
 
 	@Column(nullable = false)
@@ -61,8 +61,9 @@ public class Utenza {
 		this.creatore = creatore;
 	}
 
+	// getter e setter con validazioni
 	public Integer getIdUtente() {
-		return idUtente;  
+		return idUtente;
 	}
 
 	public Utenza getCreatore() {
@@ -128,39 +129,12 @@ public class Utenza {
 	public void setStato(Boolean stato) {
 		this.stato = stato;
 	}
-	
-	public String toStringNome() {
-	    return "Nome: " + nome;
+
+	public List<Issue> getIssuesCreate() {
+		return issuesCreate;
 	}
 
-	public String toStringCognome() {
-	    return "Cognome: " + cognome;
+	public void setIssuesCreate(List<Issue> issuesCreate) {
+		this.issuesCreate = issuesCreate;
 	}
-
-	public String toStringEmail() {
-	    return "Email: " + email;
-	}
-
-	public String toStringPassword() {
-	    return "Password: " + password;
-	}
-
-	public String toStringRuolo() {
-	    return "Ruolo: " + ruolo;
-	}
-
-	public String toStringId() {
-	    return "IdUtente: " + idUtente;
-	}
-
-	public String toStringCreatore() {
-	    return creatore != null ?
-	            "Creatore: " + creatore.getIdUtente() :
-	            "Creatore: null";
-	}
-
-	public String toStringStato() {
-	    return "Stato: " + (stato ? "Attivo" : "Disattivo");
-	}
-
 }

@@ -1,51 +1,53 @@
 package it.unina.bugboard.model;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import it.unina.bugboard.exception.InvalidFieldException;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "allegato")
 public class Allegato {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "id")
 	private Integer id;
 
 	@Column(nullable = false, length = 255)
 	private String percorso;
 
-	@Column(name = "nomefile", nullable = false)
+	@Column(name = "nomefile", nullable = false, length = 100)
 	private String nomeFile;
 
-	@Column(name = "tipofile", nullable = false)
+	@Column(name = "tipofile", nullable = false, length = 50)
 	private String tipoFile;
 
 	@Column(nullable = false)
 	private Integer dimensione;
 
 	@Column(name = "datacaricamento", nullable = false)
-	private LocalDateTime dataCaricamento;
+	private LocalDate dataCaricamento;
 
-	@ManyToOne
+	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "idissue", nullable = false)
-	@JsonBackReference
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Issue issue;
 
 	public Allegato() {
-		this.dataCaricamento = LocalDateTime.now();
+		this.dataCaricamento = LocalDate.now();
 	}
 
 	public Allegato(String percorso, String nomeFile, String tipoFile, Integer dimensione, Issue issue) {
-		this();
-		setPercorso(percorso);
-		setNomeFile(nomeFile);
-		setTipoFile(tipoFile);
-		setDimensione(dimensione);
-		setIssue(issue);
+		this.percorso = percorso;
+		this.nomeFile = nomeFile;
+		this.tipoFile = tipoFile;
+		this.dimensione = dimensione;
+		this.issue = issue;
+		this.dataCaricamento = LocalDate.now();
 	}
 
+	// getter e setter con validazioni
 	public Integer getId() {
 		return id;
 	}
@@ -94,11 +96,11 @@ public class Allegato {
 		this.dimensione = dimensione;
 	}
 
-	public LocalDateTime getDataCaricamento() {
+	public LocalDate getDataCaricamento() {
 		return dataCaricamento;
 	}
 
-	public void setDataCaricamento(LocalDateTime dataCaricamento) {
+	public void setDataCaricamento(LocalDate dataCaricamento) {
 		if (dataCaricamento == null)
 			throw new InvalidFieldException("La data di caricamento non può essere null");
 		this.dataCaricamento = dataCaricamento;
@@ -113,29 +115,4 @@ public class Allegato {
 			throw new InvalidFieldException("L'issue associato non può essere null");
 		this.issue = issue;
 	}
-
-	public String toStringPercorso() {
-		return "Percorso: " + percorso;
-	}
-
-	public String toStringNomeFile() {
-		return "Nome file: " + nomeFile;
-	}
-
-	public String toStringTipoFile() {
-		return "Tipo file: " + tipoFile;
-	}
-
-	public String toStringDimensione() {
-		return "Dimensione: " + dimensione + " bytes";
-	}
-
-	public String toStringDataCaricamento() {
-		return "Data caricamento: " + dataCaricamento;
-	}
-
-	public String toStringIssue() {
-		return "Issue ID: " + (issue != null ? issue.getIdIssue() : "null");
-	}
-
 }
