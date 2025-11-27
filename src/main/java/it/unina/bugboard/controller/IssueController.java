@@ -53,7 +53,13 @@ public class IssueController {
 
 	@PutMapping("/modifica/{id}")
 	public Issue modificaIssue(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
-		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		
+		// Verifica che l'issue non sia archiviata
+		if (issue.getArchiviata()) {
+			throw new InvalidInputException("Non è possibile modificare un'issue archiviata");
+		}
 
 		if (payload.containsKey("titolo"))
 			issue.setTitolo((String) payload.get("titolo"));
@@ -61,18 +67,36 @@ public class IssueController {
 			issue.setDescrizione((String) payload.get("descrizione"));
 		if (payload.containsKey("priorita"))
 			issue.setPriorita(parsePriorita((String) payload.get("priorita")));
-		if (payload.containsKey("stato"))
-			issue.setStato(parseStato((String) payload.get("stato")));
 		if (payload.containsKey("tipo"))
 			issue.setTipo(parseTipo((String) payload.get("tipo")));
+		
+		// Gestione cambio stato con validazione del flusso
+		if (payload.containsKey("stato")) {
+			Stato nuovoStato = parseStato((String) payload.get("stato"));
+			Stato statoAttuale = issue.getStato();
+			
+			// Validazione del flusso: Todo -> inProgress -> Done
+			if (statoAttuale == Stato.Todo && nuovoStato == Stato.Done) {
+				throw new InvalidInputException("Non puoi passare direttamente da Todo a Done. Devi prima passare per In Progress.");
+			}
+			
+			issue.setStato(nuovoStato);
+			
+			// Imposta dataRisoluzione quando lo stato diventa Done
+			if (nuovoStato == Stato.Done && issue.getDataRisoluzione() == null) {
+				issue.setDataRisoluzione(LocalDateTime.now());
+			}
+		}
 
 		issue.setDataUltimaModifica(LocalDateTime.now());
 		return issueDAO.save(issue);
 	}
 
 	@GetMapping("/filtra")
-	public List<Issue> filtraIssue(@RequestParam(required = false) String stato,
-			@RequestParam(required = false) String priorita, @RequestParam(required = false) String tipo) {
+	public List<Issue> filtraIssue(
+			@RequestParam(required = false) String stato,
+			@RequestParam(required = false) String priorita, 
+			@RequestParam(required = false) String tipo) {
 
 		if (stato != null && priorita != null)
 			return issueDAO.findByStatoAndPriorita(parseStato(stato), parsePriorita(priorita));
@@ -87,7 +111,8 @@ public class IssueController {
 
 	@DeleteMapping("/archivia/{id}")
 	public Map<String, String> archiviaIssue(@PathVariable Integer id, @RequestParam Integer idArchiviatore) {
-		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		if (issue.getArchiviata())
 			throw new InvalidInputException("L'issue è già archiviata");
@@ -103,6 +128,23 @@ public class IssueController {
 		return Map.of("message", "Issue archiviata con successo");
 	}
 
+	// NUOVO ENDPOINT: Disarchiviazione
+	@PutMapping("/disarchivia/{id}")
+	public Map<String, String> disarchiviaIssue(@PathVariable Integer id) {
+		Issue issue = issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+
+		if (!issue.getArchiviata())
+			throw new InvalidInputException("L'issue non è archiviata");
+
+		issue.setArchiviata(false);
+		issue.setDataArchiviazione(null);
+		issue.setArchiviatore(null);
+
+		issueDAO.save(issue);
+		return Map.of("message", "Issue disarchiviata con successo");
+	}
+
 	@GetMapping("/ordina")
 	public List<Issue> ordinaIssue() {
 		return issueDAO.findAllByOrderByDataUltimaModificaDesc();
@@ -110,7 +152,8 @@ public class IssueController {
 
 	@GetMapping("/visualizza/{id}")
 	public Issue visualizzaIssue(@PathVariable Integer id) {
-		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		return issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 	}
 
 	@DeleteMapping("/elimina/{id}")
@@ -186,5 +229,4 @@ public class IssueController {
 		default -> throw new InvalidInputException("Tipo non valido: " + value);
 		};
 	}
-
 }
