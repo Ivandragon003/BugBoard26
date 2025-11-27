@@ -6,9 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import it.unina.bugboard.exception.InvalidFieldException;
-import it.unina.bugboard.converter.PrioritaConverter;
-import it.unina.bugboard.converter.StatoConverter;
-import it.unina.bugboard.converter.TipoConverter;
+
 
 @Entity
 @Table(name = "issue")
@@ -21,19 +19,19 @@ public class Issue {
 	@Column(nullable = false, length = 100)
 	private String titolo;
 
-	@Column(nullable = false,columnDefinition = "TEXT")
+	@Column(nullable = false, columnDefinition = "TEXT")
 	private String descrizione;
 
-	@Convert(converter = PrioritaConverter.class)
-	@Column(nullable = false, columnDefinition = "priorita")
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
 	private Priorita priorita;
 
-	@Convert(converter = StatoConverter.class)
-	@Column(nullable = false, columnDefinition = "stato")
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
 	private Stato stato;
 
-	@Convert(converter = TipoConverter.class)
-	@Column(nullable = false, columnDefinition = "tipo")
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
 	private Tipo tipo;
 
 	@Column(nullable = false)
@@ -73,7 +71,6 @@ public class Issue {
 		this.dataUltimaModifica = LocalDateTime.now();
 	}
 
-	// costruttore completo
 	public Issue(String titolo, String descrizione, Priorita priorita, Stato stato, Tipo tipo, Utenza creatore) {
 		this();
 		setTitolo(titolo);
@@ -84,7 +81,6 @@ public class Issue {
 		setCreatore(creatore);
 	}
 
-	// getter e setter con validazione
 	public Integer getIdIssue() {
 		return idIssue;
 	}
@@ -108,11 +104,10 @@ public class Issue {
 	}
 
 	public void setDescrizione(String descrizione) {
-	    if (descrizione == null || descrizione.isBlank())
-	        throw new InvalidFieldException("La descrizione non può essere vuota");
-	    this.descrizione = descrizione;
+		if (descrizione == null || descrizione.isBlank())
+			throw new InvalidFieldException("La descrizione non può essere vuota");
+		this.descrizione = descrizione;
 	}
-
 
 	public Priorita getPriorita() {
 		return priorita;

@@ -4,7 +4,6 @@ C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\exce
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\BugBoard26Application.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\exception\AlreadyExistsException.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\model\Tipo.java
-C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\converter\RuoloConverter.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\model\Allegato.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\config\SecurityConfig.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\model\Utenza.java
@@ -16,15 +15,12 @@ C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\mode
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\model\Stato.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\exception\InvalidInputException.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\util\PasswordUtil.java
-C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\converter\TipoConverter.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\dao\IssueDAO.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\model\Issue.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\model\Ruolo.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\util\ValidationUtil.java
-C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\converter\PrioritaConverter.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\util\ImmagineUtil.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\dao\UtenzaDAO.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\exception\InvalidFieldException.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\dao\AllegatoDAO.java
-C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\converter\StatoConverter.java
 C:\Users\ivand\eclipse-workspace\BugBoard26\src\main\java\it\unina\bugboard\exception\UnauthorizedException.java
