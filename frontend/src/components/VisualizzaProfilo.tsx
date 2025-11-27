@@ -8,37 +8,58 @@ export default function VisualizzaProfilo() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState<{ email: string; ruolo: string }>({ email: "", ruolo: "" });
   const [edit, setEdit] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });
   const [message, setMessage] = useState<{ type: string; text: string }>({ type: "", text: "" });
 
   useEffect(() => {
     const u = authService.getUser();
     if (u) {
       setUser({ email: u.email, ruolo: u.ruolo });
-      setForm({ email: u.email, password: "" });
+      setForm({ email: u.email, password: "", confirmPassword: "" });
     }
   }, []);
 
   const isAdmin = authService.isAdmin();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    // Permetti solo la modifica della password e conferma password
+    if (e.target.name === "password" || e.target.name === "confirmPassword") {
+      setForm({ ...form, [e.target.name]: e.target.value });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage({ type: "", text: "" });
+    
+    // Validazione: password non vuota
+    if (!form.password.trim()) {
+      setMessage({ type: "error", text: "Inserisci una nuova password per modificare il profilo." });
+      return;
+    }
+    
+    // Validazione: le password devono coincidere
+    if (form.password !== form.confirmPassword) {
+      setMessage({ type: "error", text: "Le password non coincidono. Riprova." });
+      return;
+    }
+
+    // Validazione: lunghezza minima password
+    if (form.password.length < 6) {
+      setMessage({ type: "error", text: "La password deve essere di almeno 6 caratteri." });
+      return;
+    }
+    
     try {
+      // Invia solo la password, l'email rimane invariata
       await axios.put(
         `${API_BASE_URL}/utenza/modifica`,
-        { email: form.email, password: form.password },
+        { email: user.email, password: form.password },
         { headers: { Authorization: `Bearer ${authService.getToken()}` } }
       );
-      setMessage({ type: "success", text: "Dati aggiornati con successo!" });
+      setMessage({ type: "success", text: "Password aggiornata con successo!" });
       setEdit(false);
-      setUser(prev => ({ ...prev, email: form.email }));
-      const updatedUser = { ...authService.getUser(), email: form.email };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setForm({ email: user.email, password: "", confirmPassword: "" });
     } catch (err: any) {
       setMessage({ type: "error", text: err.response?.data?.message || "Errore nell'aggiornamento." });
     }
@@ -163,27 +184,25 @@ export default function VisualizzaProfilo() {
                   </div>
                 </div>
 
-                {isAdmin && (
-                  <button 
-                    onClick={() => setEdit(true)} 
-                    style={{ 
-                      width: "100%",
-                      background: "#0d9488", 
-                      color: "#fff", 
-                      border: "none",
-                      fontWeight: 600, 
-                      borderRadius: 8, 
-                      padding: "12px 16px",
-                      fontSize: "14px",
-                      cursor: "pointer",
-                      transition: "background-color 0.2s"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0f766e"}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#0d9488"}
-                  >
-                    ✏️ Modifica dati
-                  </button>
-                )}
+                <button 
+                  onClick={() => setEdit(true)} 
+                  style={{ 
+                    width: "100%",
+                    background: "#0d9488", 
+                    color: "#fff", 
+                    border: "none",
+                    fontWeight: 600, 
+                    borderRadius: 8, 
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    transition: "background-color 0.2s"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0f766e"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#0d9488"}
+                >
+                  🔑 Modifica Password
+                </button>
               </>
             )}
 
@@ -193,6 +212,7 @@ export default function VisualizzaProfilo() {
                   Modifica Profilo
                 </h3>
 
+                {/* EMAIL NON MODIFICABILE */}
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ 
                     display: "block", 
@@ -201,14 +221,49 @@ export default function VisualizzaProfilo() {
                     color: "#374151",
                     marginBottom: "6px"
                   }}>
-                    Nuova email:
+                    Email (non modificabile)
                   </label>
                   <input
                     type="email"
                     name="email"
-                    value={form.email}
-                    required
+                    value={user.email}
+                    readOnly
+                    disabled
+                    style={{ 
+                      width: "100%", 
+                      padding: "10px 14px", 
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      boxSizing: "border-box",
+                      backgroundColor: "#f9fafb",
+                      color: "#6b7280",
+                      cursor: "not-allowed"
+                    }}
+                  />
+                  <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: "4px" }}>
+                    ℹ️ L'email non può essere modificata
+                  </div>
+                </div>
+
+                {/* NUOVA PASSWORD */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ 
+                    display: "block", 
+                    fontSize: "13px", 
+                    fontWeight: 500, 
+                    color: "#374151",
+                    marginBottom: "6px"
+                  }}>
+                    Nuova password <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={form.password}
                     onChange={handleChange}
+                    required
+                    placeholder="Inserisci la nuova password (min. 6 caratteri)"
                     style={{ 
                       width: "100%", 
                       padding: "10px 14px", 
@@ -220,6 +275,7 @@ export default function VisualizzaProfilo() {
                   />
                 </div>
 
+                {/* CONFERMA PASSWORD */}
                 <div style={{ marginBottom: 20 }}>
                   <label style={{ 
                     display: "block", 
@@ -228,23 +284,34 @@ export default function VisualizzaProfilo() {
                     color: "#374151",
                     marginBottom: "6px"
                   }}>
-                    Nuova password (opzionale):
+                    Conferma password <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <input
                     type="password"
-                    name="password"
-                    value={form.password}
+                    name="confirmPassword"
+                    value={form.confirmPassword}
                     onChange={handleChange}
-                    placeholder="Lascia vuoto per non modificare"
+                    required
+                    placeholder="Reinserisci la password"
                     style={{ 
                       width: "100%", 
                       padding: "10px 14px", 
-                      border: "1px solid #d1d5db",
+                      border: `1px solid ${form.password && form.confirmPassword && form.password !== form.confirmPassword ? "#ef4444" : "#d1d5db"}`,
                       borderRadius: "6px",
                       fontSize: "14px",
                       boxSizing: "border-box"
                     }}
                   />
+                  {form.password && form.confirmPassword && form.password !== form.confirmPassword && (
+                    <div style={{ fontSize: "12px", color: "#ef4444", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                      ❌ Le password non coincidono
+                    </div>
+                  )}
+                  {form.password && form.confirmPassword && form.password === form.confirmPassword && (
+                    <div style={{ fontSize: "12px", color: "#16a34a", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                      ✅ Le password coincidono
+                    </div>
+                  )}
                 </div>
 
                 {message.text && (
@@ -265,16 +332,18 @@ export default function VisualizzaProfilo() {
                 <div style={{ display: "flex", gap: "12px" }}>
                   <button 
                     type="submit" 
+                    disabled={!form.password || !form.confirmPassword || form.password !== form.confirmPassword}
                     style={{ 
                       flex: 1,
-                      background: "#0d9488", 
+                      background: (!form.password || !form.confirmPassword || form.password !== form.confirmPassword) ? "#9ca3af" : "#0d9488", 
                       color: "#fff", 
                       border: "none",
                       fontWeight: 600, 
                       borderRadius: 8, 
                       padding: "10px 24px",
                       fontSize: "14px",
-                      cursor: "pointer"
+                      cursor: (!form.password || !form.confirmPassword || form.password !== form.confirmPassword) ? "not-allowed" : "pointer",
+                      opacity: (!form.password || !form.confirmPassword || form.password !== form.confirmPassword) ? 0.6 : 1
                     }}
                   >
                     💾 Salva
@@ -284,7 +353,7 @@ export default function VisualizzaProfilo() {
                     onClick={() => {
                       setEdit(false);
                       setMessage({ type: "", text: "" });
-                      setForm({ email: user.email, password: "" });
+                      setForm({ email: user.email, password: "", confirmPassword: "" });
                     }} 
                     style={{ 
                       flex: 1,

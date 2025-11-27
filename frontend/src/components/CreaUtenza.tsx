@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { authService } from "../services/authService";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -8,20 +8,54 @@ import Sidebar from "./Sidebar";
 export default function CreaUtenza() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  // Funzione per generare password casuale
+  const generatePassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*";
+    let password = "";
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
   const [form, setForm] = useState({
     nome: "",
     cognome: "",
-    password: "",
+    password: generatePassword(),
     ruolo: "Utente"
   });
+  
   const [generatedEmail, setGeneratedEmail] = useState("");
   const [message, setMessage] = useState({ type: "", text: "" });
 
   // Blocca la pagina se non sei admin
   if (!authService.isAdmin()) {
     return (
-      <div style={{ padding: 32, textAlign: "center", color: "#e11d48", fontWeight: 600 }}>
-        Solo gli amministratori possono creare un nuovo utente!
+      <div style={{ 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center", 
+        minHeight: "100vh",
+        padding: 32, 
+        textAlign: "center", 
+        backgroundColor: "#f5f7fa"
+      }}>
+        <div style={{
+          backgroundColor: "white",
+          padding: "40px",
+          borderRadius: "12px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          maxWidth: "500px"
+        }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🚫</div>
+          <div style={{ color: "#e11d48", fontWeight: 600, fontSize: "18px", marginBottom: "8px" }}>
+            Accesso Negato
+          </div>
+          <div style={{ color: "#6b7280", fontSize: "14px" }}>
+            Solo gli amministratori possono creare un nuovo utente!
+          </div>
+        </div>
       </div>
     );
   }
@@ -41,6 +75,11 @@ export default function CreaUtenza() {
         setGeneratedEmail("");
       }
     }
+  };
+
+  const handleRegeneratePassword = () => {
+    const newPassword = generatePassword();
+    setForm(prev => ({ ...prev, password: newPassword }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,13 +103,32 @@ export default function CreaUtenza() {
       await axios.post(`${API_BASE_URL}/utenza/crea`, dataToSend, {
         headers: { Authorization: `Bearer ${authService.getToken()}` }
       });
+      
       setMessage({ type: "success", text: "Utente creato con successo!" });
-      setTimeout(() => navigate("/home"), 1200);
+      
+      // Reset del form dopo successo
+      setForm({
+        nome: "",
+        cognome: "",
+        password: generatePassword(),
+        ruolo: "Utente"
+      });
+      setGeneratedEmail("");
+      
+      setTimeout(() => navigate("/home"), 1500);
+      
     } catch (err: any) {
+      // Cattura il messaggio di errore dal backend
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error ||
+                          "Errore nella creazione dell'utente";
+      
       setMessage({
         type: "error",
-        text: err.response?.data?.message || "Errore nella creazione dell'utente"
+        text: errorMessage
       });
+      
+      console.error("Errore completo:", err.response?.data);
     }
   };
 
@@ -142,36 +200,74 @@ export default function CreaUtenza() {
                 />
               </div>
 
-              {generatedEmail && (
-                <div style={{ 
-                  marginBottom: 16, 
-                  padding: 12, 
-                  backgroundColor: "#f0fdf4", 
-                  borderRadius: 6,
-                  border: "1px solid #bbf7d0"
-                }}>
-                  <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginBottom: 4 }}>
-                    Email generata automaticamente:
-                  </div>
-                  <div style={{ fontSize: 14, color: "#166534", fontWeight: 500 }}>
-                    {generatedEmail}
-                  </div>
-                </div>
-              )}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
+                  Email (autogenerata)
+                </label>
+                <input
+                  type="text"
+                  value={generatedEmail}
+                  readOnly
+                  disabled
+                  placeholder="Inserisci nome e cognome per generare l'email"
+                  style={{ 
+                    width: "100%", 
+                    padding: 10, 
+                    border: "1px solid #e5e7eb", 
+                    borderRadius: 6, 
+                    fontSize: 14,
+                    backgroundColor: "#f9fafb",
+                    color: "#374151",
+                    cursor: "not-allowed"
+                  }}
+                />
+              </div>
 
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
-                  Password <span style={{ color: "#ef4444" }}>*</span>
+                  Password (autogenerata)
                 </label>
-                <input
-                  name="password"
-                  type="password"
-                  value={form.password}
-                  required
-                  onChange={handleChange}
-                  placeholder="Minimo 6 caratteri"
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="text"
+                    value={form.password}
+                    readOnly
+                    style={{ 
+                      width: "100%", 
+                      padding: "10px 120px 10px 10px", 
+                      border: "1px solid #0d9488", 
+                      borderRadius: 6, 
+                      fontSize: 14,
+                      backgroundColor: "#f0fdfa",
+                      color: "#0d9488",
+                      fontWeight: 600,
+                      fontFamily: "monospace"
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRegeneratePassword}
+                    style={{
+                      position: "absolute",
+                      right: 8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      padding: "6px 12px",
+                      backgroundColor: "#0d9488",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer"
+                    }}
+                  >
+                    🔄 Rigenera
+                  </button>
+                </div>
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+                  ⚠️ Salva questa password e comunicala all'utente
+                </div>
               </div>
 
               <div style={{ marginBottom: 20 }}>
@@ -191,31 +287,39 @@ export default function CreaUtenza() {
 
               {message.text && (
                 <div style={{
-                  marginBottom: 12,
-                  padding: 10,
-                  borderRadius: 6,
-                  color: message.type === "success" ? "#16a34a" : "#e11d48",
+                  marginBottom: 16,
+                  padding: "12px 16px",
+                  borderRadius: 8,
+                  color: message.type === "success" ? "#16a34a" : "#dc2626",
                   backgroundColor: message.type === "success" ? "#f0fdf4" : "#fef2f2",
-                  border: `1px solid ${message.type === "success" ? "#bbf7d0" : "#fecaca"}`,
+                  border: `1px solid ${message.type === "success" ? "#86efac" : "#fca5a5"}`,
                   fontWeight: 600,
-                  fontSize: 14
+                  fontSize: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8
                 }}>
-                  {message.text}
+                  <span style={{ fontSize: 18 }}>
+                    {message.type === "success" ? "✅" : "⚠️"}
+                  </span>
+                  <span>{message.text}</span>
                 </div>
               )}
 
               <button 
                 type="submit" 
+                disabled={!generatedEmail || !form.password}
                 style={{ 
                   width: "100%", 
                   padding: "10px 20px", 
-                  backgroundColor: "#0d9488", 
+                  backgroundColor: (!generatedEmail || !form.password) ? "#9ca3af" : "#0d9488", 
                   color: "#fff", 
                   border: "none", 
                   borderRadius: 8, 
                   fontWeight: 600, 
-                  cursor: "pointer", 
-                  fontSize: 14 
+                  cursor: (!generatedEmail || !form.password) ? "not-allowed" : "pointer", 
+                  fontSize: 14,
+                  opacity: (!generatedEmail || !form.password) ? 0.6 : 1
                 }}
               >
                 Crea utente
