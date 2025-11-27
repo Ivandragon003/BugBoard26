@@ -4,9 +4,11 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import it.unina.bugboard.exception.InvalidFieldException;
+import it.unina.bugboard.converter.PrioritaConverter;
+import it.unina.bugboard.converter.StatoConverter;
+import it.unina.bugboard.converter.TipoConverter;
 
 @Entity
 @Table(name = "issue")
@@ -19,19 +21,19 @@ public class Issue {
 	@Column(nullable = false, length = 100)
 	private String titolo;
 
-	@Column(columnDefinition = "TEXT")
+	@Column(nullable = false,columnDefinition = "TEXT")
 	private String descrizione;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
+	@Convert(converter = PrioritaConverter.class)
+	@Column(nullable = false, columnDefinition = "priorita")
 	private Priorita priorita;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
+	@Convert(converter = StatoConverter.class)
+	@Column(nullable = false, columnDefinition = "stato")
 	private Stato stato;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
+	@Convert(converter = TipoConverter.class)
+	@Column(nullable = false, columnDefinition = "tipo")
 	private Tipo tipo;
 
 	@Column(nullable = false)
@@ -50,7 +52,7 @@ public class Issue {
 	private LocalDateTime dataRisoluzione;
 
 	@ManyToOne
-	@JoinColumn(name = "idcreatore", nullable = false)
+	@JoinColumn(name = "idcreatore")
 	private Utenza creatore;
 
 	@ManyToOne
@@ -63,7 +65,7 @@ public class Issue {
 	private List<Utenza> utentiAssegnati = new ArrayList<>();
 
 	@OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
-	@JsonManagedReference
+	@JsonIgnore
 	private List<Allegato> allegati = new ArrayList<>();
 
 	public Issue() {
@@ -106,8 +108,11 @@ public class Issue {
 	}
 
 	public void setDescrizione(String descrizione) {
-		this.descrizione = descrizione;
+	    if (descrizione == null || descrizione.isBlank())
+	        throw new InvalidFieldException("La descrizione non può essere vuota");
+	    this.descrizione = descrizione;
 	}
+
 
 	public Priorita getPriorita() {
 		return priorita;

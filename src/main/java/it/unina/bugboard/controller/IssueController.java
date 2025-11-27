@@ -128,8 +128,8 @@ public class IssueController {
 	}
 
 	@GetMapping("/urgenti")
-	public List<Issue> visualizzaIssueUrgenti() {
-		return issueDAO.findIssueUrgenti();
+	public List<Issue> trovaUrgenti() {
+		return issueDAO.findIssueUrgenti(List.of(Priorita.critical, Priorita.high));
 	}
 
 	@GetMapping("/cerca")
