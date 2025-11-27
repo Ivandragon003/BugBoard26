@@ -36,7 +36,6 @@ export default function VisualizzaProfilo() {
       );
       setMessage({ type: "success", text: "Dati aggiornati con successo!" });
       setEdit(false);
-      // aggiorna lo user localmente
       setUser(prev => ({ ...prev, email: form.email }));
       const updatedUser = { ...authService.getUser(), email: form.email };
       localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -52,12 +51,9 @@ export default function VisualizzaProfilo() {
       backgroundColor: "#f5f7fa",
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' 
     }}>
-      {/* Sidebar condivisa */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      {/* Main content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
         <header style={{
           backgroundColor: "white",
           borderBottom: "1px solid #e5e7eb",
@@ -90,7 +86,6 @@ export default function VisualizzaProfilo() {
           </div>
         </header>
 
-        {/* Content */}
         <div style={{ padding: "32px", maxWidth: 600, margin: "0 auto", width: "100%" }}>
           <div style={{ 
             background: "#fff", 
@@ -99,7 +94,6 @@ export default function VisualizzaProfilo() {
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             border: "1px solid #e5e7eb"
           }}>
-            {/* User Info */}
             {!edit && (
               <>
                 <div style={{ marginBottom: 24 }}>
@@ -193,7 +187,6 @@ export default function VisualizzaProfilo() {
               </>
             )}
 
-            {/* Edit Form */}
             {edit && (
               <form onSubmit={handleSubmit}>
                 <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#1f2937", marginBottom: "20px" }}>

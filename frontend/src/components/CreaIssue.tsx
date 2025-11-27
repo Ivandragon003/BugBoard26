@@ -21,14 +21,52 @@ function CreaIssue() {
   const [success, setSuccess] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  const user = authService.getUser();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    if (!user || !user.id) {
+    console.log('=== VERIFICA AUTENTICAZIONE ===');
+    
+    const token = authService.getToken();
+    const currentUser = authService.getUser();
+    
+    console.log('Token presente:', !!token);
+    console.log('User presente:', !!currentUser);
+    console.log('User completo:', currentUser);
+    
+    // Verifica token
+    if (!token) {
+      console.error('❌ Token non trovato - Redirect a login');
       navigate('/login');
+      return;
     }
-  }, [user, navigate]);
+    
+    // Verifica user
+    if (!currentUser) {
+      console.error('❌ User non trovato - Redirect a login');
+      navigate('/login');
+      return;
+    }
+    
+    // Verifica ID utente
+    if (!currentUser.id && !currentUser.idUtente) {
+      console.error('❌ User senza ID - Redirect a login');
+      console.error('Struttura user:', Object.keys(currentUser));
+      navigate('/login');
+      return;
+    }
+    
+    // Normalizza l'ID (potrebbe essere "id" o "idUtente")
+    const userId = currentUser.id || currentUser.idUtente;
+    const normalizedUser = {
+      ...currentUser,
+      id: userId
+    };
+    
+    console.log('✅ Autenticazione OK - User ID:', userId);
+    setUser(normalizedUser);
+    setIsCheckingAuth(false);
+  }, [navigate]);
 
   const [formData, setFormData] = useState<FormData>({
     titolo: "",
@@ -36,8 +74,18 @@ function CreaIssue() {
     priorita: "none",
     stato: "Todo",
     tipo: "bug",
-    idCreatore: user?.id || 0
+    idCreatore: 0
   });
+
+  useEffect(() => {
+    if (user && user.id) {
+      console.log('Impostazione idCreatore nel form:', user.id);
+      setFormData(prev => ({
+        ...prev,
+        idCreatore: user.id
+      }));
+    }
+  }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -61,7 +109,11 @@ function CreaIssue() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('=== SUBMIT ISSUE ===');
+    console.log('User corrente:', user);
+    
     if (!user || !user.id) {
+      console.error('❌ User non valido al submit');
       setError("Devi essere autenticato per creare un'issue");
       navigate('/login');
       return;
@@ -76,16 +128,19 @@ function CreaIssue() {
         idCreatore: user.id
       };
 
-      console.log("Dati inviati:", dataToSend);
+      console.log("📤 Dati inviati:", dataToSend);
 
       const newIssue = await issueService.createIssue(dataToSend);
+      console.log("✅ Issue creata:", newIssue);
 
       if (files.length > 0 && newIssue.idIssue) {
+        console.log(`📎 Upload di ${files.length} file...`);
         for (const file of files) {
           try {
             await allegatoService.uploadAllegato(file, newIssue.idIssue);
+            console.log(`✅ File caricato: ${file.name}`);
           } catch (fileError: any) {
-            console.error("Errore upload file:", file.name, fileError);
+            console.error("❌ Errore upload file:", file.name, fileError);
           }
         }
       }
@@ -96,7 +151,7 @@ function CreaIssue() {
       }, 1500);
 
     } catch (err: any) {
-      console.error("Errore completo:", err);
+      console.error("❌ Errore completo:", err);
       
       let errorMessage = "Errore durante la creazione dell'issue";
       
@@ -114,8 +169,20 @@ function CreaIssue() {
     }
   };
 
-  if (!user) {
-    return null;
+  if (isCheckingAuth) {
+    return (
+      <div style={{ 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center", 
+        minHeight: "100vh",
+        fontSize: "18px",
+        color: "#6b7280",
+        backgroundColor: "#f5f7fa"
+      }}>
+        Caricamento...
+      </div>
+    );
   }
 
   return (
@@ -125,11 +192,9 @@ function CreaIssue() {
       backgroundColor: "#f5f7fa", 
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' 
     }}>
-      {/* Sidebar condivisa */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
         <header style={{
           backgroundColor: "white",
           borderBottom: "1px solid #e5e7eb",
@@ -162,16 +227,19 @@ function CreaIssue() {
               </div>
             </div>
           </div>
-          <div style={{ 
-            width: "36px",
-            height: "36px",
-            backgroundColor: "#e0f2f1",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer"
-          }}>
+          <div 
+            onClick={() => navigate('/profilo')}
+            style={{ 
+              width: "36px",
+              height: "36px",
+              backgroundColor: "#e0f2f1",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer"
+            }}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="12" cy="8" r="4" stroke="#0d9488" strokeWidth="2"/>
               <path d="M6 21C6 17.686 8.686 15 12 15C15.314 15 18 17.686 18 21" stroke="#0d9488" strokeWidth="2" strokeLinecap="round"/>
@@ -179,9 +247,7 @@ function CreaIssue() {
           </div>
         </header>
 
-        {/* Main Content */}
         <div style={{ padding: "32px" }}>
-          {/* Alerts */}
           {error && (
             <div style={{ 
               color: "#dc2626", 
@@ -220,7 +286,6 @@ function CreaIssue() {
             </div>
           )}
 
-          {/* Form Card */}
           <div style={{ 
             backgroundColor: "white", 
             borderRadius: "12px", 
@@ -228,7 +293,6 @@ function CreaIssue() {
             overflow: "hidden",
             border: "1px solid #e5e7eb"
           }}>
-            {/* Form Header */}
             <div style={{ 
               padding: "20px 24px", 
               borderBottom: "1px solid #e5e7eb"
@@ -241,9 +305,7 @@ function CreaIssue() {
               </p>
             </div>
 
-            {/* Form Body */}
             <form onSubmit={handleSubmit} style={{ padding: "24px" }}>
-              {/* Titolo */}
               <div style={{ marginBottom: "20px" }}>
                 <label style={{
                   display: "block",
@@ -285,7 +347,6 @@ function CreaIssue() {
                 </div>
               </div>
 
-              {/* Descrizione */}
               <div style={{ marginBottom: "20px" }}>
                 <label style={{
                   display: "block",
@@ -329,14 +390,12 @@ function CreaIssue() {
                 </div>
               </div>
 
-              {/* Tipo e Priorità */}
               <div style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
                 gap: "16px",
                 marginBottom: "20px"
               }}>
-                {/* Tipo */}
                 <div>
                   <label style={{
                     display: "block",
@@ -371,7 +430,6 @@ function CreaIssue() {
                   </select>
                 </div>
 
-                {/* Priorità */}
                 <div>
                   <label style={{
                     display: "block",
@@ -407,7 +465,6 @@ function CreaIssue() {
                 </div>
               </div>
 
-              {/* Allegato Immagine */}
               <div style={{ marginBottom: "24px" }}>
                 <label style={{
                   display: "block",
@@ -485,7 +542,6 @@ function CreaIssue() {
                   </label>
                 </div>
 
-                {/* File List */}
                 {files.length > 0 && (
                   <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
                     {files.map((file, index) => (
@@ -550,7 +606,6 @@ function CreaIssue() {
                 )}
               </div>
 
-              {/* Action Buttons */}
               <div style={{
                 display: "flex",
                 gap: "12px",

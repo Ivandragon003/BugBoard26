@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import Sidebar from "./Sidebar";
 
@@ -14,6 +15,7 @@ interface Issue {
 }
 
 function Home() {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [error, setError] = useState<string>("");
@@ -81,15 +83,6 @@ function Home() {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="8" r="4" stroke="#0d9488" strokeWidth="2"/>
       <path d="M6 21C6 17.686 8.686 15 12 15C15.314 15 18 17.686 18 21" stroke="#0d9488" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  );
-
-  const CalendarIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="3" y="6" width="18" height="15" rx="2" stroke="#6B7280" strokeWidth="2"/>
-      <path d="M3 10H21" stroke="#6B7280" strokeWidth="2"/>
-      <path d="M8 3V7" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M16 3V7" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   );
 
@@ -198,33 +191,37 @@ function Home() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <a 
-              href="/issues/nuova"
+            <button
+              onClick={() => navigate('/issues/nuova')}
               style={{
                 padding: "8px 16px",
                 backgroundColor: "#0d9488",
                 color: "white",
-                textDecoration: "none",
+                border: "none",
                 borderRadius: "6px",
                 fontSize: "13px",
                 fontWeight: 500,
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "6px"
+                gap: "6px",
+                cursor: "pointer"
               }}
             >
               + Nuova Issue
-            </a>
-            <div style={{ 
-              width: "36px",
-              height: "36px",
-              backgroundColor: "#e0f2f1",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer"
-            }}>
+            </button>
+            <div 
+              onClick={() => navigate('/profilo')}
+              style={{ 
+                width: "36px",
+                height: "36px",
+                backgroundColor: "#e0f2f1",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer"
+              }}
+            >
               <UserIcon />
             </div>
           </div>
@@ -246,41 +243,46 @@ function Home() {
             </div>
           )}
 
-          {/* Dropdown Filter */}
-          <div style={{ marginBottom: "24px" }}>
-            <div style={{ 
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "8px 12px",
-              backgroundColor: "white",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "14px",
-              color: "#374151"
-            }}>
-              <CalendarIcon />
-              <select 
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                style={{
-                  border: "none",
-                  outline: "none",
-                  backgroundColor: "transparent",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  color: "#374151",
-                  paddingRight: "20px"
-                }}
-              >
-                <option value="all">Tutte le issue</option>
-                <option value="todo">Todo</option>
-                <option value="inprogress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
-              <span style={{ color: "#9ca3af", fontSize: "12px" }}>▼</span>
-            </div>
+          {/* Dropdown Filter e Nuova Issue Button */}
+          <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <select 
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              style={{
+                padding: "10px 40px 10px 16px",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                fontSize: "14px",
+                color: "#374151",
+                backgroundColor: "white",
+                cursor: "pointer",
+                outline: "none"
+              }}
+            >
+              <option value="all">Tutte le issue</option>
+              <option value="todo">Todo</option>
+              <option value="inprogress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+
+            <button
+              onClick={() => navigate('/issues/nuova')}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#0d9488",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer"
+              }}
+            >
+              <span style={{ fontSize: "18px" }}>➕</span> Nuova Issue
+            </button>
           </div>
 
           {/* Cards Statistiche */}
@@ -445,21 +447,21 @@ function Home() {
               <h2 style={{ fontSize: "16px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
                 Issue Recenti
               </h2>
-              <a 
-                href="/issues"
+              <button
+                onClick={() => navigate('/issues')}
                 style={{
                   padding: "8px 16px",
                   backgroundColor: "white",
                   color: "#0d9488",
-                  textDecoration: "none",
+                  border: "1px solid #0d9488",
                   borderRadius: "6px",
                   fontSize: "13px",
                   fontWeight: 500,
-                  border: "1px solid #0d9488"
+                  cursor: "pointer"
                 }}
               >
                 Visualizza Tutte
-              </a>
+              </button>
             </div>
 
             {loading ? (
@@ -533,7 +535,7 @@ function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {issues.map((issue) => (
+                    {issues.slice(0, 5).map((issue) => (
                       <tr 
                         key={issue.idIssue} 
                         style={{ 
@@ -543,7 +545,7 @@ function Home() {
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f9fafb"}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-                        onClick={() => window.location.href = `/issues/${issue.idIssue}`}
+                        onClick={() => navigate(`/issues/${issue.idIssue}`)}
                       >
                         <td style={{ 
                           padding: "14px 24px", 

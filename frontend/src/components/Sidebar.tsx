@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 
 interface SidebarProps {
@@ -9,9 +9,15 @@ interface SidebarProps {
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState("");
   const isAdmin = authService.isAdmin();
   const currentPath = location.pathname;
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate('/login');
+  };
 
   return (
     <div style={{
@@ -103,12 +109,12 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
               alignItems: "center",
               gap: "10px",
               padding: "10px 12px", 
-              color: currentPath.startsWith("/issues") ? "white" : "rgba(255,255,255,0.7)",
+              color: currentPath === "/issues" ? "white" : "rgba(255,255,255,0.7)",
               textDecoration: "none",
               borderRadius: "6px",
               fontSize: "13px",
-              fontWeight: currentPath.startsWith("/issues") ? 600 : 400,
-              backgroundColor: currentPath.startsWith("/issues") ? "rgba(255,255,255,0.25)" : (hoveredItem === "lista" ? "rgba(255,255,255,0.1)" : "transparent"),
+              fontWeight: currentPath === "/issues" ? 600 : 400,
+              backgroundColor: currentPath === "/issues" ? "rgba(255,255,255,0.25)" : (hoveredItem === "lista" ? "rgba(255,255,255,0.1)" : "transparent"),
               transition: "all 0.2s",
               position: "relative",
               marginBottom: "6px"
@@ -116,7 +122,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             onMouseEnter={() => setHoveredItem("lista")}
             onMouseLeave={() => setHoveredItem("")}
           >
-            {(currentPath.startsWith("/issues") || hoveredItem === "lista") && (
+            {(currentPath === "/issues" || hoveredItem === "lista") && (
               <div style={{
                 position: "absolute",
                 left: 0,
@@ -243,8 +249,8 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
           )}
           <span style={{ fontSize: "16px" }}>👤</span> Profilo
         </a>
-        <a 
-          href="/logout" 
+        <button 
+          onClick={handleLogout}
           style={{ 
             display: "flex",
             alignItems: "center",
@@ -256,7 +262,11 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             borderRadius: "6px",
             backgroundColor: hoveredItem === "logout" ? "rgba(255,255,255,0.1)" : "transparent",
             transition: "all 0.2s",
-            position: "relative"
+            position: "relative",
+            cursor: "pointer",
+            border: "none",
+            width: "100%",
+            textAlign: "left"
           }}
           onMouseEnter={() => setHoveredItem("logout")}
           onMouseLeave={() => setHoveredItem("")}
@@ -273,7 +283,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             }} />
           )}
           <span style={{ fontSize: "16px" }}>🚪</span> Logout
-        </a>
+        </button>
       </div>
     </div>
   );
