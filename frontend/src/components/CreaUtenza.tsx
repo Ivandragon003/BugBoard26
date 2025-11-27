@@ -9,10 +9,12 @@ export default function CreaUtenza() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [form, setForm] = useState({
-    email: "",
+    nome: "",
+    cognome: "",
     password: "",
     ruolo: "Utente"
   });
+  const [generatedEmail, setGeneratedEmail] = useState("");
   const [message, setMessage] = useState({ type: "", text: "" });
 
   // Blocca la pagina se non sei admin
@@ -25,14 +27,41 @@ export default function CreaUtenza() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+
+    // Genera email automaticamente quando cambiano nome o cognome
+    if (name === "nome" || name === "cognome") {
+      const nome = name === "nome" ? value : form.nome;
+      const cognome = name === "cognome" ? value : form.cognome;
+      if (nome && cognome) {
+        const email = `${nome.toLowerCase()}.${cognome.toLowerCase()}@bugboard.it`;
+        setGeneratedEmail(email);
+      } else {
+        setGeneratedEmail("");
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage({ type: "", text: "" });
+
+    if (!generatedEmail) {
+      setMessage({ type: "error", text: "Nome e cognome sono necessari per generare l'email" });
+      return;
+    }
+
     try {
-      await axios.post(`${API_BASE_URL}/utenza/crea`, form, {
+      const dataToSend = {
+        nome: form.nome,
+        cognome: form.cognome,
+        email: generatedEmail,
+        password: form.password,
+        ruolo: form.ruolo
+      };
+
+      await axios.post(`${API_BASE_URL}/utenza/crea`, dataToSend, {
         headers: { Authorization: `Bearer ${authService.getToken()}` }
       });
       setMessage({ type: "success", text: "Utente creato con successo!" });
@@ -47,12 +76,9 @@ export default function CreaUtenza() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-      {/* Sidebar condivisa */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      {/* Main content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
         <header style={{
           backgroundColor: "white",
           borderBottom: "1px solid #e5e7eb",
@@ -85,39 +111,84 @@ export default function CreaUtenza() {
           </div>
         </header>
 
-        {/* Form */}
-        <div style={{ padding: "32px", maxWidth: 500, margin: "0 auto", width: "100%" }}>
+        <div style={{ padding: "32px", maxWidth: 600, margin: "0 auto", width: "100%" }}>
           <div style={{ background: "#fff", borderRadius: 12, padding: 32, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>Email</label>
+                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
+                  Nome <span style={{ color: "#ef4444" }}>*</span>
+                </label>
                 <input
-                  name="email"
-                  type="email"
-                  value={form.email}
+                  name="nome"
+                  type="text"
+                  value={form.nome}
                   required
                   onChange={handleChange}
                   style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
                 />
               </div>
+
               <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>Password</label>
+                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
+                  Cognome <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  name="cognome"
+                  type="text"
+                  value={form.cognome}
+                  required
+                  onChange={handleChange}
+                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
+                />
+              </div>
+
+              {generatedEmail && (
+                <div style={{ 
+                  marginBottom: 16, 
+                  padding: 12, 
+                  backgroundColor: "#f0fdf4", 
+                  borderRadius: 6,
+                  border: "1px solid #bbf7d0"
+                }}>
+                  <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginBottom: 4 }}>
+                    Email generata automaticamente:
+                  </div>
+                  <div style={{ fontSize: 14, color: "#166534", fontWeight: 500 }}>
+                    {generatedEmail}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
+                  Password <span style={{ color: "#ef4444" }}>*</span>
+                </label>
                 <input
                   name="password"
                   type="password"
                   value={form.password}
                   required
                   onChange={handleChange}
+                  placeholder="Minimo 6 caratteri"
                   style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
                 />
               </div>
+
               <div style={{ marginBottom: 20 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>Ruolo</label>
-                <select name="ruolo" value={form.ruolo} onChange={handleChange} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}>
+                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
+                  Ruolo <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <select 
+                  name="ruolo" 
+                  value={form.ruolo} 
+                  onChange={handleChange} 
+                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
+                >
                   <option value="Utente">Utente</option>
                   <option value="Amministratore">Amministratore</option>
                 </select>
               </div>
+
               {message.text && (
                 <div style={{
                   marginBottom: 12,
@@ -125,13 +196,28 @@ export default function CreaUtenza() {
                   borderRadius: 6,
                   color: message.type === "success" ? "#16a34a" : "#e11d48",
                   backgroundColor: message.type === "success" ? "#f0fdf4" : "#fef2f2",
+                  border: `1px solid ${message.type === "success" ? "#bbf7d0" : "#fecaca"}`,
                   fontWeight: 600,
                   fontSize: 14
                 }}>
                   {message.text}
                 </div>
               )}
-              <button type="submit" style={{ width: "100%", padding: "10px 20px", backgroundColor: "#0d9488", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 14 }}>
+
+              <button 
+                type="submit" 
+                style={{ 
+                  width: "100%", 
+                  padding: "10px 20px", 
+                  backgroundColor: "#0d9488", 
+                  color: "#fff", 
+                  border: "none", 
+                  borderRadius: 8, 
+                  fontWeight: 600, 
+                  cursor: "pointer", 
+                  fontSize: 14 
+                }}
+              >
                 Crea utente
               </button>
             </form>

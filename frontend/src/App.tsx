@@ -6,17 +6,20 @@ import Home from "./components/Home";
 import ListaIssue from "./components/ListaIssue";
 import CreaIssue from "./components/CreaIssue";
 import CreaUtenza from "./components/CreaUtenza";
+import VisualizzaProfilo from "./components/VisualizzaProfilo";
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/recupera-password" element={<RecuperaPassword />} />
         <Route path="/home" element={<Home />} />
         <Route path="/issues" element={<ListaIssue />} />
         <Route path="/issues/nuova" element={<CreaIssue />} />
         <Route path="/crea-utenza" element={<CreaUtenza />} />
+        <Route path="/profilo" element={<VisualizzaProfilo />} />
       </Routes>
     </Router>
   );
