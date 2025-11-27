@@ -1,12 +1,14 @@
 package it.unina.bugboard.controller;
 
 import it.unina.bugboard.dao.IssueDAO;
-import it.unina.bugboard.dao.AllegatoDAO;
+
 import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.*;
 import it.unina.bugboard.exception.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -16,9 +18,6 @@ public class IssueController {
 
 	@Autowired
 	private IssueDAO issueDAO;
-
-	@Autowired
-	private AllegatoDAO allegatoDAO;
 
 	@Autowired
 	private UtenzaDAO utenzaDAO;
@@ -52,10 +51,10 @@ public class IssueController {
 	}
 
 	@PutMapping("/modifica/{id}")
+	@Transactional // ✅ AGGIUNTO
 	public Issue modificaIssue(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
-		Issue issue = issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
-		
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+
 		// Verifica che l'issue non sia archiviata
 		if (issue.getArchiviata()) {
 			throw new InvalidInputException("Non è possibile modificare un'issue archiviata");
@@ -63,25 +62,29 @@ public class IssueController {
 
 		if (payload.containsKey("titolo"))
 			issue.setTitolo((String) payload.get("titolo"));
+
 		if (payload.containsKey("descrizione"))
 			issue.setDescrizione((String) payload.get("descrizione"));
+
 		if (payload.containsKey("priorita"))
 			issue.setPriorita(parsePriorita((String) payload.get("priorita")));
+
 		if (payload.containsKey("tipo"))
 			issue.setTipo(parseTipo((String) payload.get("tipo")));
-		
+
 		// Gestione cambio stato con validazione del flusso
 		if (payload.containsKey("stato")) {
 			Stato nuovoStato = parseStato((String) payload.get("stato"));
 			Stato statoAttuale = issue.getStato();
-			
+
 			// Validazione del flusso: Todo -> inProgress -> Done
 			if (statoAttuale == Stato.Todo && nuovoStato == Stato.Done) {
-				throw new InvalidInputException("Non puoi passare direttamente da Todo a Done. Devi prima passare per In Progress.");
+				throw new InvalidInputException(
+						"Non puoi passare direttamente da Todo a Done. Devi prima passare per In Progress.");
 			}
-			
+
 			issue.setStato(nuovoStato);
-			
+
 			// Imposta dataRisoluzione quando lo stato diventa Done
 			if (nuovoStato == Stato.Done && issue.getDataRisoluzione() == null) {
 				issue.setDataRisoluzione(LocalDateTime.now());
@@ -93,26 +96,27 @@ public class IssueController {
 	}
 
 	@GetMapping("/filtra")
-	public List<Issue> filtraIssue(
-			@RequestParam(required = false) String stato,
-			@RequestParam(required = false) String priorita, 
-			@RequestParam(required = false) String tipo) {
+	public List<Issue> filtraIssue(@RequestParam(required = false) String stato,
+			@RequestParam(required = false) String priorita, @RequestParam(required = false) String tipo) {
 
 		if (stato != null && priorita != null)
 			return issueDAO.findByStatoAndPriorita(parseStato(stato), parsePriorita(priorita));
+
 		if (stato != null)
 			return issueDAO.findByStato(parseStato(stato));
+
 		if (priorita != null)
 			return issueDAO.findByPriorita(parsePriorita(priorita));
+
 		if (tipo != null)
 			return issueDAO.findByTipo(parseTipo(tipo));
+
 		return issueDAO.findAll();
 	}
 
 	@DeleteMapping("/archivia/{id}")
 	public Map<String, String> archiviaIssue(@PathVariable Integer id, @RequestParam Integer idArchiviatore) {
-		Issue issue = issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		if (issue.getArchiviata())
 			throw new InvalidInputException("L'issue è già archiviata");
@@ -122,17 +126,16 @@ public class IssueController {
 
 		Utenza archiviatore = utenzaDAO.findById(idArchiviatore)
 				.orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idArchiviatore));
-		issue.setArchiviatore(archiviatore);
 
+		issue.setArchiviatore(archiviatore);
 		issueDAO.save(issue);
+
 		return Map.of("message", "Issue archiviata con successo");
 	}
 
-	// NUOVO ENDPOINT: Disarchiviazione
 	@PutMapping("/disarchivia/{id}")
 	public Map<String, String> disarchiviaIssue(@PathVariable Integer id) {
-		Issue issue = issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		if (!issue.getArchiviata())
 			throw new InvalidInputException("L'issue non è archiviata");
@@ -152,16 +155,16 @@ public class IssueController {
 
 	@GetMapping("/visualizza/{id}")
 	public Issue visualizzaIssue(@PathVariable Integer id) {
-		return issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 	}
 
 	@DeleteMapping("/elimina/{id}")
+	@Transactional
 	public Map<String, String> eliminaIssue(@PathVariable Integer id) {
-		if (!issueDAO.existsById(id))
-			throw new NotFoundException("Issue non trovata con id: " + id);
-		allegatoDAO.deleteByIssueIdIssue(id);
-		issueDAO.deleteById(id);
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+
+		issueDAO.delete(issue);
+
 		return Map.of("message", "Issue eliminata con successo");
 	}
 
@@ -193,10 +196,49 @@ public class IssueController {
 		return stats;
 	}
 
+	// ✅ NUOVO: Endpoint per assegnare utenti alle issue
+	@PostMapping("/{idIssue}/assegna/{idUtente}")
+	@Transactional
+	public Issue assegnaUtente(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {
+		Issue issue = issueDAO.findById(idIssue)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
+
+		Utenza utente = utenzaDAO.findById(idUtente)
+				.orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idUtente));
+
+		if (!issue.getUtentiAssegnati().contains(utente)) {
+			issue.getUtentiAssegnati().add(utente);
+			issueDAO.save(issue);
+		}
+
+		return issue;
+	}
+
+	// ✅ NUOVO: Endpoint per rimuovere assegnazione utente
+	@DeleteMapping("/{idIssue}/rimuovi-assegnazione/{idUtente}")
+	@Transactional
+	public Issue rimuoviAssegnazione(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {
+		Issue issue = issueDAO.findById(idIssue)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
+
+		issue.getUtentiAssegnati().removeIf(u -> u.getIdUtente().equals(idUtente));
+		return issueDAO.save(issue);
+	}
+
+	// ✅ NUOVO: Endpoint per ottenere gli utenti assegnati a un'issue
+	@GetMapping("/{idIssue}/utenti-assegnati")
+	public List<Utenza> getUtentiAssegnati(@PathVariable Integer idIssue) {
+		Issue issue = issueDAO.findById(idIssue)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
+
+		return issue.getUtentiAssegnati();
+	}
+
 	private Priorita parsePriorita(String value) {
 		if (value == null || value.isBlank()) {
 			return Priorita.none;
 		}
+
 		return switch (value.toLowerCase()) {
 		case "none" -> Priorita.none;
 		case "critical" -> Priorita.critical;
@@ -210,6 +252,7 @@ public class IssueController {
 	private Stato parseStato(String value) {
 		if (value == null)
 			throw new InvalidInputException("Stato non può essere null");
+
 		return switch (value.toLowerCase()) {
 		case "todo" -> Stato.Todo;
 		case "inprogress", "in_progress" -> Stato.inProgress;
@@ -221,6 +264,7 @@ public class IssueController {
 	private Tipo parseTipo(String value) {
 		if (value == null)
 			throw new InvalidInputException("Tipo non può essere null");
+
 		return switch (value.toLowerCase()) {
 		case "question" -> Tipo.question;
 		case "features" -> Tipo.features;
