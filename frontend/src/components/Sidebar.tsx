@@ -27,7 +27,10 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
-      position: "relative"
+      position: "sticky",  // ← CAMBIATO: da relative a sticky
+      top: 0,              // ← AGGIUNTO
+      height: "100vh",     // ← AGGIUNTO: forza altezza 100% viewport
+      overflowY: "auto"    // ← AGGIUNTO: scroll se contenuto troppo lungo
     }}>
       {/* Linea verticale di separazione sul bordo destro */}
       <div style={{

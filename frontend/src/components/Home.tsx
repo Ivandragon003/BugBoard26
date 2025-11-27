@@ -153,11 +153,10 @@ function Home() {
       backgroundColor: "#f5f7fa", 
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' 
     }}>
-      {/* Sidebar condivisa */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
+        {/* Header - RIMOSSO IL BOTTONE "NUOVA ISSUE" */}
         <header style={{
           backgroundColor: "white",
           borderBottom: "1px solid #e5e7eb",
@@ -190,40 +189,20 @@ function Home() {
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <button
-              onClick={() => navigate('/issues/nuova')}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#0d9488",
-                color: "white",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "13px",
-                fontWeight: 500,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                cursor: "pointer"
-              }}
-            >
-              + Nuova Issue
-            </button>
-            <div 
-              onClick={() => navigate('/profilo')}
-              style={{ 
-                width: "36px",
-                height: "36px",
-                backgroundColor: "#e0f2f1",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer"
-              }}
-            >
-              <UserIcon />
-            </div>
+          <div 
+            onClick={() => navigate('/profilo')}
+            style={{ 
+              width: "36px",
+              height: "36px",
+              backgroundColor: "#e0f2f1",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer"
+            }}
+          >
+            <UserIcon />
           </div>
         </header>
 
