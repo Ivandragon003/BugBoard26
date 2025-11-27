@@ -8,26 +8,37 @@ import org.postgresql.util.PGobject;
 import java.sql.SQLException;
 
 @Converter(autoApply = true)
-public class RuoloConverter implements AttributeConverter<Ruolo, PGobject> {
+public class RuoloConverter implements AttributeConverter<Ruolo, Object> {
 
-	@Override
-	public PGobject convertToDatabaseColumn(Ruolo attribute) {
-		if (attribute == null)
-			return null;
-		PGobject pgObject = new PGobject();
-		pgObject.setType("ruolo");
-		try {
-			pgObject.setValue(attribute.name());
-		} catch (SQLException e) {
-			throw new RuntimeException("Errore nella conversione di Ruolo", e);
-		}
-		return pgObject;
-	}
+    @Override
+    public Object convertToDatabaseColumn(Ruolo attribute) {
+        if (attribute == null) {
+            return null;
+        }
+        
+        try {
+            PGobject pgObject = new PGobject();
+            pgObject.setType("ruolo");
+            pgObject.setValue(attribute.name());
+            return pgObject;
+        } catch (SQLException e) {
+            throw new RuntimeException("Errore nella conversione di Ruolo", e);
+        }
+    }
 
-	@Override
-	public Ruolo convertToEntityAttribute(PGobject dbData) {
-		if (dbData == null)
-			return null;
-		return Ruolo.valueOf(dbData.getValue());
-	}
+    @Override
+    public Ruolo convertToEntityAttribute(Object dbData) {
+        if (dbData == null) {
+            return null;
+        }
+        
+        String value;
+        if (dbData instanceof PGobject) {
+            value = ((PGobject) dbData).getValue();
+        } else {
+            value = dbData.toString();
+        }
+        
+        return Ruolo.valueOf(value);
+    }
 }
