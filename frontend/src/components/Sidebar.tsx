@@ -27,12 +27,11 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
-      position: "sticky",  // ← CAMBIATO: da relative a sticky
-      top: 0,              // ← AGGIUNTO
-      height: "100vh",     // ← AGGIUNTO: forza altezza 100% viewport
-      overflowY: "auto"    // ← AGGIUNTO: scroll se contenuto troppo lungo
+      position: "sticky",
+      top: 0,
+      height: "100vh",
+      overflowY: "auto"
     }}>
-      {/* Linea verticale di separazione sul bordo destro */}
       <div style={{
         position: "absolute",
         right: 0,
@@ -105,6 +104,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             )}
             <span style={{ fontSize: "16px" }}>📊</span> Dashboard
           </a>
+
           <a 
             href="/issues" 
             style={{ 
@@ -138,6 +138,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             )}
             <span style={{ fontSize: "16px" }}>📋</span> Lista Issue
           </a>
+
           <a 
             href="/issues/nuova" 
             style={{ 
@@ -171,6 +172,43 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             )}
             <span style={{ fontSize: "16px" }}>➕</span> Nuova Issue
           </a>
+
+          {/* Link Issue Archiviate - SOLO PER ADMIN */}
+          {isAdmin && (
+            <a 
+              href="/issues/archiviate" 
+              style={{ 
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 12px", 
+                color: currentPath === "/issues/archiviate" ? "white" : "rgba(255,255,255,0.7)",
+                textDecoration: "none",
+                borderRadius: "6px",
+                fontSize: "13px",
+                fontWeight: currentPath === "/issues/archiviate" ? 600 : 400,
+                backgroundColor: currentPath === "/issues/archiviate" ? "rgba(255,255,255,0.25)" : (hoveredItem === "archiviate" ? "rgba(255,255,255,0.1)" : "transparent"),
+                transition: "all 0.2s",
+                position: "relative",
+                marginBottom: "6px"
+              }}
+              onMouseEnter={() => setHoveredItem("archiviate")}
+              onMouseLeave={() => setHoveredItem("")}
+            >
+              {(currentPath === "/issues/archiviate" || hoveredItem === "archiviate") && (
+                <div style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "4px",
+                  backgroundColor: "white",
+                  borderRadius: "0 3px 3px 0"
+                }} />
+              )}
+              <span style={{ fontSize: "16px" }}>📦</span> Archiviate
+            </a>
+          )}
 
           {/* Link CreaUtenza - SOLO PER ADMIN */}
           {isAdmin && (
@@ -211,7 +249,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
         </nav>
       </div>
       
-      {/* Spacer per spingere profilo/logout in basso */}
       <div style={{ flex: 1 }} />
       
       <div style={{ 

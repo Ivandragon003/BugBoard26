@@ -13,6 +13,20 @@ export const issueService = {
     return response.data;
   },
 
+  getArchivedIssues: async () => {
+    const response = await axios.get(`${API_BASE_URL}/issue/visualizza-lista?archiviata=true`, {
+      headers: getAuthHeader()
+    });
+    return response.data;
+  },
+
+  getActiveIssues: async () => {
+    const response = await axios.get(`${API_BASE_URL}/issue/visualizza-lista?archiviata=false`, {
+      headers: getAuthHeader()
+    });
+    return response.data;
+  },
+
   getIssueById: async (id: number) => {
     const response = await axios.get(`${API_BASE_URL}/issue/visualizza/${id}`, {
       headers: getAuthHeader()
@@ -42,9 +56,24 @@ export const issueService = {
   },
 
   archiveIssue: async (id: number, idArchiviatore: number) => {
-    const response = await axios.delete(`${API_BASE_URL}/issue/archivia/${id}?idArchiviatore=${idArchiviatore}`, {
-      headers: getAuthHeader()
-    });
+    const response = await axios.delete(
+      `${API_BASE_URL}/issue/archivia/${id}?idArchiviatore=${idArchiviatore}`, 
+      {
+        headers: getAuthHeader()
+      }
+    );
+    return response.data;
+  },
+
+  // NUOVA FUNZIONE: Disarchiviazione
+  unarchiveIssue: async (id: number) => {
+    const response = await axios.put(
+      `${API_BASE_URL}/issue/disarchivia/${id}`,
+      {},
+      {
+        headers: getAuthHeader()
+      }
+    );
     return response.data;
   },
 
@@ -56,9 +85,12 @@ export const issueService = {
   },
 
   searchIssues: async (titolo: string) => {
-    const response = await axios.get(`${API_BASE_URL}/issue/cerca?titolo=${encodeURIComponent(titolo)}`, {
-      headers: getAuthHeader()
-    });
+    const response = await axios.get(
+      `${API_BASE_URL}/issue/cerca?titolo=${encodeURIComponent(titolo)}`, 
+      {
+        headers: getAuthHeader()
+      }
+    );
     return response.data;
   },
 
