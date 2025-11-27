@@ -64,10 +64,9 @@
 
     <!-- Driver PostgreSQL -->
     <dependency>
-  <groupId>org.postgresql</groupId>
-  <artifactId>postgresql</artifactId>
-</dependency>
-
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+    </dependency>
 
     <!-- Spring Boot Test -->
     <dependency>

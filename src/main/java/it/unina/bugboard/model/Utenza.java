@@ -7,7 +7,6 @@ import java.util.regex.Pattern;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import it.unina.bugboard.exception.InvalidFieldException;
-import it.unina.bugboard.converter.RuoloConverter;
 
 @Entity
 @Table(name = "utenza")
@@ -39,8 +38,8 @@ public class Utenza {
 	@Column(nullable = false)
 	private String password;
 
-	@Convert(converter = RuoloConverter.class)
-	@Column(nullable = false)
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
 	private Ruolo ruolo;
 
 	@Column(nullable = false)
@@ -61,7 +60,6 @@ public class Utenza {
 		setRuolo(ruolo);
 		this.creatore = creatore;
 	}
-
 
 	public Integer getIdUtente() {
 		return idUtente;
@@ -120,6 +118,8 @@ public class Utenza {
 	}
 
 	public void setRuolo(Ruolo ruolo) {
+		if (ruolo == null)
+			throw new InvalidFieldException("Il ruolo non può essere null");
 		this.ruolo = ruolo;
 	}
 
@@ -128,6 +128,8 @@ public class Utenza {
 	}
 
 	public void setStato(Boolean stato) {
+		if (stato == null)
+			throw new InvalidFieldException("Lo stato non può essere null");
 		this.stato = stato;
 	}
 
