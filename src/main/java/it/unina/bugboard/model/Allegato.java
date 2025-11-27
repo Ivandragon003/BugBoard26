@@ -1,6 +1,8 @@
 package it.unina.bugboard.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import it.unina.bugboard.exception.InvalidFieldException;
 import java.time.LocalDate;
 
@@ -29,11 +31,8 @@ public class Allegato {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "idissue", nullable = false)
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Issue issue;
-
-	public Allegato() {
-		this.dataCaricamento = LocalDate.now();
-	}
 
 	public Allegato(String percorso, String nomeFile, String tipoFile, Integer dimensione, Issue issue) {
 		this.percorso = percorso;
@@ -43,7 +42,6 @@ public class Allegato {
 		this.issue = issue;
 		this.dataCaricamento = LocalDate.now();
 	}
-
 
 	public Integer getId() {
 		return id;

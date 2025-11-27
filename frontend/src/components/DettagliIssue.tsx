@@ -1,164 +1,382 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { issueService } from "../services/issueService";
+import { allegatoService } from "../services/allegatoService";
+import { authService } from "../services/authService";
+import Sidebar from "./Sidebar";
 
-// Mock services (sostituisci con i tuoi veri servizi)
-const mockAuthService = {
-  getUser: () => ({ idUtente: 1, nome: "Mario", cognome: "Rossi", ruolo: "Amministratore" }),
-  isAdmin: () => true
-};
+interface Issue {
+  idIssue: number;
+  titolo: string;
+  descrizione: string;
+  stato: string;
+  tipo: string;
+  priorita: string;
+  dataCreazione: string;
+  dataUltimaModifica: string;
+  dataRisoluzione: string | null;
+  archiviata: boolean;
+  dataArchiviazione: string | null;
+  creatore: {
+    idUtente: number;
+    nome: string;
+    cognome: string;
+    email: string;
+  };
+  archiviatore: {
+    idUtente: number;
+    nome: string;
+    cognome: string;
+    email: string;
+  } | null;
+}
 
-const mockIssueService = {
-  getIssueById: async (id) => ({
-    idIssue: id,
-    titolo: "Bug nel login",
-    descrizione: "Gli utenti non riescono ad accedere",
-    stato: "inProgress",
-    tipo: "bug",
-    priorita: "high",
-    dataCreazione: "2025-01-15T10:30:00",
-    dataUltimaModifica: "2025-01-20T14:45:00",
-    dataRisoluzione: null,
-    archiviata: false,
-    dataArchiviazione: null,
-    creatore: { idUtente: 2, nome: "Luigi", cognome: "Verdi", email: "luigi@example.com" },
-    archiviatore: null
-  }),
-  updateIssue: async (id, data) => ({ success: true }),
-  archiveIssue: async (id, userId) => ({ success: true }),
-  unarchiveIssue: async (id) => ({ success: true }),
-  deleteIssue: async (id) => ({ success: true })
-};
+interface FormData {
+  titolo: string;
+  descrizione: string;
+  stato: string;
+  tipo: string;
+  priorita: string;
+}
+
+interface User {
+  id?: number;
+  idUtente?: number;
+  nome: string;
+  cognome: string;
+  email: string;
+  ruolo?: string;
+  role?: string;
+}
+
+interface ConfirmDialog {
+  open: boolean;
+  title: string;
+  message: string;
+  action: () => Promise<void>;
+}
 
 function DettagliIssue() {
   const navigate = useNavigate();
-  const { id } = useParams();
-  
+  const location = useLocation();
+  const { id } = useParams<{ id: string }>();
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [issue, setIssue] = useState(null);
+  const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [error, setError] = useState("");
-  
-  const [titolo, setTitolo] = useState("");
-  const [descrizione, setDescrizione] = useState("");
-  const [stato, setStato] = useState("");
-  const [tipo, setTipo] = useState("");
-  const [priorita, setPriorita] = useState("");
-  
-  const user = mockAuthService.getUser();
-  const isAdmin = mockAuthService.isAdmin();
+  const [success, setSuccess] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
+    open: false,
+    title: "",
+    message: "",
+    action: async () => {},
+  });
+
+  const [formData, setFormData] = useState<FormData>({
+    titolo: "",
+    descrizione: "",
+    stato: "",
+    tipo: "",
+    priorita: "",
+  });
+
+  const getBackPath = (): string => {
+    if (location.state?.from === "/issues/archiviate") {
+      return "/issues/archiviate";
+    }
+    if (location.state?.from === "/issues") {
+      return "/issues";
+    }
+    return "/issues";
+  };
 
   useEffect(() => {
-    loadIssue();
-  }, [id]);
+    console.log("=== VERIFICA AUTENTICAZIONE ===");
+    try {
+      const token = authService.getToken();
+      const currentUser = authService.getUser();
 
-  const loadIssue = async () => {
+      console.log("Token presente:", !!token);
+      console.log("User presente:", !!currentUser);
+
+      if (!token || !currentUser) {
+        console.error("❌ Non autenticato");
+        navigate("/login");
+        return;
+      }
+
+      const userId = currentUser.id || currentUser.idUtente;
+      if (!userId) {
+        console.error("❌ User senza ID");
+        navigate("/login");
+        return;
+      }
+
+      const normalizedUser: User = {
+        ...currentUser,
+        id: userId,
+      };
+      console.log("✅ Autenticazione OK - User ID:", userId);
+      setUser(normalizedUser);
+      setIsCheckingAuth(false);
+    } catch (err) {
+      console.error("❌ Errore autenticazione:", err);
+      navigate("/login");
+    }
+  }, [navigate]);
+
+  const loadIssue = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await mockIssueService.getIssueById(Number(id));
+      console.log("📥 Caricamento issue:", id);
+      const data = await issueService.getIssueById(Number(id));
+      console.log("✅ Issue caricata:", data);
       setIssue(data);
-      setTitolo(data.titolo);
-      setDescrizione(data.descrizione);
-      setStato(data.stato);
-      setTipo(data.tipo);
-      setPriorita(data.priorita);
+      setFormData({
+        titolo: data.titolo,
+        descrizione: data.descrizione,
+        stato: data.stato,
+        tipo: data.tipo,
+        priorita: data.priorita,
+      });
       setError("");
-    } catch (err) {
-      setError(err.response?.data?.message || "Errore nel caricamento dell'issue");
+    } catch (err: any) {
+      console.error("❌ Errore caricamento:", err);
+      let errorMessage = "Errore nel caricamento dell'issue";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
+  }, [id]);
+
+  useEffect(() => {
+    if (isCheckingAuth || !id) return;
+    loadIssue();
+  }, [id, isCheckingAuth, loadIssue]);
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSave = async () => {
     try {
-      await mockIssueService.updateIssue(Number(id), {
-        titolo,
-        descrizione,
-        stato,
-        tipo,
-        priorita
-      });
+      console.log("💾 Salvataggio modifiche:", formData);
+      await issueService.updateIssue(Number(id), formData);
+      console.log("✅ Modifiche salvate");
+
+      // Upload allegati SOLO se presenti e se l'issue esiste
+      if (files.length > 0 && issue?.idIssue) {
+        console.log(`📎 Upload di ${files.length} file...`);
+        
+        const uploadPromises = files.map(file => 
+          allegatoService.uploadAllegato(file, issue.idIssue)
+            .then(() => console.log(`✅ File caricato: ${file.name}`))
+            .catch(err => {
+              console.error(`❌ Errore upload ${file.name}:`, err);
+              throw new Error(`Impossibile caricare ${file.name}: ${err.message}`);
+            })
+        );
+
+        await Promise.all(uploadPromises);
+        console.log("✅ Tutti i file caricati con successo");
+      }
+
+      setFiles([]); // Svuota i file dopo l'upload
+      setSuccess("Issue aggiornata con successo!");
       await loadIssue();
       setEditMode(false);
-      setError("");
-    } catch (err) {
-      setError(err.response?.data?.message || "Errore nel salvataggio");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err: any) {
+      console.error("❌ Errore salvataggio:", err);
+      let errorMessage = "Errore nel salvataggio";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     }
   };
 
-  const handleArchive = async () => {
-    if (!window.confirm("Sei sicuro di voler archiviare questa issue?")) return;
-    try {
-      await mockIssueService.archiveIssue(Number(id), user.idUtente);
-      await loadIssue();
-      setError("");
-    } catch (err) {
-      setError(err.response?.data?.message || "Errore nell'archiviazione");
-    }
-  };
-
-  const handleUnarchive = async () => {
-    if (!window.confirm("Sei sicuro di voler disarchiviare questa issue?")) return;
-    try {
-      await mockIssueService.unarchiveIssue(Number(id));
-      await loadIssue();
-      setError("");
-    } catch (err) {
-      setError(err.response?.data?.message || "Errore nella disarchiviazione");
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!window.confirm("Sei sicuro di voler eliminare questa issue?")) return;
-    try {
-      await mockIssueService.deleteIssue(Number(id));
-      navigate("/issues");
-    } catch (err) {
-      setError(err.response?.data?.message || "Errore nell'eliminazione");
-    }
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("it-IT", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
+  const handleArchive = () => {
+    setShowConfirm({
+      open: true,
+      title: "Archivia Issue",
+      message: "Sei sicuro di voler archiviare questa issue?",
+      action: async () => {
+        if (!user) return;
+        try {
+          console.log("📦 Archiviazione:", id);
+          await issueService.archiveIssue(Number(id), user.id || user.idUtente || 0);
+          console.log("✅ Issue archiviata");
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+          setSuccess("Issue archiviata con successo!");
+          await loadIssue();
+          setTimeout(() => setSuccess(""), 3000);
+        } catch (err: any) {
+          console.error("❌ Errore archiviazione:", err);
+          let errorMessage = "Errore nell'archiviazione";
+          if (err.response?.data?.message) {
+            errorMessage = err.response.data.message;
+          }
+          setError(errorMessage);
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+        }
+      },
     });
   };
 
-  const getStatoLabel = (s) => {
-    if (s === "Todo") return "To Do";
-    if (s === "inProgress") return "In Progress";
-    if (s === "Done") return "Done";
-    return s;
+  const handleUnarchive = () => {
+    setShowConfirm({
+      open: true,
+      title: "Disarchivia Issue",
+      message: "Sei sicuro di voler disarchiviare questa issue?",
+      action: async () => {
+        try {
+          console.log("📤 Disarchiviazione:", id);
+          await issueService.unarchiveIssue(Number(id));
+          console.log("✅ Issue disarchiviata");
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+          setSuccess("Issue disarchiviata con successo!");
+          await loadIssue();
+          setTimeout(() => setSuccess(""), 3000);
+        } catch (err: any) {
+          console.error("❌ Errore disarchiviazione:", err);
+          let errorMessage = "Errore nella disarchiviazione";
+          if (err.response?.data?.message) {
+            errorMessage = err.response.data.message;
+          }
+          setError(errorMessage);
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+        }
+      },
+    });
   };
 
-  const getNextStato = (currentStato) => {
+  const handleDelete = () => {
+    setShowConfirm({
+      open: true,
+      title: "Elimina Issue",
+      message: "Sei sicuro di voler eliminare questa issue? Questa azione non può essere annullata.",
+      action: async () => {
+        try {
+          console.log("🗑️ Eliminazione:", id);
+          await issueService.deleteIssue(Number(id));
+          console.log("✅ Issue eliminata");
+          const backPath = getBackPath();
+          navigate(backPath);
+        } catch (err: any) {
+          console.error("❌ Errore eliminazione:", err);
+          let errorMessage = "Errore nell'eliminazione";
+          if (err.response?.data?.message) {
+            errorMessage = err.response.data.message;
+          }
+          setError(errorMessage);
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+        }
+      },
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    await showConfirm.action();
+  };
+
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return "-";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("it-IT", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "-";
+    }
+  };
+
+  const getStatoLabel = (s: string): string => {
+    const statoMap: { [key: string]: string } = {
+      Todo: "To Do",
+      inProgress: "In Progress",
+      Done: "Done",
+    };
+    return statoMap[s] || s;
+  };
+
+  const getNextStato = (currentStato: string): string => {
     if (currentStato === "Todo") return "inProgress";
     if (currentStato === "inProgress") return "Done";
     return currentStato;
   };
 
-  const canChangeStato = () => {
-    return stato !== "Done" && !issue?.archiviata;
+  const canChangeStato = (): boolean => {
+    return formData.stato !== "Done" && !issue?.archiviata;
   };
 
   const handleAdvanceStato = () => {
     if (canChangeStato()) {
-      setStato(getNextStato(stato));
+      setFormData((prev) => ({
+        ...prev,
+        stato: getNextStato(prev.stato),
+      }));
     }
   };
+
+  const isArchived = issue?.archiviata || false;
+  const canEdit = !isArchived;
+  const isAdmin = user?.ruolo === "Amministratore" || user?.role === "admin";
+
+  if (isCheckingAuth) {
+    return (
+      <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div style={{ fontSize: "18px", color: "#6b7280" }}>Caricamento...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
       <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ fontSize: "18px", color: "#6b7280" }}>Caricamento...</div>
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div style={{ fontSize: "18px", color: "#6b7280" }}>Caricamento issue...</div>
         </div>
       </div>
     );
@@ -167,41 +385,52 @@ function DettagliIssue() {
   if (!issue) {
     return (
       <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <div style={{ fontSize: "18px", color: "#dc2626" }}>Issue non trovata</div>
         </div>
       </div>
     );
   }
 
-  const isArchived = issue.archiviata;
-  const canEdit = !isArchived;
+  const backPath = getBackPath();
+  const backLabel = backPath === "/issues/archiviate" ? "← Torna alle Archiviate" : "← Torna alla lista";
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Header */}
-        <header style={{
-          backgroundColor: "white",
-          borderBottom: "1px solid #e5e7eb",
-          padding: "20px 32px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}>
+        <header
+          style={{
+            backgroundColor: "white",
+            borderBottom: "1px solid #e5e7eb",
+            padding: "20px 32px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <button
-              onClick={() => navigate("/issues")}
+              onClick={() => navigate(backPath)}
               style={{
                 padding: "8px 12px",
                 backgroundColor: "transparent",
                 border: "none",
                 cursor: "pointer",
                 fontSize: "18px",
-                color: "#374151"
+                color: "#374151",
               }}
             >
-              ← Torna alla lista
+              {backLabel}
             </button>
             <div>
               <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
@@ -212,7 +441,6 @@ function DettagliIssue() {
               </div>
             </div>
           </div>
-
           <div style={{ display: "flex", gap: "12px" }}>
             {canEdit && !editMode && (
               <button
@@ -225,13 +453,13 @@ function DettagliIssue() {
                   borderRadius: "8px",
                   fontSize: "14px",
                   fontWeight: 600,
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 ✏️ Modifica
               </button>
             )}
-            
+
             {isAdmin && !isArchived && (
               <button
                 onClick={handleArchive}
@@ -243,13 +471,13 @@ function DettagliIssue() {
                   borderRadius: "8px",
                   fontSize: "14px",
                   fontWeight: 600,
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 📦 Archivia
               </button>
             )}
-            
+
             {isAdmin && isArchived && (
               <button
                 onClick={handleUnarchive}
@@ -261,13 +489,13 @@ function DettagliIssue() {
                   borderRadius: "8px",
                   fontSize: "14px",
                   fontWeight: 600,
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 📤 Disarchivia
               </button>
             )}
-            
+
             {isAdmin && (
               <button
                 onClick={handleDelete}
@@ -279,7 +507,7 @@ function DettagliIssue() {
                   borderRadius: "8px",
                   fontSize: "14px",
                   fontWeight: 600,
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 🗑️ Elimina
@@ -291,82 +519,130 @@ function DettagliIssue() {
         {/* Main Content */}
         <div style={{ padding: "32px", maxWidth: "1400px", margin: "0 auto", width: "100%" }}>
           {error && (
-            <div style={{
-              color: "#dc2626",
-              backgroundColor: "#fee2e2",
-              padding: "12px 16px",
-              borderRadius: "8px",
-              marginBottom: "24px",
-              fontSize: "14px",
-              border: "1px solid #fecaca"
-            }}>
-              {error}
+            <div
+              style={{
+                color: "#dc2626",
+                backgroundColor: "#fee2e2",
+                padding: "12px 16px",
+                borderRadius: "8px",
+                marginBottom: "24px",
+                fontSize: "14px",
+                border: "1px solid #fecaca",
+              }}
+            >
+              ⚠️ {error}
+            </div>
+          )}
+
+          {success && (
+            <div
+              style={{
+                color: "#065f46",
+                backgroundColor: "#d1fae5",
+                padding: "12px 16px",
+                borderRadius: "8px",
+                marginBottom: "24px",
+                fontSize: "14px",
+                border: "1px solid #6ee7b7",
+              }}
+            >
+              ✅ {success}
             </div>
           )}
 
           {isArchived && (
-            <div style={{
-              color: "#92400e",
-              backgroundColor: "#fef3c7",
-              padding: "12px 16px",
-              borderRadius: "8px",
-              marginBottom: "24px",
-              fontSize: "14px",
-              border: "1px solid #fde68a"
-            }}>
+            <div
+              style={{
+                color: "#92400e",
+                backgroundColor: "#fef3c7",
+                padding: "12px 16px",
+                borderRadius: "8px",
+                marginBottom: "24px",
+                fontSize: "14px",
+                border: "1px solid #fde68a",
+              }}
+            >
               ⚠️ Questa issue è archiviata e non può essere modificata
             </div>
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px" }}>
             {/* Colonna Sinistra */}
-            <div style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "32px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-            }}>
+            <div
+              style={{
+                backgroundColor: "white",
+                borderRadius: "12px",
+                padding: "32px",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              }}
+            >
               {/* Titolo */}
               <div style={{ marginBottom: "24px" }}>
-                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#374151",
+                    marginBottom: "8px",
+                  }}
+                >
                   Titolo *
                 </label>
                 {editMode ? (
-                  <input
-                    type="text"
-                    value={titolo}
-                    onChange={(e) => setTitolo(e.target.value)}
-                    maxLength={200}
-                    style={{
-                      width: "100%",
-                      padding: "12px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "8px",
-                      fontSize: "14px"
-                    }}
-                  />
+                  <>
+                    <input
+                      type="text"
+                      name="titolo"
+                      value={formData.titolo}
+                      onChange={handleInputChange}
+                      maxLength={200}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#6b7280",
+                        marginTop: "4px",
+                        textAlign: "right",
+                      }}
+                    >
+                      {formData.titolo.length}/200
+                    </div>
+                  </>
                 ) : (
                   <div style={{ fontSize: "24px", fontWeight: 600, color: "#1f2937" }}>
                     {issue.titolo}
-                  </div>
-                )}
-                {editMode && (
-                  <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px", textAlign: "right" }}>
-                    {titolo.length}/200
                   </div>
                 )}
               </div>
 
               {/* Descrizione */}
               <div style={{ marginBottom: "24px" }}>
-                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#374151",
+                    marginBottom: "8px",
+                  }}
+                >
                   Descrizione *
                 </label>
                 {editMode ? (
                   <>
                     <textarea
-                      value={descrizione}
-                      onChange={(e) => setDescrizione(e.target.value)}
+                      name="descrizione"
+                      value={formData.descrizione}
+                      onChange={handleInputChange}
                       maxLength={5000}
                       rows={8}
                       style={{
@@ -375,19 +651,167 @@ function DettagliIssue() {
                         border: "1px solid #d1d5db",
                         borderRadius: "8px",
                         fontSize: "14px",
-                        resize: "vertical"
+                        resize: "vertical",
+                        boxSizing: "border-box",
                       }}
                     />
-                    <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px", textAlign: "right" }}>
-                      {descrizione.length}/5000
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#6b7280",
+                        marginTop: "4px",
+                        textAlign: "right",
+                      }}
+                    >
+                      {formData.descrizione.length}/5000
                     </div>
                   </>
                 ) : (
-                  <div style={{ fontSize: "15px", color: "#4b5563", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
+                  <div
+                    style={{
+                      fontSize: "15px",
+                      color: "#4b5563",
+                      lineHeight: "1.6",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
                     {issue.descrizione}
                   </div>
                 )}
               </div>
+
+              {/* Allegati File - SOLO IN EDIT MODE */}
+              {editMode && (
+                <div style={{ marginBottom: "24px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      color: "#374151",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Allega File (facoltativo)
+                  </label>
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.style.borderColor = "#0d9488";
+                      e.currentTarget.style.backgroundColor = "#f0fdfa";
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#d1d5db";
+                      e.currentTarget.style.backgroundColor = "#f9fafb";
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.style.borderColor = "#d1d5db";
+                      e.currentTarget.style.backgroundColor = "#f9fafb";
+                      if (e.dataTransfer.files) {
+                        const newFiles = Array.from(e.dataTransfer.files);
+                        setFiles((prev) => [...prev, ...newFiles]);
+                      }
+                    }}
+                    style={{
+                      border: "2px dashed #d1d5db",
+                      borderRadius: "8px",
+                      padding: "32px",
+                      textAlign: "center",
+                      backgroundColor: "#f9fafb",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="file"
+                      id="file-input"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          const newFiles = Array.from(e.target.files);
+                          setFiles((prev) => [...prev, ...newFiles]);
+                        }
+                      }}
+                      style={{ display: "none" }}
+                    />
+                    <label
+                      htmlFor="file-input"
+                      style={{ cursor: "pointer", display: "block" }}
+                    >
+                      <div style={{ fontSize: "24px", marginBottom: "8px" }}>⬆️</div>
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: "#1f2937",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        Trascina file qui o clicca
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "#6b7280",
+                        }}
+                      >
+                        Formati supportati: JPEG, PNG, GIF, WebP - Max 5MB
+                      </div>
+                    </label>
+                  </div>
+
+                  {files && files.length > 0 && (
+                    <div style={{ marginTop: "16px" }}>
+                      <div style={{ fontSize: "12px", fontWeight: 600, color: "#6b7280", marginBottom: "8px" }}>
+                        File selezionati:
+                      </div>
+                      {files.map((file: any, index: number) => (
+                        <div
+                          key={index}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "8px 12px",
+                            backgroundColor: "#f3f4f6",
+                            borderRadius: "6px",
+                            marginBottom: "6px",
+                            fontSize: "12px",
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, color: "#1f2937" }}>
+                              {file.name}
+                            </div>
+                            <div style={{ color: "#6b7280" }}>
+                              {(file.size / 1024).toFixed(2)} KB
+                            </div>
+                          </div>
+                          <button
+                            onClick={() =>
+                              setFiles((prev) =>
+                                prev.filter((_, i) => i !== index)
+                              )
+                            }
+                            style={{
+                              padding: "6px 10px",
+                              backgroundColor: "#fee2e2",
+                              border: "1px solid #fca5a5",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              color: "#dc2626",
+                              fontSize: "16px",
+                              lineHeight: "1",
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Pulsanti Modifica */}
               {editMode && (
@@ -402,7 +826,7 @@ function DettagliIssue() {
                       borderRadius: "8px",
                       fontSize: "14px",
                       fontWeight: 600,
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                   >
                     💾 Salva Modifiche
@@ -410,11 +834,14 @@ function DettagliIssue() {
                   <button
                     onClick={() => {
                       setEditMode(false);
-                      setTitolo(issue.titolo);
-                      setDescrizione(issue.descrizione);
-                      setStato(issue.stato);
-                      setTipo(issue.tipo);
-                      setPriorita(issue.priorita);
+                      setFormData({
+                        titolo: issue.titolo,
+                        descrizione: issue.descrizione,
+                        stato: issue.stato,
+                        tipo: issue.tipo,
+                        priorita: issue.priorita,
+                      });
+                      setFiles([]);
                     }}
                     style={{
                       padding: "12px 24px",
@@ -424,7 +851,7 @@ function DettagliIssue() {
                       borderRadius: "8px",
                       fontSize: "14px",
                       fontWeight: 600,
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                   >
                     ✖ Annulla
@@ -434,20 +861,37 @@ function DettagliIssue() {
             </div>
 
             {/* Colonna Destra */}
-            <div style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "24px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              height: "fit-content"
-            }}>
-              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#1f2937", marginBottom: "20px" }}>
+            <div
+              style={{
+                backgroundColor: "white",
+                borderRadius: "12px",
+                padding: "24px",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                height: "fit-content",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  color: "#1f2937",
+                  margin: "0 0 20px 0",
+                }}
+              >
                 Informazioni
               </h3>
 
               {/* Stato */}
               <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#6b7280", marginBottom: "8px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#6b7280",
+                    marginBottom: "8px",
+                  }}
+                >
                   Stato
                 </label>
                 {editMode && canChangeStato() ? (
@@ -462,41 +906,63 @@ function DettagliIssue() {
                       fontSize: "14px",
                       fontWeight: 600,
                       cursor: "pointer",
-                      width: "100%"
+                      width: "100%",
                     }}
                   >
-                    {getStatoLabel(stato)} → {getStatoLabel(getNextStato(stato))}
+                    {getStatoLabel(formData.stato)} → {getStatoLabel(getNextStato(formData.stato))}
                   </button>
                 ) : (
-                  <span style={{
-                    padding: "6px 12px",
-                    backgroundColor: stato === "Done" ? "#d1fae5" : stato === "inProgress" ? "#fef3c7" : "#e5e7eb",
-                    color: stato === "Done" ? "#065f46" : stato === "inProgress" ? "#92400e" : "#374151",
-                    borderRadius: "6px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    display: "inline-block"
-                  }}>
-                    {getStatoLabel(stato)}
+                  <span
+                    style={{
+                      padding: "6px 12px",
+                      backgroundColor:
+                        formData.stato === "Done"
+                          ? "#d1fae5"
+                          : formData.stato === "inProgress"
+                          ? "#fef3c7"
+                          : "#e5e7eb",
+                      color:
+                        formData.stato === "Done"
+                          ? "#065f46"
+                          : formData.stato === "inProgress"
+                          ? "#92400e"
+                          : "#374151",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      display: "inline-block",
+                    }}
+                  >
+                    {getStatoLabel(formData.stato)}
                   </span>
                 )}
               </div>
 
               {/* Tipo */}
               <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#6b7280", marginBottom: "8px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#6b7280",
+                    marginBottom: "8px",
+                  }}
+                >
                   Tipo
                 </label>
                 {editMode ? (
                   <select
-                    value={tipo}
-                    onChange={(e) => setTipo(e.target.value)}
+                    name="tipo"
+                    value={formData.tipo}
+                    onChange={handleInputChange}
                     style={{
                       width: "100%",
                       padding: "8px 12px",
                       border: "1px solid #d1d5db",
                       borderRadius: "6px",
-                      fontSize: "14px"
+                      fontSize: "14px",
+                      boxSizing: "border-box",
                     }}
                   >
                     <option value="bug">Bug</option>
@@ -505,35 +971,47 @@ function DettagliIssue() {
                     <option value="documentation">Documentation</option>
                   </select>
                 ) : (
-                  <span style={{
-                    padding: "6px 12px",
-                    backgroundColor: "#dbeafe",
-                    color: "#1e40af",
-                    borderRadius: "6px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    display: "inline-block"
-                  }}>
-                    {tipo}
+                  <span
+                    style={{
+                      padding: "6px 12px",
+                      backgroundColor: "#dbeafe",
+                      color: "#1e40af",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      display: "inline-block",
+                    }}
+                  >
+                    {formData.tipo}
                   </span>
                 )}
               </div>
 
               {/* Priorità */}
               <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#6b7280", marginBottom: "8px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#6b7280",
+                    marginBottom: "8px",
+                  }}
+                >
                   Priorità
                 </label>
                 {editMode ? (
                   <select
-                    value={priorita}
-                    onChange={(e) => setPriorita(e.target.value)}
+                    name="priorita"
+                    value={formData.priorita}
+                    onChange={handleInputChange}
                     style={{
                       width: "100%",
                       padding: "8px 12px",
                       border: "1px solid #d1d5db",
                       borderRadius: "6px",
-                      fontSize: "14px"
+                      fontSize: "14px",
+                      boxSizing: "border-box",
                     }}
                   >
                     <option value="none">None</option>
@@ -543,17 +1021,33 @@ function DettagliIssue() {
                     <option value="critical">Critical</option>
                   </select>
                 ) : (
-                  <span style={{
-                    padding: "6px 12px",
-                    backgroundColor: priorita === "critical" ? "#fecaca" : priorita === "high" ? "#fed7aa" : priorita === "medium" ? "#fef3c7" : "#f3f4f6",
-                    color: priorita === "critical" ? "#7f1d1d" : priorita === "high" ? "#9a3412" : priorita === "medium" ? "#92400e" : "#374151",
-                    borderRadius: "6px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    display: "inline-block",
-                    textTransform: "capitalize"
-                  }}>
-                    {priorita}
+                  <span
+                    style={{
+                      padding: "6px 12px",
+                      backgroundColor:
+                        formData.priorita === "critical"
+                          ? "#fecaca"
+                          : formData.priorita === "high"
+                          ? "#fed7aa"
+                          : formData.priorita === "medium"
+                          ? "#fef3c7"
+                          : "#f3f4f6",
+                      color:
+                        formData.priorita === "critical"
+                          ? "#7f1d1d"
+                          : formData.priorita === "high"
+                          ? "#9a3412"
+                          : formData.priorita === "medium"
+                          ? "#92400e"
+                          : "#374151",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      display: "inline-block",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {formData.priorita}
                   </span>
                 )}
               </div>
@@ -562,7 +1056,14 @@ function DettagliIssue() {
 
               {/* ID Issue */}
               <div style={{ marginBottom: "16px" }}>
-                <div style={{ fontSize: "13px", fontWeight: 600, color: "#6b7280", marginBottom: "4px" }}>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#6b7280",
+                    marginBottom: "4px",
+                  }}
+                >
                   ID Issue
                 </div>
                 <div style={{ fontSize: "14px", color: "#1f2937", fontFamily: "monospace" }}>
@@ -573,7 +1074,14 @@ function DettagliIssue() {
               {/* Creatore */}
               {issue.creatore && (
                 <div style={{ marginBottom: "16px" }}>
-                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#6b7280", marginBottom: "4px" }}>
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "#6b7280",
+                      marginBottom: "4px",
+                    }}
+                  >
                     Creato da
                   </div>
                   <div style={{ fontSize: "14px", color: "#1f2937" }}>
@@ -587,7 +1095,14 @@ function DettagliIssue() {
 
               {/* Data Creazione */}
               <div style={{ marginBottom: "16px" }}>
-                <div style={{ fontSize: "13px", fontWeight: 600, color: "#6b7280", marginBottom: "4px" }}>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#6b7280",
+                    marginBottom: "4px",
+                  }}
+                >
                   Data Creazione
                 </div>
                 <div style={{ fontSize: "14px", color: "#1f2937" }}>
@@ -597,7 +1112,14 @@ function DettagliIssue() {
 
               {/* Data Ultima Modifica */}
               <div style={{ marginBottom: "16px" }}>
-                <div style={{ fontSize: "13px", fontWeight: 600, color: "#6b7280", marginBottom: "4px" }}>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#6b7280",
+                    marginBottom: "4px",
+                  }}
+                >
                   Ultima Modifica
                 </div>
                 <div style={{ fontSize: "14px", color: "#1f2937" }}>
@@ -608,7 +1130,14 @@ function DettagliIssue() {
               {/* Data Risoluzione */}
               {issue.dataRisoluzione && (
                 <div style={{ marginBottom: "16px" }}>
-                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#6b7280", marginBottom: "4px" }}>
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "#6b7280",
+                      marginBottom: "4px",
+                    }}
+                  >
                     Data Risoluzione
                   </div>
                   <div style={{ fontSize: "14px", color: "#10b981" }}>
@@ -617,14 +1146,21 @@ function DettagliIssue() {
                 </div>
               )}
 
-              {/* Dati Archiviazione - SOLO SE ARCHIVIATA */}
+              {/* Dati Archiviazione */}
               {isArchived && (
                 <>
                   <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
-                  
+
                   {issue.dataArchiviazione && (
                     <div style={{ marginBottom: "16px" }}>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: "#6b7280", marginBottom: "4px" }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          color: "#6b7280",
+                          marginBottom: "4px",
+                        }}
+                      >
                         Data Archiviazione
                       </div>
                       <div style={{ fontSize: "14px", color: "#92400e" }}>
@@ -635,7 +1171,14 @@ function DettagliIssue() {
 
                   {issue.archiviatore && (
                     <div style={{ marginBottom: "16px" }}>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: "#6b7280", marginBottom: "4px" }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          color: "#6b7280",
+                          marginBottom: "4px",
+                        }}
+                      >
                         Archiviato da
                       </div>
                       <div style={{ fontSize: "14px", color: "#92400e" }}>
@@ -652,6 +1195,74 @@ function DettagliIssue() {
           </div>
         </div>
       </div>
+
+      {/* Modal di Conferma */}
+      {showConfirm.open && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              padding: "32px",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+              maxWidth: "400px",
+              textAlign: "center",
+            }}
+          >
+            <h3 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", marginTop: 0 }}>
+              {showConfirm.title}
+            </h3>
+            <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px", marginTop: "12px" }}>
+              {showConfirm.message}
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+              <button
+                onClick={() => setShowConfirm({ open: false, title: "", message: "", action: async () => {} })}
+                style={{
+                  padding: "10px 24px",
+                  backgroundColor: "#f3f4f6",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                style={{
+                  padding: "10px 24px",
+                  backgroundColor: "#dc2626",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Conferma
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import Sidebar from "./Sidebar";
+import { authService } from "../services/authService";
+
 
 interface Issue {
   idIssue: number;
@@ -12,41 +14,67 @@ interface Issue {
   priorita: string;
   dataCreazione: string;
   dataUltimaModifica: string;
+  archiviata?: boolean;
 }
+
 
 function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [filterType, setFilterType] = useState<string>("all");
 
-  useEffect(() => {
-    const loadIssues = async () => {
-      try {
-        setLoading(true);
-        const data = await issueService.getAllIssues();
-        setIssues(data);
-        setError("");
-      } catch (err: any) {
-        console.error("Errore caricamento issues:", err);
-        setError(err.response?.data?.message || "Errore nel caricamento delle issue");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadIssues();
-  }, []);
 
-  const issueStats = {
-    totali: issues.length,
-    todo: issues.filter(i => i.stato.toLowerCase() === 'todo').length,
-    inProgress: issues.filter(i => i.stato.toLowerCase() === 'inprogress' || i.stato.toLowerCase() === 'in_progress').length,
-    done: issues.filter(i => i.stato.toLowerCase() === 'done').length,
+  useEffect(() => {
+    const token = authService.getToken();
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    loadIssues();
+  }, [navigate, location.pathname]);
+
+  const loadIssues = async () => {
+    try {
+      setLoading(true);
+      const data = await issueService.getAllIssues();
+      const nonArchived = data.filter((issue: Issue) => !issue.archiviata);
+      setIssues(nonArchived);
+      setError("");
+    } catch (err: any) {
+      console.error("Errore caricamento issues:", err);
+      setError(err.response?.data?.message || "Errore nel caricamento delle issue");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Componenti SVG Icons
+  const getFilteredIssues = () => {
+    if (filterType === "all") return issues;
+    
+    return issues.filter(i => {
+      const statoNorm = i.stato.toLowerCase().replace('_', '');
+      const filterNorm = filterType.toLowerCase().replace('_', '');
+      return statoNorm === filterNorm;
+    });
+  };
+
+  const filteredIssues = getFilteredIssues();
+
+  const issueStats = {
+    totali: filteredIssues.length,
+    todo: filteredIssues.filter(i => i.stato.toLowerCase() === 'todo').length,
+    inProgress: filteredIssues.filter(i => {
+      const stato = i.stato.toLowerCase();
+      return stato === 'inprogress' || stato === 'in_progress';
+    }).length,
+    done: filteredIssues.filter(i => i.stato.toLowerCase() === 'done').length,
+  };
+
+
   const ListIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M8 6H21" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round"/>
@@ -142,7 +170,7 @@ function Home() {
   };
 
   const formatStato = (stato: string) => {
-    if (stato === "inProgress") return "In Progress";
+    if (stato === "inProgress" || stato === "in_progress") return "In Progress";
     return stato.charAt(0).toUpperCase() + stato.slice(1);
   };
 
@@ -156,7 +184,6 @@ function Home() {
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header - RIMOSSO IL BOTTONE "NUOVA ISSUE" */}
         <header style={{
           backgroundColor: "white",
           borderBottom: "1px solid #e5e7eb",
@@ -206,7 +233,6 @@ function Home() {
           </div>
         </header>
 
-        {/* Main Content */}
         <div style={{ padding: "32px" }}>
           {error && (
             <div style={{ 
@@ -222,32 +248,72 @@ function Home() {
             </div>
           )}
 
-          {/* Dropdown Filter e Nuova Issue Button */}
-          <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <select 
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              style={{
-                padding: "10px 40px 10px 16px",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                fontSize: "14px",
-                color: "#374151",
-                backgroundColor: "white",
-                cursor: "pointer",
-                outline: "none"
-              }}
-            >
-              <option value="all">Tutte le issue</option>
-              <option value="todo">Todo</option>
-              <option value="inprogress">In Progress</option>
-              <option value="done">Done</option>
-            </select>
+          {/* FIX 2: Indicatore visivo filtro attivo */}
+          <div style={{ 
+            backgroundColor: "white",
+            borderRadius: "12px",
+            padding: "20px 24px",
+            marginBottom: "32px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            border: "1px solid #e5e7eb",
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center" 
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                <label style={{ 
+                  fontSize: "12px", 
+                  fontWeight: 600, 
+                  color: "#6b7280", 
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px"
+                }}>
+                  Filtra per stato
+                </label>
+                {filterType !== "all" && (
+                  <span style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    color: "#0d9488",
+                    backgroundColor: "#d1fae5",
+                    padding: "2px 8px",
+                    borderRadius: "10px"
+                  }}>
+                    Filtro attivo
+                  </span>
+                )}
+              </div>
+              <select 
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                style={{
+                  padding: "10px 40px 10px 16px",
+                  border: filterType !== "all" ? "2px solid #0d9488" : "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  color: "#374151",
+                  backgroundColor: filterType !== "all" ? "#f0fdfa" : "white",
+                  cursor: "pointer",
+                  outline: "none",
+                  minWidth: "200px",
+                  appearance: "none",
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 12px center"
+                }}
+              >
+                <option value="all">Tutte le issue</option>
+                <option value="todo">Fare</option>
+                <option value="inprogress">In corso</option>
+                <option value="done">Fatto</option>
+              </select>
+            </div>
 
             <button
               onClick={() => navigate('/issues/nuova')}
               style={{
-                padding: "10px 20px",
+                padding: "12px 24px",
                 backgroundColor: "#0d9488",
                 color: "white",
                 border: "none",
@@ -257,158 +323,194 @@ function Home() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "8px",
-                cursor: "pointer"
+                cursor: "pointer",
+                transition: "all 0.2s",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#0f766e";
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#0d9488";
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
               }}
             >
               <span style={{ fontSize: "18px" }}>➕</span> Nuova Issue
             </button>
           </div>
 
-          {/* Cards Statistiche */}
+          {/* FIX 1: Loading state per le cards statistiche */}
           <div style={{ 
             display: "grid", 
             gridTemplateColumns: "repeat(4, 1fr)",
             gap: "20px",
-            marginBottom: "32px"
+            marginBottom: "32px",
+            minHeight: "120px"
           }}>
-            {/* Card Issue Totali */}
-            <div style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "20px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              border: "1px solid #e5e7eb"
-            }}>
-              <div style={{ 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "flex-start",
-                marginBottom: "12px"
-              }}>
-                <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
-                  Issue Totali
-                </div>
+            {loading ? (
+              <>
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} style={{
+                    backgroundColor: "white",
+                    borderRadius: "12px",
+                    padding: "20px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                    border: "1px solid #e5e7eb",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    <div style={{ 
+                      width: "24px", 
+                      height: "24px", 
+                      border: "3px solid #f3f4f6",
+                      borderTop: "3px solid #0d9488",
+                      borderRadius: "50%",
+                      animation: "spin 1s linear infinite"
+                    }} />
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
                 <div style={{
-                  width: "40px",
-                  height: "40px",
-                  backgroundColor: "#dbeafe",
-                  borderRadius: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
+                  backgroundColor: "white",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  border: "1px solid #e5e7eb"
                 }}>
-                  <ListIcon />
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    alignItems: "flex-start",
+                    marginBottom: "12px"
+                  }}>
+                    <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
+                      Issue Totali
+                    </div>
+                    <div style={{
+                      width: "40px",
+                      height: "40px",
+                      backgroundColor: "#dbeafe",
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}>
+                      <ListIcon />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
+                    {issueStats.totali}
+                  </div>
                 </div>
-              </div>
-              <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
-                {issueStats.totali}
-              </div>
-            </div>
 
-            {/* Card Issue Todo */}
-            <div style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "20px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              border: "1px solid #e5e7eb"
-            }}>
-              <div style={{ 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "flex-start",
-                marginBottom: "12px"
-              }}>
-                <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
-                  Issue Todo
-                </div>
                 <div style={{
-                  width: "40px",
-                  height: "40px",
-                  backgroundColor: "#f3f4f6",
-                  borderRadius: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
+                  backgroundColor: "white",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  border: "1px solid #e5e7eb"
                 }}>
-                  <ClockIcon />
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    alignItems: "flex-start",
+                    marginBottom: "12px"
+                  }}>
+                    <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
+                      Problema da fare
+                    </div>
+                    <div style={{
+                      width: "40px",
+                      height: "40px",
+                      backgroundColor: "#f3f4f6",
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}>
+                      <ClockIcon />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
+                    {issueStats.todo}
+                  </div>
                 </div>
-              </div>
-              <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
-                {issueStats.todo}
-              </div>
-            </div>
 
-            {/* Card Issue In Progress */}
-            <div style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "20px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              border: "1px solid #e5e7eb"
-            }}>
-              <div style={{ 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "flex-start",
-                marginBottom: "12px"
-              }}>
-                <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
-                  Issue In Progress
-                </div>
                 <div style={{
-                  width: "40px",
-                  height: "40px",
-                  backgroundColor: "#fef3c7",
-                  borderRadius: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
+                  backgroundColor: "white",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  border: "1px solid #e5e7eb"
                 }}>
-                  <TrendUpIcon />
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    alignItems: "flex-start",
+                    marginBottom: "12px"
+                  }}>
+                    <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
+                      Problema in corso
+                    </div>
+                    <div style={{
+                      width: "40px",
+                      height: "40px",
+                      backgroundColor: "#fef3c7",
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}>
+                      <TrendUpIcon />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
+                    {issueStats.inProgress}
+                  </div>
                 </div>
-              </div>
-              <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
-                {issueStats.inProgress}
-              </div>
-            </div>
 
-            {/* Card Issue Done */}
-            <div style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "20px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              border: "1px solid #e5e7eb"
-            }}>
-              <div style={{ 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "flex-start",
-                marginBottom: "12px"
-              }}>
-                <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
-                  Issue Done
-                </div>
                 <div style={{
-                  width: "40px",
-                  height: "40px",
-                  backgroundColor: "#d1fae5",
-                  borderRadius: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
+                  backgroundColor: "white",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  border: "1px solid #e5e7eb"
                 }}>
-                  <CheckCircleIcon />
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    alignItems: "flex-start",
+                    marginBottom: "12px"
+                  }}>
+                    <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
+                      Problema risolto
+                    </div>
+                    <div style={{
+                      width: "40px",
+                      height: "40px",
+                      backgroundColor: "#d1fae5",
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}>
+                      <CheckCircleIcon />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
+                    {issueStats.done}
+                  </div>
                 </div>
-              </div>
-              <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
-                {issueStats.done}
-              </div>
-            </div>
+              </>
+            )}
           </div>
 
-          {/* Tabella Issue Recenti */}
           <div style={{ 
             backgroundColor: "white", 
             borderRadius: "12px", 
@@ -418,7 +520,7 @@ function Home() {
           }}>
             <div style={{ 
               padding: "20px 24px", 
-              borderBottom: "1px solid #e5e7eb", 
+              borderBottom: "2px solid #e5e7eb", 
               display: "flex", 
               justifyContent: "space-between", 
               alignItems: "center" 
@@ -447,7 +549,7 @@ function Home() {
               <div style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
                 Caricamento in corso...
               </div>
-            ) : issues.length === 0 ? (
+            ) : filteredIssues.length === 0 ? (
               <div style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
                 Nessuna issue trovata. Crea la tua prima issue!
               </div>
@@ -455,7 +557,7 @@ function Home() {
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ backgroundColor: "#f9fafb" }}>
+                    <tr style={{ backgroundColor: "#f9fafb", borderBottom: "2px solid #d1d5db" }}>
                       <th style={{ 
                         padding: "14px 24px", 
                         textAlign: "left",
@@ -514,21 +616,21 @@ function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {issues.slice(0, 5).map((issue) => (
+                    {filteredIssues.slice(0, 5).map((issue) => (
                       <tr 
                         key={issue.idIssue} 
                         style={{ 
-                          borderTop: "1px solid #e5e7eb",
+                          borderBottom: "1px solid #e5e7eb",
                           cursor: "pointer",
                           transition: "background-color 0.2s"
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f9fafb"}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-                        onClick={() => navigate(`/issues/${issue.idIssue}`)}
+                        onClick={() => navigate(`/issues/${issue.idIssue}`, { state: { from: "/home" } })}
                       >
                         <td style={{ 
                           padding: "14px 24px", 
-                          color: "#1f2937",
+                          color: "#0d9488",
                           fontWeight: 500,
                           fontSize: "14px"
                         }}>
@@ -580,6 +682,13 @@ function Home() {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

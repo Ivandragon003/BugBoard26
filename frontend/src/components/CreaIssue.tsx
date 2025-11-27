@@ -4,6 +4,7 @@ import { issueService } from "../services/issueService";
 import { allegatoService } from "../services/allegatoService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
+import FileUploadSection from "./FileUploadSection";
 
 interface FormData {
   titolo: string;
@@ -25,45 +26,21 @@ function CreaIssue() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    console.log('=== VERIFICA AUTENTICAZIONE ===');
-    
     const token = authService.getToken();
     const currentUser = authService.getUser();
     
-    console.log('Token presente:', !!token);
-    console.log('User presente:', !!currentUser);
-    console.log('User completo:', currentUser);
-    
-    // Verifica token
-    if (!token) {
-      console.error('❌ Token non trovato - Redirect a login');
+    if (!token || !currentUser) {
       navigate('/login');
       return;
     }
     
-    // Verifica user
-    if (!currentUser) {
-      console.error('❌ User non trovato - Redirect a login');
-      navigate('/login');
-      return;
-    }
-    
-    // Verifica ID utente
-    if (!currentUser.id && !currentUser.idUtente) {
-      console.error('❌ User senza ID - Redirect a login');
-      console.error('Struttura user:', Object.keys(currentUser));
-      navigate('/login');
-      return;
-    }
-    
-    // Normalizza l'ID (potrebbe essere "id" o "idUtente")
     const userId = currentUser.id || currentUser.idUtente;
-    const normalizedUser = {
-      ...currentUser,
-      id: userId
-    };
+    if (!userId) {
+      navigate('/login');
+      return;
+    }
     
-    console.log('✅ Autenticazione OK - User ID:', userId);
+    const normalizedUser = { ...currentUser, id: userId };
     setUser(normalizedUser);
     setIsCheckingAuth(false);
   }, [navigate]);
@@ -79,41 +56,19 @@ function CreaIssue() {
 
   useEffect(() => {
     if (user && user.id) {
-      console.log('Impostazione idCreatore nel form:', user.id);
-      setFormData(prev => ({
-        ...prev,
-        idCreatore: user.id
-      }));
+      setFormData(prev => ({ ...prev, idCreatore: user.id }));
     }
   }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...newFiles]);
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('=== SUBMIT ISSUE ===');
-    console.log('User corrente:', user);
-    
     if (!user || !user.id) {
-      console.error('❌ User non valido al submit');
       setError("Devi essere autenticato per creare un'issue");
       navigate('/login');
       return;
@@ -123,42 +78,38 @@ function CreaIssue() {
     setError("");
 
     try {
-      const dataToSend = {
-        ...formData,
-        idCreatore: user.id
-      };
-
-      console.log("📤 Dati inviati:", dataToSend);
+      const dataToSend = { ...formData, idCreatore: user.id };
+      console.log("📤 Creazione issue:", dataToSend);
 
       const newIssue = await issueService.createIssue(dataToSend);
       console.log("✅ Issue creata:", newIssue);
 
+      // Upload file SOLO se la creazione issue è riuscita
       if (files.length > 0 && newIssue.idIssue) {
         console.log(`📎 Upload di ${files.length} file...`);
-        for (const file of files) {
-          try {
-            await allegatoService.uploadAllegato(file, newIssue.idIssue);
-            console.log(`✅ File caricato: ${file.name}`);
-          } catch (fileError: any) {
-            console.error("❌ Errore upload file:", file.name, fileError);
-          }
-        }
+        
+        const uploadPromises = files.map(file => 
+          allegatoService.uploadAllegato(file, newIssue.idIssue)
+            .then(() => console.log(`✅ File caricato: ${file.name}`))
+            .catch(err => {
+              console.error(`❌ Errore upload ${file.name}:`, err);
+              throw new Error(`Impossibile caricare ${file.name}: ${err.message}`);
+            })
+        );
+
+        await Promise.all(uploadPromises);
+        console.log("✅ Tutti i file caricati con successo");
       }
 
       setSuccess(true);
-      setTimeout(() => {
-        navigate("/issues");
-      }, 1500);
+      setTimeout(() => navigate("/issues"), 1500);
 
     } catch (err: any) {
-      console.error("❌ Errore completo:", err);
+      console.error("❌ Errore:", err);
       
       let errorMessage = "Errore durante la creazione dell'issue";
-      
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
-      } else if (err.response?.data) {
-        errorMessage = JSON.stringify(err.response.data);
       } else if (err.message) {
         errorMessage = err.message;
       }
@@ -465,146 +416,7 @@ function CreaIssue() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: "24px" }}>
-                <label style={{
-                  display: "block",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#374151",
-                  marginBottom: "8px"
-                }}>
-                  Allegato File (facoltativo)
-                </label>
-                <div style={{
-                  border: "2px dashed #d1d5db",
-                  borderRadius: "8px",
-                  padding: "24px",
-                  textAlign: "center",
-                  backgroundColor: "#f9fafb",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.style.borderColor = "#0d9488";
-                  e.currentTarget.style.backgroundColor = "#f0fdfa";
-                }}
-                onDragLeave={(e) => {
-                  e.currentTarget.style.borderColor = "#d1d5db";
-                  e.currentTarget.style.backgroundColor = "#f9fafb";
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.style.borderColor = "#d1d5db";
-                  e.currentTarget.style.backgroundColor = "#f9fafb";
-                  if (e.dataTransfer.files) {
-                    const newFiles = Array.from(e.dataTransfer.files);
-                    setFiles(prev => [...prev, ...newFiles]);
-                  }
-                }}>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                    onChange={handleFileChange}
-                    style={{ display: "none" }}
-                    id="file-upload"
-                  />
-                  <label htmlFor="file-upload" style={{ cursor: "pointer" }}>
-                    <div style={{
-                      width: "48px",
-                      height: "48px",
-                      margin: "0 auto 12px",
-                      backgroundColor: "#e0f2f1",
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "24px"
-                    }}>
-                      ⬆️
-                    </div>
-                    <p style={{
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "#0d9488",
-                      margin: "0 0 4px 0"
-                    }}>
-                      Carica File
-                    </p>
-                    <p style={{
-                      fontSize: "12px",
-                      color: "#6b7280",
-                      margin: 0
-                    }}>
-                      Formati supportati: JPEG, PNG, GIF, WebP - Max 5MB
-                    </p>
-                  </label>
-                </div>
-
-                {files.length > 0 && (
-                  <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {files.map((file, index) => (
-                      <div key={index} style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "10px 14px",
-                        backgroundColor: "#f9fafb",
-                        borderRadius: "6px",
-                        border: "1px solid #e5e7eb"
-                      }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
-                          <div style={{
-                            width: "36px",
-                            height: "36px",
-                            backgroundColor: "#e0f2f1",
-                            borderRadius: "6px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "18px"
-                          }}>
-                            📄
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{
-                              fontWeight: 500,
-                              color: "#1f2937",
-                              fontSize: "13px"
-                            }}>
-                              {file.name}
-                            </div>
-                            <div style={{
-                              fontSize: "12px",
-                              color: "#6b7280",
-                              marginTop: "2px"
-                            }}>
-                              {(file.size / 1024).toFixed(2)} KB
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          style={{
-                            padding: "6px 10px",
-                            backgroundColor: "#fee2e2",
-                            border: "1px solid #fca5a5",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                            color: "#dc2626",
-                            fontSize: "16px",
-                            lineHeight: 1
-                          }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <FileUploadSection files={files} setFiles={setFiles} disabled={loading} />
 
               <div style={{
                 display: "flex",
