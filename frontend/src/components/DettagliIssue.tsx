@@ -174,45 +174,56 @@ function DettagliIssue() {
     }));
   };
 
-  const handleSave = async () => {
-    try {
-      console.log("💾 Salvataggio modifiche:", formData);
-      await issueService.updateIssue(Number(id), formData);
-      console.log("✅ Modifiche salvate");
+ 
+const handleSave = async () => {
+  try {
+    console.log("💾 Salvataggio modifiche:", formData);
+    
+   
+    const issueAggiornata = await issueService.updateIssue(Number(id), formData);
+    console.log("✅ Modifiche salvate, issue aggiornata:", issueAggiornata);
 
-      // Upload allegati SOLO se presenti e se l'issue esiste
-      if (files.length > 0 && issue?.idIssue) {
-        console.log(`📎 Upload di ${files.length} file...`);
-        
-        const uploadPromises = files.map(file => 
-          allegatoService.uploadAllegato(file, issue.idIssue)
-            .then(() => console.log(`✅ File caricato: ${file.name}`))
-            .catch(err => {
-              console.error(`❌ Errore upload ${file.name}:`, err);
-              throw new Error(`Impossibile caricare ${file.name}: ${err.message}`);
-            })
-        );
-
-        await Promise.all(uploadPromises);
-        console.log("✅ Tutti i file caricati con successo");
+   
+    if (files.length > 0) {
+      console.log(`📎 Upload di ${files.length} file per issue ID: ${id}...`);
+      
+     
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+          console.log(`📤 Upload file ${i + 1}/${files.length}: ${file.name}`);
+          await allegatoService.uploadAllegato(file, Number(id));
+          console.log(`✅ File caricato: ${file.name}`);
+        } catch (uploadErr: any) {
+          console.error(`❌ Errore upload ${file.name}:`, uploadErr);
+          throw new Error(`Impossibile caricare ${file.name}: ${uploadErr.response?.data?.message || uploadErr.message}`);
+        }
       }
-
-      setFiles([]); // Svuota i file dopo l'upload
-      setSuccess("Issue aggiornata con successo!");
-      await loadIssue();
-      setEditMode(false);
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      console.error("❌ Errore salvataggio:", err);
-      let errorMessage = "Errore nel salvataggio";
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      setError(errorMessage);
+      
+      console.log("✅ Tutti i file caricati con successo");
     }
-  };
+
+  
+    setFiles([]);
+    setSuccess("Issue aggiornata con successo!");
+    await loadIssue();
+    setEditMode(false);
+    setTimeout(() => setSuccess(""), 3000);
+    
+  } catch (err: any) {
+    console.error("❌ Errore salvataggio:", err);
+    let errorMessage = "Errore nel salvataggio";
+    
+    if (err.response?.data?.message) {
+      errorMessage = err.response.data.message;
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+    
+    setError(errorMessage);
+    setTimeout(() => setError(""), 5000);
+  }
+};
 
   const handleArchive = () => {
     setShowConfirm({

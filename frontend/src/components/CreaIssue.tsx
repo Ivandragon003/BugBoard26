@@ -65,60 +65,71 @@ function CreaIssue() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+ 
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (!user || !user.id) {
+    setError("Devi essere autenticato per creare un'issue");
+    navigate('/login');
+    return;
+  }
+
+  setLoading(true);
+  setError("");
+
+  try {
+    const dataToSend = { ...formData, idCreatore: user.id };
+    console.log("📤 Creazione issue:", dataToSend);
+
+  
+    const newIssue = await issueService.createIssue(dataToSend);
+    console.log("✅ Issue creata:", newIssue);
+
+   
+    if (!newIssue.idIssue) {
+      throw new Error("Issue creata ma ID non disponibile");
+    }
+
+   
+    if (files.length > 0) {
+      console.log(`📎 Upload di ${files.length} file per issue #${newIssue.idIssue}...`);
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+          console.log(`📤 Upload file ${i + 1}/${files.length}: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+          await allegatoService.uploadAllegato(file, newIssue.idIssue);
+          console.log(`✅ File caricato: ${file.name}`);
+        } catch (uploadErr: any) {
+          console.error(`❌ Errore upload ${file.name}:`, uploadErr);
+       
+          const errorMsg = uploadErr.response?.data?.message || uploadErr.message;
+          console.warn(`Impossibile caricare ${file.name}: ${errorMsg}`);
+        }
+      }
+      
+      console.log("✅ Processo upload completato");
+    }
+
+    setSuccess(true);
+    setTimeout(() => navigate("/issues"), 1500);
+
+  } catch (err: any) {
+    console.error("❌ Errore:", err);
     
-    if (!user || !user.id) {
-      setError("Devi essere autenticato per creare un'issue");
-      navigate('/login');
-      return;
+    let errorMessage = "Errore durante la creazione dell'issue";
+    if (err.response?.data?.message) {
+      errorMessage = err.response.data.message;
+    } else if (err.message) {
+      errorMessage = err.message;
     }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const dataToSend = { ...formData, idCreatore: user.id };
-      console.log("📤 Creazione issue:", dataToSend);
-
-      const newIssue = await issueService.createIssue(dataToSend);
-      console.log("✅ Issue creata:", newIssue);
-
-      // Upload file SOLO se la creazione issue è riuscita
-      if (files.length > 0 && newIssue.idIssue) {
-        console.log(`📎 Upload di ${files.length} file...`);
-        
-        const uploadPromises = files.map(file => 
-          allegatoService.uploadAllegato(file, newIssue.idIssue)
-            .then(() => console.log(`✅ File caricato: ${file.name}`))
-            .catch(err => {
-              console.error(`❌ Errore upload ${file.name}:`, err);
-              throw new Error(`Impossibile caricare ${file.name}: ${err.message}`);
-            })
-        );
-
-        await Promise.all(uploadPromises);
-        console.log("✅ Tutti i file caricati con successo");
-      }
-
-      setSuccess(true);
-      setTimeout(() => navigate("/issues"), 1500);
-
-    } catch (err: any) {
-      console.error("❌ Errore:", err);
-      
-      let errorMessage = "Errore durante la creazione dell'issue";
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+    
+    setError(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (isCheckingAuth) {
     return (
