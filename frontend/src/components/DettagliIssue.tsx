@@ -678,7 +678,8 @@ function DettagliIssue() {
                         padding: "12px", 
                         border: "1px solid #d1d5db", 
                         borderRadius: "8px", 
-                        fontSize: "14px", 
+                        fontSize: "14px",
+                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif", 
                         resize: "vertical", 
                         boxSizing: "border-box" 
                       }}
