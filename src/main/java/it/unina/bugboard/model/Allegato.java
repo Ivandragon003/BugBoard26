@@ -50,7 +50,7 @@ public class Allegato {
     }
 
     // Getters and Setters
-    public Integer getId() {
+    public Integer getIdAllegato() {
         return id;
     }
 

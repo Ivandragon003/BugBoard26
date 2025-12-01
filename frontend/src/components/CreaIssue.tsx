@@ -15,12 +15,19 @@ interface FormData {
   idCreatore: number;
 }
 
+interface UploadResult {
+  fileName: string;
+  success: boolean;
+  error?: string;
+}
+
 function CreaIssue() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [uploadResults, setUploadResults] = useState<UploadResult[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -65,71 +72,109 @@ function CreaIssue() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
- 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  if (!user || !user.id) {
-    setError("Devi essere autenticato per creare un'issue");
-    navigate('/login');
-    return;
-  }
-
-  setLoading(true);
-  setError("");
-
-  try {
-    const dataToSend = { ...formData, idCreatore: user.id };
-    console.log("📤 Creazione issue:", dataToSend);
-
-  
-    const newIssue = await issueService.createIssue(dataToSend);
-    console.log("✅ Issue creata:", newIssue);
-
-   
-    if (!newIssue.idIssue) {
-      throw new Error("Issue creata ma ID non disponibile");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user || !user.id) {
+      setError("Devi essere autenticato per creare un'issue");
+      navigate('/login');
+      return;
     }
 
-   
-    if (files.length > 0) {
-      console.log(`📎 Upload di ${files.length} file per issue #${newIssue.idIssue}...`);
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        try {
-          console.log(`📤 Upload file ${i + 1}/${files.length}: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
-          await allegatoService.uploadAllegato(file, newIssue.idIssue);
-          console.log(`✅ File caricato: ${file.name}`);
-        } catch (uploadErr: any) {
-          console.error(`❌ Errore upload ${file.name}:`, uploadErr);
-       
-          const errorMsg = uploadErr.response?.data?.message || uploadErr.message;
-          console.warn(`Impossibile caricare ${file.name}: ${errorMsg}`);
+    setLoading(true);
+    setError("");
+    setUploadResults([]);
+
+    try {
+      const dataToSend = { ...formData, idCreatore: user.id };
+      console.log("📤 Creazione issue:", dataToSend);
+
+      // 1. Crea l'issue
+      const newIssue = await issueService.createIssue(dataToSend);
+      console.log("✅ Issue creata:", newIssue);
+
+      if (!newIssue.idIssue) {
+        throw new Error("Issue creata ma ID non disponibile");
+      }
+
+      // 2. Upload files se presenti
+      if (files.length > 0) {
+        console.log(`📎 Inizio upload di ${files.length} file...`);
+        const results: UploadResult[] = [];
+        
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          console.log(`📤 Upload ${i + 1}/${files.length}: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+          
+          try {
+            // ✅ VALIDAZIONE FRONTEND
+            const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+            if (file.size > MAX_SIZE) {
+              throw new Error(`File troppo grande (max 5MB)`);
+            }
+
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+              throw new Error('Formato non supportato');
+            }
+
+            // Upload del file
+            await allegatoService.uploadAllegato(file, newIssue.idIssue);
+            
+            results.push({
+              fileName: file.name,
+              success: true
+            });
+            
+            console.log(`✅ Upload completato: ${file.name}`);
+            
+          } catch (uploadErr: any) {
+            console.error(`❌ Errore upload ${file.name}:`, uploadErr);
+            
+            const errorMsg = uploadErr.response?.data?.message || uploadErr.message || 'Errore sconosciuto';
+            results.push({
+              fileName: file.name,
+              success: false,
+              error: errorMsg
+            });
+          }
         }
+        
+        setUploadResults(results);
+        
+        // Verifica se tutti gli upload sono falliti
+        const allFailed = results.every(r => !r.success);
+        const someFailed = results.some(r => !r.success);
+        
+        if (allFailed) {
+          setError(`Issue creata ma tutti gli allegati hanno fallito l'upload. Puoi aggiungerli successivamente dai dettagli dell'issue.`);
+        } else if (someFailed) {
+          setError(`Issue creata. Alcuni allegati non sono stati caricati (vedi sotto).`);
+        }
+        
+        console.log("📊 Risultati upload:", results);
+      }
+
+      setSuccess(true);
+      
+      // Reindirizza dopo 2.5 secondi per dare tempo di vedere i risultati
+      setTimeout(() => navigate("/issues"), 2500);
+
+    } catch (err: any) {
+      console.error("❌ Errore creazione issue:", err);
+      
+      let errorMessage = "Errore durante la creazione dell'issue";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
       }
       
-      console.log("✅ Processo upload completato");
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
-
-    setSuccess(true);
-    setTimeout(() => navigate("/issues"), 1500);
-
-  } catch (err: any) {
-    console.error("❌ Errore:", err);
-    
-    let errorMessage = "Errore durante la creazione dell'issue";
-    if (err.response?.data?.message) {
-      errorMessage = err.response.data.message;
-    } else if (err.message) {
-      errorMessage = err.message;
-    }
-    
-    setError(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   if (isCheckingAuth) {
     return (
@@ -245,6 +290,63 @@ const handleSubmit = async (e: React.FormEvent) => {
             }}>
               <span style={{ fontSize: "20px" }}>✅</span>
               Issue creata con successo! Reindirizzamento in corso...
+            </div>
+          )}
+
+          {/* 🆕 Risultati Upload */}
+          {uploadResults.length > 0 && (
+            <div style={{
+              backgroundColor: "white",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              padding: "16px",
+              marginBottom: "24px"
+            }}>
+              <div style={{ 
+                fontSize: "14px", 
+                fontWeight: 600, 
+                color: "#374151", 
+                marginBottom: "12px" 
+              }}>
+                📎 Risultati Upload Allegati
+              </div>
+              {uploadResults.map((result, index) => (
+                <div 
+                  key={index}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "8px 12px",
+                    backgroundColor: result.success ? "#f0fdf4" : "#fef2f2",
+                    border: `1px solid ${result.success ? '#bbf7d0' : '#fecaca'}`,
+                    borderRadius: "6px",
+                    marginBottom: "8px",
+                    fontSize: "13px"
+                  }}
+                >
+                  <span style={{ fontSize: "16px" }}>
+                    {result.success ? '✅' : '❌'}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ 
+                      fontWeight: 600, 
+                      color: result.success ? '#166534' : '#991b1b' 
+                    }}>
+                      {result.fileName}
+                    </div>
+                    {result.error && (
+                      <div style={{ 
+                        fontSize: "12px", 
+                        color: "#dc2626", 
+                        marginTop: "2px" 
+                      }}>
+                        {result.error}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -448,6 +550,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                       idCreatore: user?.id || 0
                     });
                     setFiles([]);
+                    setUploadResults([]);
                   }}
                   disabled={loading}
                   style={{

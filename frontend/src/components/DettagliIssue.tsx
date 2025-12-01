@@ -4,6 +4,7 @@ import { issueService } from "../services/issueService";
 import { allegatoService } from "../services/allegatoService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
+import AttachmentsViewer from "./AttachmentsViewer";
 
 interface Issue {
   idIssue: number;
@@ -62,6 +63,7 @@ function DettagliIssue() {
   const { id } = useParams<{ id: string }>();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [uploadResults, setUploadResults] = useState<Array<{fileName: string; success: boolean; error?: string}>>([]);
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
@@ -175,40 +177,78 @@ function DettagliIssue() {
   };
 
  
+
 const handleSave = async () => {
   try {
     console.log("💾 Salvataggio modifiche:", formData);
+    setUploadResults([]); // Reset risultati precedenti
     
-   
+    // 1. Salva le modifiche all'issue
     const issueAggiornata = await issueService.updateIssue(Number(id), formData);
     console.log("✅ Modifiche salvate, issue aggiornata:", issueAggiornata);
 
-   
+    // 2. Upload files se presenti
     if (files.length > 0) {
       console.log(`📎 Upload di ${files.length} file per issue ID: ${id}...`);
+      const results: Array<{fileName: string; success: boolean; error?: string}> = [];
       
-     
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        console.log(`📤 Upload file ${i + 1}/${files.length}: ${file.name}`);
+        
         try {
-          console.log(`📤 Upload file ${i + 1}/${files.length}: ${file.name}`);
+          // ✅ VALIDAZIONE FRONTEND
+          const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+          if (file.size > MAX_SIZE) {
+            throw new Error(`File troppo grande (max 5MB)`);
+          }
+
+          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+          if (!allowedTypes.includes(file.type)) {
+            throw new Error('Formato non supportato');
+          }
+
           await allegatoService.uploadAllegato(file, Number(id));
+          
+          results.push({
+            fileName: file.name,
+            success: true
+          });
+          
           console.log(`✅ File caricato: ${file.name}`);
+          
         } catch (uploadErr: any) {
           console.error(`❌ Errore upload ${file.name}:`, uploadErr);
-          throw new Error(`Impossibile caricare ${file.name}: ${uploadErr.response?.data?.message || uploadErr.message}`);
+          
+          const errorMsg = uploadErr.response?.data?.message || uploadErr.message || 'Errore sconosciuto';
+          results.push({
+            fileName: file.name,
+            success: false,
+            error: errorMsg
+          });
         }
       }
       
-      console.log("✅ Tutti i file caricati con successo");
+      setUploadResults(results);
+      
+      // Verifica se ci sono stati errori
+      const someFailed = results.some(r => !r.success);
+      if (someFailed) {
+        setError("Issue aggiornata. Alcuni allegati non sono stati caricati (vedi sotto).");
+      }
+      
+      console.log("📊 Risultati upload:", results);
     }
 
-  
+    // 3. Reset e feedback
     setFiles([]);
     setSuccess("Issue aggiornata con successo!");
-    await loadIssue();
+    await loadIssue(); // Ricarica i dati
     setEditMode(false);
-    setTimeout(() => setSuccess(""), 3000);
+    setTimeout(() => {
+      setSuccess("");
+      setUploadResults([]);
+    }, 5000);
     
   } catch (err: any) {
     console.error("❌ Errore salvataggio:", err);
@@ -224,6 +264,7 @@ const handleSave = async () => {
     setTimeout(() => setError(""), 5000);
   }
 };
+
 
   const handleArchive = () => {
     setShowConfirm({
@@ -561,6 +602,63 @@ const handleSave = async () => {
             </div>
           )}
 
+          
+{uploadResults.length > 0 && (
+  <div style={{
+    backgroundColor: "white",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    padding: "16px",
+    marginBottom: "24px"
+  }}>
+    <div style={{ 
+      fontSize: "14px", 
+      fontWeight: 600, 
+      color: "#374151", 
+      marginBottom: "12px" 
+    }}>
+      📎 Risultati Upload Allegati
+    </div>
+    {uploadResults.map((result, index) => (
+      <div 
+        key={index}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          padding: "8px 12px",
+          backgroundColor: result.success ? "#f0fdf4" : "#fef2f2",
+          border: `1px solid ${result.success ? '#bbf7d0' : '#fecaca'}`,
+          borderRadius: "6px",
+          marginBottom: "8px",
+          fontSize: "13px"
+        }}
+      >
+        <span style={{ fontSize: "16px" }}>
+          {result.success ? '✅' : '❌'}
+        </span>
+        <div style={{ flex: 1 }}>
+          <div style={{ 
+            fontWeight: 600, 
+            color: result.success ? '#166534' : '#991b1b' 
+          }}>
+            {result.fileName}
+          </div>
+          {result.error && (
+            <div style={{ 
+              fontSize: "12px", 
+              color: "#dc2626", 
+              marginTop: "2px" 
+            }}>
+              {result.error}
+            </div>
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+
           {isArchived && (
             <div
               style={{
@@ -575,7 +673,11 @@ const handleSave = async () => {
             >
               ⚠️ Questa issue è archiviata e non può essere modificata
             </div>
+
+            
           )}
+
+          
 
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px" }}>
             {/* Colonna Sinistra */}
@@ -587,6 +689,7 @@ const handleSave = async () => {
                 boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
               }}
             >
+              
               {/* Titolo */}
               <div style={{ marginBottom: "24px" }}>
                 <label
@@ -1180,16 +1283,14 @@ const handleSave = async () => {
                     </div>
                   )}
 
-                  {issue.archiviatore && (
+                       {issue.archiviatore && (
                     <div style={{ marginBottom: "16px" }}>
-                      <div
-                        style={{
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          color: "#6b7280",
-                          marginBottom: "4px",
-                        }}
-                      >
+                      <div style={{
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        color: "#6b7280",
+                        marginBottom: "4px",
+                      }}>
                         Archiviato da
                       </div>
                       <div style={{ fontSize: "14px", color: "#92400e" }}>
@@ -1202,10 +1303,17 @@ const handleSave = async () => {
                   )}
                 </>
               )}
-            </div>
-          </div>
-        </div>
-      </div>
+            </div>  {/* 👈 Fine colonna DESTRA (Informazioni) */}
+          </div>  {/* 👈 Fine GRID 2 colonne */}
+
+          {/* 🆕 SEZIONE ALLEGATI - AGGIUNGI QUI! */}
+          <AttachmentsViewer 
+            idIssue={Number(id)} 
+            canEdit={canEdit} 
+          />
+
+        </div>  {/* Fine container padding */}
+      </div>  {/* Fine flex column */}
 
       {/* Modal di Conferma */}
       {showConfirm.open && (
