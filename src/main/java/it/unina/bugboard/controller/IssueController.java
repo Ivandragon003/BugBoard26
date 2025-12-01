@@ -1,7 +1,6 @@
 package it.unina.bugboard.controller;
 
 import it.unina.bugboard.dao.IssueDAO;
-
 import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.*;
 import it.unina.bugboard.exception.*;
@@ -30,6 +29,7 @@ public class IssueController {
 		String statoStr = (String) payload.get("stato");
 		String tipoStr = (String) payload.get("tipo");
 		Integer idCreatore = (Integer) payload.get("idCreatore");
+		Integer idAssegnatario = (Integer) payload.get("idAssegnatario");
 
 		if (titolo == null || titolo.isBlank()) {
 			throw new InvalidInputException("Il titolo è obbligatorio");
@@ -47,6 +47,14 @@ public class IssueController {
 				.orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idCreatore));
 
 		Issue issue = new Issue(titolo, descrizione, priorita, stato, tipo, creatore);
+		
+		// Gestisci assegnatario se presente
+		if (idAssegnatario != null) {
+			Utenza assegnatario = utenzaDAO.findById(idAssegnatario)
+					.orElseThrow(() -> new NotFoundException("Utente assegnatario non trovato con id: " + idAssegnatario));
+			issue.setAssegnatario(assegnatario);
+		}
+		
 		return issueDAO.save(issue);
 	}
 
@@ -71,6 +79,26 @@ public class IssueController {
 		if (payload.containsKey("tipo"))
 			issue.setTipo(parseTipo((String) payload.get("tipo")));
 
+		// Gestisci assegnatario
+		if (payload.containsKey("idAssegnatario")) {
+			Object idAssegnatarioObj = payload.get("idAssegnatario");
+			if (idAssegnatarioObj == null) {
+				issue.setAssegnatario(null);
+			} else {
+				Integer idAssegnatario = null;
+				if (idAssegnatarioObj instanceof Integer) {
+					idAssegnatario = (Integer) idAssegnatarioObj;
+				} else if (idAssegnatarioObj instanceof String) {
+					idAssegnatario = Integer.parseInt((String) idAssegnatarioObj);
+				}
+				
+				if (idAssegnatario != null) {
+					Utenza assegnatario = utenzaDAO.findById(idAssegnatario)
+							.orElseThrow(() -> new NotFoundException("Utente assegnatario non trovato con id: " + idAssegnatario));
+					issue.setAssegnatario(assegnatario);
+				}
+			}
+		}
 	
 		if (payload.containsKey("stato")) {
 			Stato nuovoStato = parseStato((String) payload.get("stato"));
@@ -193,7 +221,7 @@ public class IssueController {
 		return stats;
 	}
 
-
+	// Metodi per gestione utenti assegnati (lista multipla - se la usi ancora)
 	@PostMapping("/{idIssue}/assegna/{idUtente}")
 	@Transactional
 	public Issue assegnaUtente(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {
@@ -211,7 +239,6 @@ public class IssueController {
 		return issue;
 	}
 
-
 	@DeleteMapping("/{idIssue}/rimuovi-assegnazione/{idUtente}")
 	@Transactional
 	public Issue rimuoviAssegnazione(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {
@@ -222,7 +249,6 @@ public class IssueController {
 		return issueDAO.save(issue);
 	}
 
-	
 	@GetMapping("/{idIssue}/utenti-assegnati")
 	public List<Utenza> getUtentiAssegnati(@PathVariable Integer idIssue) {
 		Issue issue = issueDAO.findById(idIssue)

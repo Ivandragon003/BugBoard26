@@ -12,6 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.Optional;
+import java.util.List;
+import java.util.HashMap;
+import java.util.stream.Collectors;
+
 
 @RestController
 @RequestMapping("/api/utenza")
@@ -229,4 +233,30 @@ public class UtenzaController {
 
         return Map.of("message", "Utenza riattivata con successo");
     }
+    
+ // ---------------- LISTA UTENTI (solo admin) ----------------
+    @GetMapping("/lista")
+    public List<Map<String, Object>> getListaUtenti(@RequestHeader("Authorization") String token) {
+        Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+        
+        if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
+            throw new InvalidFieldException("Solo gli amministratori possono visualizzare la lista utenti");
+        }
+
+        return utenzaDAO.findAll().stream()
+            .filter(Utenza::getStato)
+            .map(utenza -> {
+                Map<String, Object> utenteMap = new java.util.HashMap<>();
+                utenteMap.put("idUtente", utenza.getIdUtente());
+                utenteMap.put("id", utenza.getIdUtente());
+                utenteMap.put("nome", utenza.getNome());
+                utenteMap.put("cognome", utenza.getCognome());
+                utenteMap.put("email", utenza.getEmail());
+                utenteMap.put("ruolo", utenza.getRuolo().toString());
+                return utenteMap;
+            })
+            .collect(Collectors.toList());
+    }
+
+
 }
