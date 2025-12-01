@@ -245,32 +245,46 @@ function DettagliIssue() {
   };
 
   const handleArchive = () => {
-    setShowConfirm({
-      open: true,
-      title: "Archivia Issue",
-      message: "Sei sicuro di voler archiviare questa issue?",
-      action: async () => {
-        if (!user) return;
-        try {
-          console.log("📦 Archiviazione:", id);
-          await issueService.archiveIssue(Number(id), user.id || user.idUtente || 0);
-          console.log("✅ Issue archiviata");
-          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
-          setSuccess("Issue archiviata con successo!");
-          await loadIssue();
-          setTimeout(() => setSuccess(""), 3000);
-        } catch (err: any) {
-          console.error("❌ Errore archiviazione:", err);
-          let errorMessage = "Errore nell'archiviazione";
-          if (err.response?.data?.message) {
-            errorMessage = err.response.data.message;
-          }
-          setError(errorMessage);
-          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+ 
+  if (issue && issue.stato !== "Done") {
+    setError("Non è possibile archiviare un'issue che non è stata completata.");
+    setTimeout(() => setError(""), 5000);
+    return;
+  }
+
+  setShowConfirm({
+    open: true,
+    title: "Archivia Issue",
+    message: "Sei sicuro di voler archiviare questa issue?",
+    action: async () => {
+      if (!user) return;
+      try {
+        console.log("📦 Archiviazione:", id);
+        await issueService.archiveIssue(Number(id), user.id || user.idUtente || 0);
+        console.log("✅ Issue archiviata");
+        setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+        setSuccess("Issue archiviata con successo!");
+        await loadIssue();
+        setTimeout(() => setSuccess(""), 3000);
+      } catch (err: any) {
+        console.error("❌ Errore archiviazione:", err);
+        
+        let errorMessage = "Errore nell'archiviazione dell'issue";
+        
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.message) {
+          errorMessage = err.message;
         }
-      },
-    });
-  };
+        
+        setError(errorMessage);
+        setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+        setTimeout(() => setError(""), 5000);
+      }
+    },
+  });
+};
+
 
   const handleUnarchive = () => {
     setShowConfirm({

@@ -1,6 +1,7 @@
 package it.unina.bugboard.dao;
 
 import it.unina.bugboard.model.Issue;
+import it.unina.bugboard.model.Team;
 import it.unina.bugboard.model.Stato;
 import it.unina.bugboard.model.Priorita;
 import it.unina.bugboard.model.Tipo;
@@ -68,13 +69,36 @@ public interface IssueDAO extends JpaRepository<Issue, Integer> {
 	@Query("SELECT i FROM Issue i WHERE i.priorita IN :priorita AND i.archiviata = false")
 	List<Issue> findIssueUrgenti(@Param("priorita") List<Priorita> priorita);
 
-
-
 	List<Issue> findByStatoAndTipo(Stato stato, Tipo tipo);
 
 	List<Issue> findByPrioritaAndTipo(Priorita priorita, Tipo tipo);
 
 	List<Issue> findByStatoAndPrioritaAndTipo(Stato stato, Priorita priorita, Tipo tipo);
+
+	List<Issue> findByTeam(Team team);
+
+	List<Issue> findByTeamIdTeam(Integer idTeam);
+
+	// Trova issue per team e stato
+	List<Issue> findByTeamAndStato(Team team, Stato stato);
+
+	// Trova issue per team e priorità
+	List<Issue> findByTeamAndPriorita(Team team, Priorita priorita);
+
+	// Trova issue per team che non sono archiviate
+	List<Issue> findByTeamAndArchiviataFalse(Team team);
+
+	// Conta issue per team
+	Long countByTeam(Team team);
+
+	Long countByTeamIdTeam(Integer idTeam);
+
+	// Conta issue per team e stato
+	Long countByTeamAndStato(Team team, Stato stato);
+
+	// Trova issue urgenti per team
+	@Query("SELECT i FROM Issue i WHERE i.team.idTeam = :idTeam AND i.priorita IN :priorita AND i.archiviata = false")
+	List<Issue> findIssueUrgentiByTeam(@Param("idTeam") Integer idTeam, @Param("priorita") List<Priorita> priorita);
 
 	void deleteByArchiviataAndCreatore(Boolean archiviata, Utenza creatore);
 }
