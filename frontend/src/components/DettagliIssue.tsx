@@ -245,46 +245,41 @@ function DettagliIssue() {
   };
 
   const handleArchive = () => {
- 
-  if (issue && issue.stato !== "Done") {
-    setError("Non è possibile archiviare un'issue che non è stata completata.");
-    setTimeout(() => setError(""), 5000);
-    return;
-  }
+    if (issue && issue.stato !== "Done") {
+      setError("Non è possibile archiviare un'issue che non è stata completata.");
+      setTimeout(() => setError(""), 5000);
+      return;
+    }
 
-  setShowConfirm({
-    open: true,
-    title: "Archivia Issue",
-    message: "Sei sicuro di voler archiviare questa issue?",
-    action: async () => {
-      if (!user) return;
-      try {
-        console.log("📦 Archiviazione:", id);
-        await issueService.archiveIssue(Number(id), user.id || user.idUtente || 0);
-        console.log("✅ Issue archiviata");
-        setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
-        setSuccess("Issue archiviata con successo!");
-        await loadIssue();
-        setTimeout(() => setSuccess(""), 3000);
-      } catch (err: any) {
-        console.error("❌ Errore archiviazione:", err);
-        
-        let errorMessage = "Errore nell'archiviazione dell'issue";
-        
-        if (err.response?.data?.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.message) {
-          errorMessage = err.message;
+    setShowConfirm({
+      open: true,
+      title: "Archivia Issue",
+      message: "Sei sicuro di voler archiviare questa issue?",
+      action: async () => {
+        if (!user) return;
+        try {
+          console.log("📦 Archiviazione:", id);
+          await issueService.archiveIssue(Number(id), user.id || user.idUtente || 0);
+          console.log("✅ Issue archiviata");
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+          setSuccess("Issue archiviata con successo!");
+          await loadIssue();
+          setTimeout(() => setSuccess(""), 3000);
+        } catch (err: any) {
+          console.error("❌ Errore archiviazione:", err);
+          let errorMessage = "Errore nell'archiviazione dell'issue";
+          if (err.response?.data?.message) {
+            errorMessage = err.response.data.message;
+          } else if (err.message) {
+            errorMessage = err.message;
+          }
+          setError(errorMessage);
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+          setTimeout(() => setError(""), 5000);
         }
-        
-        setError(errorMessage);
-        setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
-        setTimeout(() => setError(""), 5000);
-      }
-    },
-  });
-};
-
+      },
+    });
+  };
 
   const handleUnarchive = () => {
     setShowConfirm({
@@ -648,8 +643,11 @@ function DettagliIssue() {
                         padding: "12px", 
                         border: "1px solid #d1d5db", 
                         borderRadius: "8px", 
-                        fontSize: "14px", 
-                        boxSizing: "border-box" 
+                        fontSize: "15px",
+                        fontFamily: "inherit",
+                        color: "#4b5563",
+                        boxSizing: "border-box",
+                        outline: "none"
                       }}
                     />
                     <div style={{ 
@@ -692,10 +690,13 @@ function DettagliIssue() {
                         padding: "12px", 
                         border: "1px solid #d1d5db", 
                         borderRadius: "8px", 
-                        fontSize: "14px",
-                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif", 
+                        fontSize: "15px",
+                        fontFamily: "inherit",
+                        color: "#4b5563",
+                        lineHeight: 1.6,
                         resize: "vertical", 
-                        boxSizing: "border-box" 
+                        boxSizing: "border-box",
+                        outline: "none"
                       }}
                     />
                     <div style={{ 
@@ -1165,7 +1166,7 @@ function DettagliIssue() {
 
           {/* Sezione Allegati */}
           <div style={{ marginTop: "20px" }}>
-            <AttachmentsViewer idIssue={Number(id)} canEdit={canEdit}/>
+            <AttachmentsViewer idIssue={Number(id)} canEdit={canEdit} />
           </div>
         </div>
       </div>
