@@ -10,6 +10,7 @@ import VisualizzaProfilo from "./components/VisualizzaProfilo";
 import DettagliIssue from "./components/DettagliIssue"; 
 import ListaIssueArchiviate from "./components/ListaIssueArchiviate";
 
+
 function App() {
   return (
     <Router>

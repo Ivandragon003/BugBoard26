@@ -1,7 +1,7 @@
 package it.unina.bugboard.controller;
 
 import it.unina.bugboard.dao.IssueDAO;
-import it.unina.bugboard.dao.TeamDAO;
+
 import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.*;
 import it.unina.bugboard.exception.*;
@@ -21,9 +21,6 @@ public class IssueController {
 
 	@Autowired
 	private UtenzaDAO utenzaDAO;
-
-	@Autowired
-	private TeamDAO teamDAO;
 
 	@PostMapping("/crea")
 	public Issue creaIssue(@RequestBody Map<String, Object> payload) {
@@ -54,7 +51,7 @@ public class IssueController {
 	}
 
 	@PutMapping("/modifica/{id}")
-	@Transactional
+	@Transactional 
 	public Issue modificaIssue(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
 		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
@@ -74,6 +71,7 @@ public class IssueController {
 		if (payload.containsKey("tipo"))
 			issue.setTipo(parseTipo((String) payload.get("tipo")));
 
+	
 		if (payload.containsKey("stato")) {
 			Stato nuovoStato = parseStato((String) payload.get("stato"));
 			Stato statoAttuale = issue.getStato();
@@ -195,6 +193,7 @@ public class IssueController {
 		return stats;
 	}
 
+
 	@PostMapping("/{idIssue}/assegna/{idUtente}")
 	@Transactional
 	public Issue assegnaUtente(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {
@@ -212,6 +211,7 @@ public class IssueController {
 		return issue;
 	}
 
+
 	@DeleteMapping("/{idIssue}/rimuovi-assegnazione/{idUtente}")
 	@Transactional
 	public Issue rimuoviAssegnazione(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {
@@ -222,6 +222,7 @@ public class IssueController {
 		return issueDAO.save(issue);
 	}
 
+	
 	@GetMapping("/{idIssue}/utenti-assegnati")
 	public List<Utenza> getUtentiAssegnati(@PathVariable Integer idIssue) {
 		Issue issue = issueDAO.findById(idIssue)
@@ -268,53 +269,5 @@ public class IssueController {
 		case "documentation" -> Tipo.documentation;
 		default -> throw new InvalidInputException("Tipo non valido: " + value);
 		};
-	}
-
-	// ---------------- ASSEGNA ISSUE A TEAM ----------------
-	@PutMapping("/{idIssue}/assegna-team/{idTeam}")
-	@Transactional
-	public Issue assegnaIssueATeam(@PathVariable Integer idIssue, @PathVariable Integer idTeam) {
-		Issue issue = issueDAO.findById(idIssue)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
-
-		Team team = teamDAO.findById(idTeam)
-				.orElseThrow(() -> new NotFoundException("Team non trovato con id: " + idTeam));
-
-		if (!team.getAttivo()) {
-			throw new InvalidInputException("Non è possibile assegnare issue a un team disattivato");
-		}
-
-		issue.setTeam(team);
-		return issueDAO.save(issue);
-	}
-
-	// ---------------- RIMUOVI ISSUE DA TEAM ----------------
-	@DeleteMapping("/{idIssue}/rimuovi-team")
-	@Transactional
-	public Issue rimuoviIssueDaTeam(@PathVariable Integer idIssue) {
-		Issue issue = issueDAO.findById(idIssue)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
-
-		issue.setTeam(null);
-		return issueDAO.save(issue);
-	}
-
-	// ---------------- VISUALIZZA ISSUE DI UN TEAM ----------------
-	@GetMapping("/team/{idTeam}")
-	public List<Issue> getIssuesByTeam(@PathVariable Integer idTeam) {
-		Team team = teamDAO.findById(idTeam)
-				.orElseThrow(() -> new NotFoundException("Team non trovato con id: " + idTeam));
-
-		return issueDAO.findByTeam(team);
-	}
-
-	// ---------------- VISUALIZZA ISSUE DI UN TEAM PER STATO ----------------
-	@GetMapping("/team/{idTeam}/stato/{stato}")
-	public List<Issue> getIssuesByTeamAndStato(@PathVariable Integer idTeam, @PathVariable String stato) {
-		Team team = teamDAO.findById(idTeam)
-				.orElseThrow(() -> new NotFoundException("Team non trovato con id: " + idTeam));
-
-		Stato statoEnum = parseStato(stato);
-		return issueDAO.findByTeamAndStato(team, statoEnum);
 	}
 }

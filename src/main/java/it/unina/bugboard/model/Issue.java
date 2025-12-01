@@ -7,6 +7,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import it.unina.bugboard.exception.InvalidFieldException;
 
+
 @Entity
 @Table(name = "issue")
 public class Issue {
@@ -60,10 +61,6 @@ public class Issue {
 	@JoinTable(name = "assegnazione", joinColumns = @JoinColumn(name = "idissue"), inverseJoinColumns = @JoinColumn(name = "idutente"))
 	@JsonIgnore
 	private List<Utenza> utentiAssegnati = new ArrayList<>();
-
-	@ManyToOne
-	@JoinColumn(name = "idteam")
-	private Team team;
 
 	@OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonIgnore
@@ -220,13 +217,5 @@ public class Issue {
 
 	public void setAllegati(List<Allegato> allegati) {
 		this.allegati = allegati;
-	}
-
-	public Team getTeam() {
-		return team;
-	}
-
-	public void setTeam(Team team) {
-		this.team = team;
 	}
 }
