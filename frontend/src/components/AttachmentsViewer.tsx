@@ -141,7 +141,6 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
         marginTop: '24px',
         textAlign: 'center'
       }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📎</div>
         <div style={{ fontSize: '16px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
           Nessun allegato
         </div>
