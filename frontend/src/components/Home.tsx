@@ -321,7 +321,7 @@ function Home() {
                 }}
               >
                 <option value="">Tutte le issue</option>
-                <option value="Todo">Fare</option>
+                <option value="Todo"> Da fare</option>
                 <option value="inProgress">In corso</option>
                 <option value="Done">Fatto</option>
               </select>

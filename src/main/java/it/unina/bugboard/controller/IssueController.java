@@ -50,47 +50,6 @@ public class IssueController {
 		return issueDAO.save(issue);
 	}
 
-	@PutMapping("/modifica/{id}")
-	@Transactional
-	public Issue modificaIssue(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
-		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
-
-		if (issue.getArchiviata()) {
-			throw new InvalidInputException("Non è possibile modificare un'issue archiviata");
-		}
-
-		if (payload.containsKey("titolo"))
-			issue.setTitolo((String) payload.get("titolo"));
-
-		if (payload.containsKey("descrizione"))
-			issue.setDescrizione((String) payload.get("descrizione"));
-
-		if (payload.containsKey("priorita"))
-			issue.setPriorita(parsePriorita((String) payload.get("priorita")));
-
-		if (payload.containsKey("tipo"))
-			issue.setTipo(parseTipo((String) payload.get("tipo")));
-
-		if (payload.containsKey("stato")) {
-			Stato nuovoStato = parseStato((String) payload.get("stato"));
-			Stato statoAttuale = issue.getStato();
-
-			if (statoAttuale == Stato.Todo && nuovoStato == Stato.Done) {
-				throw new InvalidInputException(
-						"Non puoi passare direttamente da Todo a Done. Devi prima passare per In Progress.");
-			}
-
-			issue.setStato(nuovoStato);
-
-			if (nuovoStato == Stato.Done && issue.getDataRisoluzione() == null) {
-				issue.setDataRisoluzione(LocalDateTime.now());
-			}
-		}
-
-		issue.setDataUltimaModifica(LocalDateTime.now());
-		return issueDAO.save(issue);
-	}
-
 	@GetMapping("/filtra-avanzato")
 	public List<Issue> filtraAvanzato(@RequestParam(required = false) String stato,
 			@RequestParam(required = false) String priorita, @RequestParam(required = false) String tipo,
