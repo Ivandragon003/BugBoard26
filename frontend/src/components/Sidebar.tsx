@@ -246,6 +246,43 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
               <span style={{ fontSize: "16px" }}>👥</span> Crea Utenza
             </a>
           )}
+
+          {/* Link Gestione Utenti - SOLO PER ADMIN */}
+          {isAdmin && (
+            <a 
+              href="/utenti" 
+              style={{ 
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 12px", 
+                color: currentPath === "/utenti" ? "white" : "rgba(255,255,255,0.7)",
+                textDecoration: "none",
+                borderRadius: "6px",
+                fontSize: "13px",
+                fontWeight: currentPath === "/utenti" ? 600 : 400,
+                backgroundColor: currentPath === "/utenti" ? "rgba(255,255,255,0.25)" : (hoveredItem === "utenti" ? "rgba(255,255,255,0.1)" : "transparent"),
+                transition: "all 0.2s",
+                position: "relative",
+                marginBottom: "6px"
+              }}
+              onMouseEnter={() => setHoveredItem("utenti")}
+              onMouseLeave={() => setHoveredItem("")}
+            >
+              {(currentPath === "/utenti" || hoveredItem === "utenti") && (
+                <div style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "4px",
+                  backgroundColor: "white",
+                  borderRadius: "0 3px 3px 0"
+                }} />
+              )}
+              <span style={{ fontSize: "16px" }}>👨‍💼</span> Gestione Utenti
+            </a>
+          )}
         </nav>
       </div>
       

@@ -42,7 +42,7 @@ export default function ListaUtenza() {
   const [successMessage, setSuccessMessage] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState({ nome: '', cognome: '' });
+  const [editForm, setEditForm] = useState({ nome: '', cognome: '', ruolo: '' });
 
   useEffect(() => {
     if (!authService.isAuthenticated()) {
@@ -95,7 +95,8 @@ export default function ListaUtenza() {
     setUtenteSelezionato(utente);
     setEditForm({
       nome: utente.nome,
-      cognome: utente.cognome
+      cognome: utente.cognome,
+      ruolo: utente.ruolo
     });
     setShowEditModal(true);
   };
@@ -753,6 +754,36 @@ export default function ListaUtenza() {
                     }}
                     required
                   />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#374151',
+                    marginBottom: '8px'
+                  }}>
+                    Ruolo
+                  </label>
+                  <select
+                    value={editForm.ruolo}
+                    onChange={(e) => setEditForm({ ...editForm, ruolo: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      backgroundColor: 'white',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="Utente">Utente</option>
+                    <option value="Amministratore">Amministratore</option>
+                  </select>
                 </div>
 
                 <div style={{

@@ -51,7 +51,7 @@ public class IssueController {
 	}
 
 	@PutMapping("/modifica/{id}")
-	@Transactional 
+	@Transactional
 	public Issue modificaIssue(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
 		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
@@ -91,100 +91,75 @@ public class IssueController {
 		return issueDAO.save(issue);
 	}
 
-	// NUOVO ENDPOINT: Filtraggio avanzato con ricerca e ordinamento
 	@GetMapping("/filtra-avanzato")
-	public List<Issue> filtraAvanzato(
-			@RequestParam(required = false) String stato,
-			@RequestParam(required = false) String priorita,
-			@RequestParam(required = false) String tipo,
-			@RequestParam(required = false) String ricerca,
-			@RequestParam(required = false) String ordinamento,
+	public List<Issue> filtraAvanzato(@RequestParam(required = false) String stato,
+			@RequestParam(required = false) String priorita, @RequestParam(required = false) String tipo,
+			@RequestParam(required = false) String ricerca, @RequestParam(required = false) String ordinamento,
 			@RequestParam(required = false, defaultValue = "false") Boolean archiviata) {
 
-		// Carica le issue base (archiviate o meno)
 		List<Issue> issues = archiviata ? issueDAO.findByArchiviata(true) : issueDAO.findByArchiviataFalse();
 
-		// Applica filtri
 		if (stato != null && !stato.isEmpty()) {
 			Stato statoEnum = parseStato(stato);
-			issues = issues.stream()
-					.filter(i -> i.getStato() == statoEnum)
-					.collect(Collectors.toList());
+			issues = issues.stream().filter(i -> i.getStato() == statoEnum).collect(Collectors.toList());
 		}
 
 		if (priorita != null && !priorita.isEmpty()) {
 			Priorita prioritaEnum = parsePriorita(priorita);
-			issues = issues.stream()
-					.filter(i -> i.getPriorita() == prioritaEnum)
-					.collect(Collectors.toList());
+			issues = issues.stream().filter(i -> i.getPriorita() == prioritaEnum).collect(Collectors.toList());
 		}
 
 		if (tipo != null && !tipo.isEmpty()) {
 			Tipo tipoEnum = parseTipo(tipo);
-			issues = issues.stream()
-					.filter(i -> i.getTipo() == tipoEnum)
-					.collect(Collectors.toList());
+			issues = issues.stream().filter(i -> i.getTipo() == tipoEnum).collect(Collectors.toList());
 		}
 
-		// Ricerca per titolo
 		if (ricerca != null && !ricerca.isEmpty()) {
 			String ricercaLower = ricerca.toLowerCase();
-			issues = issues.stream()
-					.filter(i -> i.getTitolo().toLowerCase().contains(ricercaLower))
+			issues = issues.stream().filter(i -> i.getTitolo().toLowerCase().contains(ricercaLower))
 					.collect(Collectors.toList());
 		}
 
-		// Ordinamento
 		if (ordinamento != null && !ordinamento.isEmpty()) {
 			switch (ordinamento.toLowerCase()) {
-				case "data_recente":
-					issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
-					break;
-				case "data_vecchio":
-					issues.sort((a, b) -> a.getDataCreazione().compareTo(b.getDataCreazione()));
-					break;
-				case "titolo_az":
-					issues.sort((a, b) -> a.getTitolo().compareToIgnoreCase(b.getTitolo()));
-					break;
-				case "titolo_za":
-					issues.sort((a, b) -> b.getTitolo().compareToIgnoreCase(a.getTitolo()));
-					break;
-				case "priorita_alta":
-					issues.sort((a, b) -> {
-						int ordineA = getPrioritaOrdine(a.getPriorita());
-						int ordineB = getPrioritaOrdine(b.getPriorita());
-						return Integer.compare(ordineA, ordineB);
-					});
-					break;
-				case "priorita_bassa":
-					issues.sort((a, b) -> {
-						int ordineA = getPrioritaOrdine(a.getPriorita());
-						int ordineB = getPrioritaOrdine(b.getPriorita());
-						return Integer.compare(ordineB, ordineA);
-					});
-					break;
-				default:
-					// Default: data più recente
-					issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
+			case "data_recente":
+				issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
+				break;
+			case "data_vecchio":
+				issues.sort((a, b) -> a.getDataCreazione().compareTo(b.getDataCreazione()));
+				break;
+			case "titolo_az":
+				issues.sort((a, b) -> a.getTitolo().compareToIgnoreCase(b.getTitolo()));
+				break;
+			case "titolo_za":
+				issues.sort((a, b) -> b.getTitolo().compareToIgnoreCase(a.getTitolo()));
+				break;
+			case "priorita_alta":
+				issues.sort((a, b) -> Integer.compare(getPrioritaOrdine(a.getPriorita()),
+						getPrioritaOrdine(b.getPriorita())));
+				break;
+			case "priorita_bassa":
+				issues.sort((a, b) -> Integer.compare(getPrioritaOrdine(b.getPriorita()),
+						getPrioritaOrdine(a.getPriorita())));
+				break;
+			default:
+				issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
 			}
 		} else {
-			// Default sorting
 			issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
 		}
 
 		return issues;
 	}
 
-	// Helper per ordinamento priorità
 	private int getPrioritaOrdine(Priorita priorita) {
-		switch (priorita) {
-			case critical: return 0;
-			case high: return 1;
-			case medium: return 2;
-			case low: return 3;
-			case none: return 4;
-			default: return 5;
-		}
+		return switch (priorita) {
+		case critical -> 0;
+		case high -> 1;
+		case medium -> 2;
+		case low -> 3;
+		case none -> 4;
+		};
 	}
 
 	@GetMapping("/filtra")
@@ -286,41 +261,6 @@ public class IssueController {
 		stats.put("risolte", issueDAO.findIssueRisolte().size());
 		stats.put("nonRisolte", issueDAO.findIssueNonRisolte().size());
 		return stats;
-	}
-
-	@PostMapping("/{idIssue}/assegna/{idUtente}")
-	@Transactional
-	public Issue assegnaUtente(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {
-		Issue issue = issueDAO.findById(idIssue)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
-
-		Utenza utente = utenzaDAO.findById(idUtente)
-				.orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idUtente));
-
-		if (!issue.getUtentiAssegnati().contains(utente)) {
-			issue.getUtentiAssegnati().add(utente);
-			issueDAO.save(issue);
-		}
-
-		return issue;
-	}
-
-	@DeleteMapping("/{idIssue}/rimuovi-assegnazione/{idUtente}")
-	@Transactional
-	public Issue rimuoviAssegnazione(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {
-		Issue issue = issueDAO.findById(idIssue)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
-
-		issue.getUtentiAssegnati().removeIf(u -> u.getIdUtente().equals(idUtente));
-		return issueDAO.save(issue);
-	}
-
-	@GetMapping("/{idIssue}/utenti-assegnati")
-	public List<Utenza> getUtentiAssegnati(@PathVariable Integer idIssue) {
-		Issue issue = issueDAO.findById(idIssue)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
-
-		return issue.getUtentiAssegnati();
 	}
 
 	private Priorita parsePriorita(String value) {

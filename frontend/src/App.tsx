@@ -9,6 +9,7 @@ import CreaUtenza from "./components/CreaUtenza";
 import VisualizzaProfilo from "./components/VisualizzaProfilo";
 import DettagliIssue from "./components/DettagliIssue"; 
 import ListaIssueArchiviate from "./components/ListaIssueArchiviate";
+import ListaUtenza from "./components/ListaUtenza";
 
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
         <Route path="/issues/archiviate" element={<ListaIssueArchiviate />} />
         <Route path="/crea-utenza" element={<CreaUtenza />} />
         <Route path="/profilo" element={<VisualizzaProfilo />} />
+        <Route path="/utenti" element={<ListaUtenza />} />
       </Routes>
     </Router>
   );

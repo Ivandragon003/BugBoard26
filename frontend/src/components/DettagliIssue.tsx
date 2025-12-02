@@ -6,8 +6,7 @@ import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
 import AttachmentsViewer from "./AttachmentsViewer";
 import axios from "axios";
-import API_BASE_URL from "../config";
-import Select from 'react-select';
+import API_BASE_URL from "../config";        
 
 
 interface Issue {
@@ -48,7 +47,6 @@ interface FormData {
   stato: string;
   tipo: string;
   priorita: string;
-  idAssegnatario: number | null;
 }
 
 interface User {
@@ -81,7 +79,6 @@ function DettagliIssue() {
   const [success, setSuccess] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
     open: false,
@@ -95,7 +92,6 @@ function DettagliIssue() {
     stato: "",
     tipo: "",
     priorita: "",
-    idAssegnatario: null,
   });
 
   const getBackPath = (): string => {
@@ -141,19 +137,6 @@ function DettagliIssue() {
     }
   }, [navigate]);
 
-  const loadUsers = useCallback(async () => {
-    try {
-      console.log("📥 Caricamento lista utenti...");
-      const response = await axios.get(`${API_BASE_URL}/utenza/lista`, {
-        headers: { Authorization: `Bearer ${authService.getToken()}` }
-      });
-      console.log("✅ Utenti caricati:", response.data);
-      setUsers(response.data);
-    } catch (err) {
-      console.error("❌ Errore caricamento utenti:", err);
-    }
-  }, []);
-
   const loadIssue = useCallback(async () => {
     try {
       setLoading(true);
@@ -167,7 +150,6 @@ function DettagliIssue() {
         stato: data.stato,
         tipo: data.tipo,
         priorita: data.priorita,
-        idAssegnatario: data.assegnatario?.idUtente || null,
       });
       setError("");
     } catch (err: any) {
@@ -188,13 +170,6 @@ function DettagliIssue() {
   if (isCheckingAuth || !id) return;
   loadIssue();
 }, [id, isCheckingAuth, loadIssue]);
-useEffect(() => {
-  if (!user || isCheckingAuth) return;
-  const adminCheck = user?.ruolo === "Amministratore" || user?.role === "admin";
-  if (adminCheck) {
-    loadUsers();
-  }
-}, [user, isCheckingAuth, loadUsers]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -892,7 +867,6 @@ useEffect(() => {
                         stato: issue.stato,
                         tipo: issue.tipo,
                         priorita: issue.priorita,
-                        idAssegnatario: issue.assegnatario?.idUtente || null,
                       });
                       setFiles([]);
                     }}
@@ -1094,76 +1068,6 @@ useEffect(() => {
                   </span>
                 )}
               </div>
-
-              {/* Assegnatario - SOLO PER ADMIN */}
-                {isAdmin && (
-                  <div style={{ marginBottom: "20px" }}>
-                    <label style={{ 
-                      display: "block", 
-                      fontSize: "13px", 
-                      fontWeight: 600, 
-                      color: "#6b7280", 
-                      marginBottom: "8px" 
-                    }}>
-                      Assegnatario
-                    </label>
-                    {editMode ? (
-                      <Select
-                        isClearable
-                        placeholder="Cerca utente..."
-                        noOptionsMessage={() => "Nessun utente trovato"}
-                        value={
-                          formData.idAssegnatario
-                            ? {
-                                value: formData.idAssegnatario,
-                                label: `${users.find((u) => (u.id || u.idUtente) === formData.idAssegnatario)?.nome} ${users.find((u) => (u.id || u.idUtente) === formData.idAssegnatario)?.cognome}`
-                              }
-                            : null
-                        }
-                        options={users
-                          .filter((u) => (u.id || u.idUtente) !== undefined)
-                          .map((u) => ({
-                            value: (u.id || u.idUtente)!,
-                            label: `${u.nome} ${u.cognome} (${u.email})`
-                          }))}
-                        onChange={(selectedOption) => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            idAssegnatario: selectedOption ? selectedOption.value : null,
-                          }));
-                        }}
-                        styles={{
-                          control: (base) => ({
-                            ...base,
-                            borderColor: '#d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            padding: '2px',
-                          }),
-                        }}
-                      />
-                    ) : (
-                      <div style={{ fontSize: "14px", color: "#1f2937" }}>
-                        {issue.assegnatario ? (
-                          <>
-                            <div style={{ fontWeight: 600 }}>
-                              {issue.assegnatario.nome} {issue.assegnatario.cognome}
-                            </div>
-                            <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                              {issue.assegnatario.email}
-                            </div>
-                          </>
-                        ) : (
-                          <span style={{ color: "#9ca3af", fontStyle: "italic" }}>
-                            Non assegnato
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-
 
               <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
 
