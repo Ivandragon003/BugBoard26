@@ -67,7 +67,7 @@ public class Issue {
 	private List<Allegato> allegati = new ArrayList<>();
 	
 	@ManyToOne
-	@JoinColumn(name = "id_assegnatario")
+	@JoinColumn(name = "idassegnatario")
 	private Utenza assegnatario;
 
 
