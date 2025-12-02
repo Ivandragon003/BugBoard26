@@ -207,76 +207,77 @@ useEffect(() => {
   };
 
   const handleSave = async () => {
-    try {
-      console.log("💾 Salvataggio modifiche:", formData);
-      setUploadResults([]);
+  try {
+    console.log("💾 Salvataggio modifiche:", formData);
+    setUploadResults([]);
 
-      const issueAggiornata = await issueService.updateIssue(Number(id), formData);
-      console.log("✅ Modifiche salvate, issue aggiornata:", issueAggiornata);
+    const issueAggiornata = await issueService.updateIssue(Number(id), formData);
+    console.log("✅ Modifiche salvate, issue aggiornata:", issueAggiornata);
 
-      if (files.length > 0) {
-        console.log(`📎 Upload di ${files.length} file per issue ID: ${id}...`);
-        const results: Array<{fileName: string; success: boolean; error?: string}> = [];
+    if (files.length > 0) {
+      console.log(`📎 Upload di ${files.length} file per issue ID: ${id}...`);
+      const results: Array<{fileName: string; success: boolean; error?: string}> = [];
 
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          console.log(`📤 Upload file ${i + 1}/${files.length}: ${file.name}`);
-          try {
-            const MAX_SIZE = 5 * 1024 * 1024;
-            if (file.size > MAX_SIZE) {
-              throw new Error(`File troppo grande (max 5MB)`);
-            }
-
-            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-            if (!allowedTypes.includes(file.type)) {
-              throw new Error('Formato non supportato');
-            }
-
-            await allegatoService.uploadAllegato(file, Number(id));
-            results.push({
-              fileName: file.name,
-              success: true
-            });
-            console.log(`✅ File caricato: ${file.name}`);
-          } catch (uploadErr: any) {
-            console.error(`❌ Errore upload ${file.name}:`, uploadErr);
-            const errorMsg = uploadErr.response?.data?.message || uploadErr.message || 'Errore sconosciuto';
-            results.push({
-              fileName: file.name,
-              success: false,
-              error: errorMsg
-            });
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        console.log(`📤 Upload file ${i + 1}/${files.length}: ${file.name}`);
+        try {
+          const MAX_SIZE = 5 * 1024 * 1024;
+          if (file.size > MAX_SIZE) {
+            throw new Error(`File troppo grande (max 5MB)`);
           }
-        }
 
-        setUploadResults(results);
-        const someFailed = results.some(r => !r.success);
-        if (someFailed) {
-          setError("Issue aggiornata. Alcuni allegati non sono stati caricati (vedi sotto).");
+          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+          if (!allowedTypes.includes(file.type)) {
+            throw new Error('Formato non supportato');
+          }
+
+          await allegatoService.uploadAllegato(file, Number(id));
+          results.push({
+            fileName: file.name,
+            success: true
+          });
+          console.log(`✅ File caricato: ${file.name}`);
+        } catch (uploadErr: any) {
+          console.error(`❌ Errore upload ${file.name}:`, uploadErr);
+          const errorMsg = uploadErr.response?.data?.message || uploadErr.message || 'Errore sconosciuto';
+          results.push({
+            fileName: file.name,
+            success: false,
+            error: errorMsg
+          });
         }
-        console.log("📊 Risultati upload:", results);
       }
 
-      setFiles([]);
-      setSuccess("Issue aggiornata con successo!");
-      await loadIssue();
-      setEditMode(false);
-      setTimeout(() => {
-        setSuccess("");
-        setUploadResults([]);
-      }, 5000);
-    } catch (err: any) {
-      console.error("❌ Errore salvataggio:", err);
-      let errorMessage = "Errore nel salvataggio";
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
+      setUploadResults(results);
+      const someFailed = results.some(r => !r.success);
+      if (someFailed) {
+        setError("Issue aggiornata. Alcuni allegati non sono stati caricati (vedi sotto).");
       }
-      setError(errorMessage);
-      setTimeout(() => setError(""), 5000);
+      console.log("📊 Risultati upload:", results);
     }
-  };
+
+    setFiles([]);
+    setSuccess("Issue aggiornata con successo!");
+    setEditMode(false);  // ✅ Esci dalla modalità edit PRIMA di ricaricare
+    await loadIssue();   // ✅ Ricarica i dati dal server
+    
+    setTimeout(() => {
+      setSuccess("");
+      setUploadResults([]);
+    }, 5000);
+  } catch (err: any) {
+    console.error("❌ Errore salvataggio:", err);
+    let errorMessage = "Errore nel salvataggio";
+    if (err.response?.data?.message) {
+      errorMessage = err.response.data.message;
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+    setError(errorMessage);
+    setTimeout(() => setError(""), 5000);
+  }
+};
 
   const handleArchive = () => {
     if (issue && issue.stato !== "Done") {
