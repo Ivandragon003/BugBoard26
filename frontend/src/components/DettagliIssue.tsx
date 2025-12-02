@@ -17,8 +17,6 @@ interface Issue {
   tipo: string;
   priorita: string;
   dataCreazione: string;
-  dataUltimaModifica: string;
-  dataRisoluzione: string | null;
   archiviata: boolean;
   dataArchiviazione: string | null;
   creatore: {
@@ -28,12 +26,6 @@ interface Issue {
     email: string;
   };
   archiviatore: {
-    idUtente: number;
-    nome: string;
-    cognome: string;
-    email: string;
-  } | null;
-  assegnatario: {
     idUtente: number;
     nome: string;
     cognome: string;
@@ -180,79 +172,6 @@ function DettagliIssue() {
       [name]: value,
     }));
   };
-
-  const handleSave = async () => {
-  try {
-    console.log("💾 Salvataggio modifiche:", formData);
-    setUploadResults([]);
-
-    const issueAggiornata = await issueService.updateIssue(Number(id), formData);
-    console.log("✅ Modifiche salvate, issue aggiornata:", issueAggiornata);
-
-    if (files.length > 0) {
-      console.log(`📎 Upload di ${files.length} file per issue ID: ${id}...`);
-      const results: Array<{fileName: string; success: boolean; error?: string}> = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        console.log(`📤 Upload file ${i + 1}/${files.length}: ${file.name}`);
-        try {
-          const MAX_SIZE = 5 * 1024 * 1024;
-          if (file.size > MAX_SIZE) {
-            throw new Error(`File troppo grande (max 5MB)`);
-          }
-
-          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-          if (!allowedTypes.includes(file.type)) {
-            throw new Error('Formato non supportato');
-          }
-
-          await allegatoService.uploadAllegato(file, Number(id));
-          results.push({
-            fileName: file.name,
-            success: true
-          });
-          console.log(`✅ File caricato: ${file.name}`);
-        } catch (uploadErr: any) {
-          console.error(`❌ Errore upload ${file.name}:`, uploadErr);
-          const errorMsg = uploadErr.response?.data?.message || uploadErr.message || 'Errore sconosciuto';
-          results.push({
-            fileName: file.name,
-            success: false,
-            error: errorMsg
-          });
-        }
-      }
-
-      setUploadResults(results);
-      const someFailed = results.some(r => !r.success);
-      if (someFailed) {
-        setError("Issue aggiornata. Alcuni allegati non sono stati caricati (vedi sotto).");
-      }
-      console.log("📊 Risultati upload:", results);
-    }
-
-    setFiles([]);
-    setSuccess("Issue aggiornata con successo!");
-    setEditMode(false);  // ✅ Esci dalla modalità edit PRIMA di ricaricare
-    await loadIssue();   // ✅ Ricarica i dati dal server
-    
-    setTimeout(() => {
-      setSuccess("");
-      setUploadResults([]);
-    }, 5000);
-  } catch (err: any) {
-    console.error("❌ Errore salvataggio:", err);
-    let errorMessage = "Errore nel salvataggio";
-    if (err.response?.data?.message) {
-      errorMessage = err.response.data.message;
-    } else if (err.message) {
-      errorMessage = err.message;
-    }
-    setError(errorMessage);
-    setTimeout(() => setError(""), 5000);
-  }
-};
 
   const handleArchive = () => {
     if (issue && issue.stato !== "Done") {
@@ -454,28 +373,11 @@ function DettagliIssue() {
                 Dettagli Issue
               </h2>
               <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "2px" }}>
-                Visualizza e modifica i dettagli dell'issue
+                Visualizza i dettagli dell'issue
               </div>
             </div>
           </div>
           <div style={{ display: "flex", gap: "12px" }}>
-            {canEdit && !editMode && (
-              <button 
-                onClick={() => setEditMode(true)} 
-                style={{ 
-                  padding: "10px 20px", 
-                  backgroundColor: "#0d9488", 
-                  color: "white", 
-                  border: "none", 
-                  borderRadius: "8px", 
-                  fontSize: "14px", 
-                  fontWeight: 600, 
-                  cursor: "pointer" 
-                }}
-              >
-                ✏️ Modifica
-              </button>
-            )}
             {isAdmin && !isArchived && (
               <button 
                 onClick={handleArchive} 
@@ -840,51 +742,6 @@ function DettagliIssue() {
                 </div>
               )}
 
-              {/* Pulsanti Modifica */}
-              {editMode && (
-                <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
-                  <button 
-                    onClick={handleSave} 
-                    style={{ 
-                      padding: "12px 24px", 
-                      backgroundColor: "#0d9488", 
-                      color: "white", 
-                      border: "none", 
-                      borderRadius: "8px", 
-                      fontSize: "14px", 
-                      fontWeight: 600, 
-                      cursor: "pointer" 
-                    }}
-                  >
-                    💾 Salva Modifiche
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditMode(false);
-                      setFormData({
-                        titolo: issue.titolo,
-                        descrizione: issue.descrizione,
-                        stato: issue.stato,
-                        tipo: issue.tipo,
-                        priorita: issue.priorita,
-                      });
-                      setFiles([]);
-                    }}
-                    style={{
-                      padding: "12px 24px",
-                      backgroundColor: "#f3f4f6",
-                      color: "#374151",
-                      border: "none",
-                      borderRadius: "8px",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    ✖ Annulla
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Colonna Destra */}
@@ -1120,38 +977,6 @@ function DettagliIssue() {
                   {formatDate(issue.dataCreazione)}
                 </div>
               </div>
-
-              {/* Data Ultima Modifica */}
-              <div style={{ marginBottom: "16px" }}>
-                <div style={{ 
-                  fontSize: "13px", 
-                  fontWeight: 600, 
-                  color: "#6b7280", 
-                  marginBottom: "4px" 
-                }}>
-                  Ultima Modifica
-                </div>
-                <div style={{ fontSize: "14px", color: "#1f2937" }}>
-                  {formatDate(issue.dataUltimaModifica)}
-                </div>
-              </div>
-
-              {/* Data Risoluzione */}
-              {issue.dataRisoluzione && (
-                <div style={{ marginBottom: "16px" }}>
-                  <div style={{ 
-                    fontSize: "13px", 
-                    fontWeight: 600, 
-                    color: "#6b7280", 
-                    marginBottom: "4px" 
-                  }}>
-                    Data Risoluzione
-                  </div>
-                  <div style={{ fontSize: "14px", color: "#10b981" }}>
-                    {formatDate(issue.dataRisoluzione)}
-                  </div>
-                </div>
-              )}
 
               {/* Dati Archiviazione */}
               {isArchived && (

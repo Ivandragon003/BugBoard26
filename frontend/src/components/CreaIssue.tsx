@@ -19,28 +19,11 @@ function CreaIssue() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
-  const [idAssegnatario, setIdAssegnatario] = useState<number | null>(null);
 
   const user = authService.getUser();
   const isAdmin = user?.ruolo === "Amministratore" || user?.role === "admin";
 
-  useEffect(() => {
-    if (isAdmin) {
-      loadUsers();
-    }
-  }, [isAdmin]);
 
-  const loadUsers = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/utenza/lista`, {
-        headers: { Authorization: `Bearer ${authService.getToken()}` }
-      });
-      setUsers(response.data);
-    } catch (err) {
-      console.error("Errore caricamento utenti:", err);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,8 +37,7 @@ function CreaIssue() {
         descrizione,
         stato,
         tipo,
-        priorita,
-        idAssegnatario: idAssegnatario || undefined
+        priorita
       };
 
       console.log("📤 Creazione issue:", dataToSend);
@@ -259,38 +241,7 @@ function CreaIssue() {
                 </div>
               </div>
 
-              {isAdmin && (
-                <div style={{ marginBottom: "24px" }}>
-                  <label style={{
-                    display: "block",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: "#374151",
-                    marginBottom: "8px"
-                  }}>
-                    Assegna a (facoltativo)
-                  </label>
-                  <select
-                    value={idAssegnatario || ""}
-                    onChange={(e) => setIdAssegnatario(e.target.value ? Number(e.target.value) : null)}
-                    style={{
-                      width: "100%",
-                      padding: "12px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "8px",
-                      fontSize: "15px",
-                      boxSizing: "border-box"
-                    }}
-                  >
-                    <option value="">Non assegnare</option>
-                    {users.map((u) => (
-                      <option key={u.idUtente || u.id} value={u.idUtente || u.id}>
-                        {u.nome} {u.cognome} ({u.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+
 
               <div style={{ marginBottom: "24px" }}>
                 <label style={{

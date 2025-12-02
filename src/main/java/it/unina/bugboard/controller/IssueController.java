@@ -174,11 +174,6 @@ public class IssueController {
 		return Map.of("message", "Issue disarchiviata con successo");
 	}
 
-	@GetMapping("/ordina")
-	public List<Issue> ordinaIssue() {
-		return issueDAO.findAllByOrderByDataUltimaModificaDesc();
-	}
-
 	@GetMapping("/visualizza/{id}")
 	public Issue visualizzaIssue(@PathVariable Integer id) {
 		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
@@ -217,8 +212,6 @@ public class IssueController {
 		stats.put("todo", issueDAO.countByStato(Stato.Todo));
 		stats.put("inProgress", issueDAO.countByStato(Stato.inProgress));
 		stats.put("done", issueDAO.countByStato(Stato.Done));
-		stats.put("risolte", issueDAO.findIssueRisolte().size());
-		stats.put("nonRisolte", issueDAO.findIssueNonRisolte().size());
 		return stats;
 	}
 

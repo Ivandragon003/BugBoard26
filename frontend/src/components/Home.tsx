@@ -12,7 +12,6 @@ interface Issue {
   tipo: string;
   priorita: string;
   dataCreazione: string;
-  dataUltimaModifica: string;
   archiviata?: boolean;
 }
 

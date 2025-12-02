@@ -55,15 +55,7 @@ public interface IssueDAO extends JpaRepository<Issue, Integer> {
 
 	Long countByCreatoreIdUtente(Integer idUtente);
 
-	@Query("SELECT i FROM Issue i WHERE i.dataRisoluzione IS NOT NULL")
-	List<Issue> findIssueRisolte();
-
-	@Query("SELECT i FROM Issue i WHERE i.dataRisoluzione IS NULL AND i.archiviata = false")
-	List<Issue> findIssueNonRisolte();
-
 	List<Issue> findByTitoloContainingIgnoreCase(String titolo);
-
-	List<Issue> findAllByOrderByDataUltimaModificaDesc();
 
 	@Query("SELECT i FROM Issue i WHERE i.priorita IN :priorita AND i.archiviata = false")
 	List<Issue> findIssueUrgenti(@Param("priorita") List<Priorita> priorita);

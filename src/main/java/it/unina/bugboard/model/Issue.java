@@ -43,12 +43,6 @@ public class Issue {
 	@Column(name = "datacreazione", nullable = false)
 	private LocalDateTime dataCreazione;
 
-	@Column(name = "dataultimamodifica", nullable = false)
-	private LocalDateTime dataUltimaModifica;
-
-	@Column(name = "datarisoluzione")
-	private LocalDateTime dataRisoluzione;
-
 	@ManyToOne
 	@JoinColumn(name = "idcreatore")
 	private Utenza creatore;
@@ -69,7 +63,6 @@ public class Issue {
 
 	public Issue() {
 		this.dataCreazione = LocalDateTime.now();
-		this.dataUltimaModifica = LocalDateTime.now();
 	}
 
 	public Issue(String titolo, String descrizione, Priorita priorita, Stato stato, Tipo tipo, Utenza creatore) {
@@ -166,24 +159,6 @@ public class Issue {
 		if (dataCreazione == null)
 			throw new InvalidFieldException("La data di creazione non può essere null");
 		this.dataCreazione = dataCreazione;
-	}
-
-	public LocalDateTime getDataUltimaModifica() {
-		return dataUltimaModifica;
-	}
-
-	public void setDataUltimaModifica(LocalDateTime dataUltimaModifica) {
-		if (dataUltimaModifica == null)
-			throw new InvalidFieldException("La data di ultima modifica non può essere null");
-		this.dataUltimaModifica = dataUltimaModifica;
-	}
-
-	public LocalDateTime getDataRisoluzione() {
-		return dataRisoluzione;
-	}
-
-	public void setDataRisoluzione(LocalDateTime dataRisoluzione) {
-		this.dataRisoluzione = dataRisoluzione;
 	}
 
 	public Utenza getCreatore() {
