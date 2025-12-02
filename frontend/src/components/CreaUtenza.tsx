@@ -1,136 +1,111 @@
 import React, { useState } from "react";
-import { authService } from "../services/authService";
-import axios from "axios";
-import API_BASE_URL from "../config";
 import { useNavigate } from "react-router-dom";
+import { issueService } from "../services/issueService";
+import { allegatoService } from "../services/allegatoService";
+import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
 
-export default function CreaUtenza() {
-  const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  
-  const generatePassword = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*";
-    let password = "";
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
-  };
+function CreaIssue() {
+  const naviga = useNavigate();
+  const [sidebarAperta, setSidebarAperta] = useState(true);
+  const [titoloIssue, setTitoloIssue] = useState("");
+  const [descrizioneIssue, setDescrizioneIssue] = useState("");
+  const [statoIssue] = useState("Todo");
+  const [tipoIssue, setTipoIssue] = useState("bug");
+  const [prioritaIssue, setPrioritaIssue] = useState("none");
+  const [fileAllegati, setFileAllegati] = useState<File[]>([]);
+  const [messaggioErrore, setMessaggioErrore] = useState("");
+  const [messaggioSuccesso, setMessaggioSuccesso] = useState("");
+  const [caricamentoInCorso, setCaricamentoInCorso] = useState(false);
 
-  const [form, setForm] = useState({
-    nome: "",
-    cognome: "",
-    password: generatePassword(),
-    ruolo: "Utente"
-  });
-  
-  const [generatedEmail, setGeneratedEmail] = useState("");
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const utenteCorrente = authService.getUser();
+  const utenteEAmministratore = utenteCorrente?.ruolo === "Amministratore" || utenteCorrente?.role === "admin";
 
-  if (!authService.isAdmin()) {
-    return (
-      <div style={{ 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center", 
-        minHeight: "100vh",
-        padding: 32, 
-        textAlign: "center", 
-        backgroundColor: "#f5f7fa"
-      }}>
-        <div style={{
-          backgroundColor: "white",
-          padding: "40px",
-          borderRadius: "12px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          maxWidth: "500px"
-        }}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🚫</div>
-          <div style={{ color: "#e11d48", fontWeight: 600, fontSize: "18px", marginBottom: "8px" }}>
-            Accesso Negato
-          </div>
-          <div style={{ color: "#6b7280", fontSize: "14px" }}>
-            Solo gli amministratori possono creare un nuovo utente!
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-
-    if (name === "nome" || name === "cognome") {
-      const nome = name === "nome" ? value : form.nome;
-      const cognome = name === "cognome" ? value : form.cognome;
-      if (nome && cognome) {
-        const email = `${nome.toLowerCase()}.${cognome.toLowerCase()}@bugboard.it`;
-        setGeneratedEmail(email);
-      } else {
-        setGeneratedEmail("");
-      }
-    }
-  };
-
-  const handleRegeneratePassword = () => {
-    const newPassword = generatePassword();
-    setForm(prev => ({ ...prev, password: newPassword }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMessage({ type: "", text: "" });
-
-    if (!generatedEmail) {
-      setMessage({ type: "error", text: "Nome e cognome sono necessari per generare l'email" });
-      return;
-    }
+  const gestisciInvioForm = async (eventoForm: React.FormEvent) => {
+    eventoForm.preventDefault();
+    setMessaggioErrore("");
+    setMessaggioSuccesso("");
+    setCaricamentoInCorso(true);
 
     try {
-      const dataToSend = {
-        nome: form.nome,
-        cognome: form.cognome,
-        email: generatedEmail,
-        password: form.password,
-        ruolo: form.ruolo
-      };
+      const utente = authService.getUser();
+      if (!utente || !utente.id) {
+        setMessaggioErrore("Utente non autenticato");
+        setCaricamentoInCorso(false);
+        return;
+      }
 
-      await axios.post(`${API_BASE_URL}/utenza/crea`, dataToSend, {
-        headers: { Authorization: `Bearer ${authService.getToken()}` }
-      });
-      
-      setMessage({ type: "success", text: "Utente creato con successo!" });
-      
-      setForm({
-        nome: "",
-        cognome: "",
-        password: generatePassword(),
-        ruolo: "Utente"
-      });
-      setGeneratedEmail("");
-      
-      setTimeout(() => navigate("/home"), 1500);
-      
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error ||
-                          "Errore nella creazione dell'utente";
-      
-      setMessage({
-        type: "error",
-        text: errorMessage
-      });
-      
-      console.error("Errore completo:", err.response?.data);
+      const datiDaInviare = {
+        titolo: titoloIssue,
+        descrizione: descrizioneIssue,
+        stato: statoIssue,
+        tipo: tipoIssue,
+        priorita: prioritaIssue,
+        idCreatore: utente.id
+      };
+      const issueCreata = await issueService.createIssue(datiDaInviare);
+
+      if (fileAllegati.length > 0) {
+        for (const fileSingolo of fileAllegati) {
+          try {
+            await allegatoService.uploadAllegato(fileSingolo, issueCreata.idIssue);
+          } catch (erroreUpload) {
+            console.error(`Errore upload ${fileSingolo.name}:`, erroreUpload);
+          }
+        }
+      }
+
+      setMessaggioSuccesso("Issue creata con successo!");
+      setTimeout(() => {
+        naviga("/issues");
+      }, 1500);
+    } catch (errore: any) {
+      console.error("❌ Errore creazione issue:", errore);
+      setMessaggioErrore(errore.response?.data?.message || "Errore nella creazione dell'issue");
+    } finally {
+      setCaricamentoInCorso(false);
     }
+  };
+
+  const gestisciTrascina = (eventoTrascina: React.DragEvent<HTMLDivElement>) => {
+    eventoTrascina.preventDefault();
+    eventoTrascina.currentTarget.style.borderColor = "#0d9488";
+    eventoTrascina.currentTarget.style.backgroundColor = "#f0fdfa";
+  };
+
+  const gestisciEsceDaAreaTrascina = (eventoTrascina: React.DragEvent<HTMLDivElement>) => {
+    eventoTrascina.currentTarget.style.borderColor = "#d1d5db";
+    eventoTrascina.currentTarget.style.backgroundColor = "#f9fafb";
+  };
+
+  const gestisciRilascioFile = (eventoRilascio: React.DragEvent<HTMLDivElement>) => {
+    eventoRilascio.preventDefault();
+    eventoRilascio.currentTarget.style.borderColor = "#d1d5db";
+    eventoRilascio.currentTarget.style.backgroundColor = "#f9fafb";
+    if (eventoRilascio.dataTransfer.files) {
+      const nuoviFile = Array.from(eventoRilascio.dataTransfer.files);
+      setFileAllegati((fileEsistenti) => [...fileEsistenti, ...nuoviFile]);
+    }
+  };
+
+  const gestisciSelezioneFile = (eventoInput: React.ChangeEvent<HTMLInputElement>) => {
+    if (eventoInput.target.files) {
+      const nuoviFile = Array.from(eventoInput.target.files);
+      setFileAllegati((fileEsistenti) => [...fileEsistenti, ...nuoviFile]);
+    }
+  };
+
+  const rimuoviFile = (indiceFile: number) => {
+    setFileAllegati((fileEsistenti) => fileEsistenti.filter((_, indice) => indice !== indiceFile));
+  };
+
+  const formattaDimensioneFile = (dimensioneInBytes: number): string => {
+    return (dimensioneInBytes / 1024).toFixed(2);
   };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
+      <Sidebar sidebarOpen={sidebarAperta} setSidebarOpen={setSidebarAperta} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <header style={{
           backgroundColor: "white",
@@ -141,7 +116,7 @@ export default function CreaUtenza() {
           gap: "16px"
         }}>
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => setSidebarAperta(!sidebarAperta)}
             style={{
               padding: "8px 12px",
               backgroundColor: "transparent",
@@ -156,168 +131,281 @@ export default function CreaUtenza() {
           </button>
           <div>
             <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
-              Crea nuovo utente
+              Nuova Issue
             </h2>
             <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "2px" }}>
-              Aggiungi un nuovo utente al sistema
+              Crea una nuova segnalazione
             </div>
           </div>
         </header>
 
-        <div style={{ padding: "32px", maxWidth: 600, margin: "0 auto", width: "100%" }}>
-          <div style={{ background: "#fff", borderRadius: 12, padding: 32, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-            <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
-                  Nome <span style={{ color: "#ef4444" }}>*</span>
+        <div style={{ padding: "32px", maxWidth: 800, margin: "0 auto", width: "100%" }}>
+          <div style={{
+            backgroundColor: "white",
+            borderRadius: "12px",
+            padding: "32px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+          }}>
+            <form onSubmit={gestisciInvioForm}>
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{
+                  display: "block",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "#374151",
+                  marginBottom: "8px"
+                }}>
+                  Titolo *
                 </label>
                 <input
-                  name="nome"
                   type="text"
-                  value={form.nome}
+                  value={titoloIssue}
+                  onChange={(evento) => setTitoloIssue(evento.target.value)}
                   required
-                  onChange={handleChange}
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
-                />
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
-                  Cognome <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  name="cognome"
-                  type="text"
-                  value={form.cognome}
-                  required
-                  onChange={handleChange}
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
-                />
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
-                  Email (autogenerata)
-                </label>
-                <input
-                  type="text"
-                  value={generatedEmail}
-                  readOnly
-                  disabled
-                  placeholder="Inserisci nome e cognome per generare l'email"
-                  style={{ 
-                    width: "100%", 
-                    padding: 10, 
-                    border: "1px solid #e5e7eb", 
-                    borderRadius: 6, 
-                    fontSize: 14,
-                    backgroundColor: "#f9fafb",
-                    color: "#374151",
-                    cursor: "not-allowed"
+                  maxLength={200}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "8px",
+                    fontSize: "15px",
+                    fontFamily: "inherit",
+                    color: "#4b5563",
+                    boxSizing: "border-box",
+                    outline: "none"
                   }}
                 />
+                <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px", textAlign: "right" }}>
+                  {titoloIssue.length}/200
+                </div>
               </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
-                  Password (autogenerata)
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{
+                  display: "block",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "#374151",
+                  marginBottom: "8px"
+                }}>
+                  Descrizione *
                 </label>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <input
-                    type="text"
-                    value={form.password}
-                    readOnly
-                    style={{ 
-                      flex: 1,
-                      padding: "10px 12px", 
-                      border: "1px solid #0d9488", 
-                      borderRadius: 6, 
-                      fontSize: 14,
-                      backgroundColor: "#f0fdfa",
-                      color: "#0d9488",
-                      fontWeight: 600,
-                      fontFamily: "monospace"
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRegeneratePassword}
+                <textarea
+                  value={descrizioneIssue}
+                  onChange={(evento) => setDescrizioneIssue(evento.target.value)}
+                  required
+                  maxLength={5000}
+                  rows={6}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "8px",
+                    fontSize: "15px",
+                    fontFamily: "inherit",
+                    color: "#4b5563",
+                    lineHeight: 1.6,
+                    resize: "vertical",
+                    boxSizing: "border-box",
+                    outline: "none"
+                  }}
+                />
+                <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px", textAlign: "right" }}>
+                  {descrizioneIssue.length}/5000
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+                <div>
+                  <label style={{
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#374151",
+                    marginBottom: "8px"
+                  }}>
+                    Tipo *
+                  </label>
+                  <select
+                    value={tipoIssue}
+                    onChange={(evento) => setTipoIssue(evento.target.value)}
                     style={{
-                      padding: "10px 16px",
-                      backgroundColor: "#0d9488",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 6,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
+                      width: "100%",
+                      padding: "12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "15px",
+                      boxSizing: "border-box"
                     }}
                   >
-                    🔄 Rigenera
-                  </button>
+                    <option value="bug">bug</option>
+                    <option value="features">features</option>
+                    <option value="question">question</option>
+                    <option value="documentation">documentation</option>
+                  </select>
                 </div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                  ⚠️ Salva questa password e comunicala all'utente
+
+                <div>
+                  <label style={{
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#374151",
+                    marginBottom: "8px"
+                  }}>
+                    Priorità *
+                  </label>
+                  <select
+                    value={prioritaIssue}
+                    onChange={(evento) => setPrioritaIssue(evento.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "15px",
+                      boxSizing: "border-box"
+                    }}
+                  >
+                    <option value="none">none</option>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                    <option value="critical">critical</option>
+                  </select>
                 </div>
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
-                  Ruolo <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <select 
-                  name="ruolo" 
-                  value={form.ruolo} 
-                  onChange={handleChange} 
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
-                >
-                  <option value="Utente">Utente</option>
-                  <option value="Amministratore">Amministratore</option>
-                </select>
-              </div>
-
-              {message.text && (
-                <div style={{
-                  marginBottom: 16,
-                  padding: "12px 16px",
-                  borderRadius: 8,
-                  color: message.type === "success" ? "#16a34a" : "#dc2626",
-                  backgroundColor: message.type === "success" ? "#f0fdf4" : "#fef2f2",
-                  border: `1px solid ${message.type === "success" ? "#86efac" : "#fca5a5"}`,
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{
+                  display: "block",
+                  fontSize: "14px",
                   fontWeight: 600,
-                  fontSize: 14,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8
+                  color: "#374151",
+                  marginBottom: "8px"
                 }}>
-                  <span style={{ fontSize: 18 }}>
-                    {message.type === "success" ? "✅" : "⚠️"}
-                  </span>
-                  <span>{message.text}</span>
+                  Allega file (facoltativo)
+                </label>
+                <div
+                  onDragOver={gestisciTrascina}
+                  onDragLeave={gestisciEsceDaAreaTrascina}
+                  onDrop={gestisciRilascioFile}
+                  style={{
+                    border: "2px dashed #d1d5db",
+                    borderRadius: "8px",
+                    padding: "24px",
+                    textAlign: "center",
+                    backgroundColor: "#f9fafb",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="file"
+                    id="input-selezione-file"
+                    multiple
+                    onChange={gestisciSelezioneFile}
+                    style={{ display: "none" }}
+                  />
+                  <label htmlFor="input-selezione-file" style={{ cursor: "pointer", display: "block" }}>
+                    <div style={{ fontSize: "24px", marginBottom: "8px" }}>⬆️</div>
+                    <div style={{ fontSize: "14px", fontWeight: 600, color: "#1f2937", marginBottom: "4px" }}>
+                      Trascina file qui o clicca
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                      Formati supportati: JPEG, PNG, GIF, WebP - Max 5MB
+                    </div>
+                  </label>
+                </div>
+                {fileAllegati.length > 0 && (
+                  <div style={{ marginTop: "16px" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 600, color: "#6b7280", marginBottom: "8px" }}>
+                      File selezionati:
+                    </div>
+                    {fileAllegati.map((fileSingolo, indice) => (
+                      <div
+                        key={indice}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "8px 12px",
+                          backgroundColor: "#f3f4f6",
+                          borderRadius: "6px",
+                          marginBottom: "6px",
+                          fontSize: "12px"
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, color: "#1f2937" }}>{fileSingolo.name}</div>
+                          <div style={{ color: "#6b7280" }}>{formattaDimensioneFile(fileSingolo.size)} KB</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => rimuoviFile(indice)}
+                          style={{
+                            padding: "6px 10px",
+                            backgroundColor: "#fee2e2",
+                            border: "1px solid #fca5a5",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            color: "#dc2626",
+                            fontSize: "16px",
+                            lineHeight: "1",
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {messaggioErrore && (
+                <div style={{
+                  color: "#dc2626",
+                  backgroundColor: "#fee2e2",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  marginBottom: "16px",
+                  fontSize: "14px",
+                  border: "1px solid #fecaca"
+                }}>
+                  ⚠️ {messaggioErrore}
                 </div>
               )}
 
-              <button 
-                type="submit" 
-                disabled={!generatedEmail || !form.password}
-                style={{ 
-                  width: "100%", 
-                  padding: "10px 20px", 
-                  backgroundColor: (!generatedEmail || !form.password) ? "#9ca3af" : "#0d9488", 
-                  color: "#fff", 
-                  border: "none", 
-                  borderRadius: 8, 
-                  fontWeight: 600, 
-                  cursor: (!generatedEmail || !form.password) ? "not-allowed" : "pointer", 
-                  fontSize: 14,
-                  opacity: (!generatedEmail || !form.password) ? 0.6 : 1
+              {messaggioSuccesso && (
+                <div style={{
+                  color: "#065f46",
+                  backgroundColor: "#d1fae5",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  marginBottom: "16px",
+                  fontSize: "14px",
+                  border: "1px solid #6ee7b7"
+                }}>
+                  ✅ {messaggioSuccesso}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={caricamentoInCorso}
+                style={{
+                  width: "100%",
+                  padding: "12px 24px",
+                  backgroundColor: caricamentoInCorso ? "#9ca3af" : "#0d9488",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: caricamentoInCorso ? "not-allowed" : "pointer",
+                  opacity: caricamentoInCorso ? 0.6 : 1
                 }}
               >
-                Crea utente
+                {caricamentoInCorso ? "Creazione in corso..." : "Crea Issue"}
               </button>
             </form>
           </div>
@@ -326,3 +414,5 @@ export default function CreaUtenza() {
     </div>
   );
 }
+
+export default CreaIssue;

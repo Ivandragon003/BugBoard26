@@ -13,6 +13,7 @@ interface Utente {
   cognome: string;
   email: string;
   ruolo: string;
+  stato: boolean;
 }
 
 
@@ -23,15 +24,17 @@ const getAuthHeader = () => ({
 
 export default function ListaUtenza() {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarAperta, setSidebarAperta] = useState(true);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [utenteSelezionato, setUtenteSelezionato] = useState<Utente | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState({ nome: '', cognome: '', ruolo: '' });
+  const [caricamentoInCorso, setCaricamentoInCorso] = useState(true);
+  const [messaggioErrore, setMessaggioErrore] = useState('');
+  const [messaggioSuccesso, setMessaggioSuccesso] = useState('');
+  const [mostraModalVisualizza, setMostraModalVisualizza] = useState(false);
+  const [mostraModalModifica, setMostraModalModifica] = useState(false);
+  const [formModifica, setFormModifica] = useState({ nome: '', cognome: '', ruolo: '' });
+  const [filtroStato, setFiltroStato] = useState<string>('');
+  const [filtroNome, setFiltroNome] = useState<string>('');
 
 
   useEffect(() => {
@@ -51,43 +54,43 @@ export default function ListaUtenza() {
 
   const caricaUtenti = async () => {
     try {
-      setLoading(true);
+      setCaricamentoInCorso(true);
       const response = await axios.get(`${API_BASE_URL}/utenza/lista`, {
         headers: getAuthHeader()
       });
       setUtenti(response.data);
-      setError('');
+      setMessaggioErrore('');
     } catch (err: any) {
-      setError('Errore nel caricamento degli utenti');
+      setMessaggioErrore('Errore nel caricamento degli utenti');
       console.error(err);
     } finally {
-      setLoading(false);
+      setCaricamentoInCorso(false);
     }
   };
 
 
   const visualizzaProfiloUtente = (utente: Utente) => {
     setUtenteSelezionato(utente);
-    setShowModal(true);
+    setMostraModalVisualizza(true);
   };
 
 
   const apriModalModifica = (utente: Utente) => {
     setUtenteSelezionato(utente);
-    setEditForm({
+    setFormModifica({
       nome: utente.nome,
       cognome: utente.cognome,
       ruolo: utente.ruolo
     });
-    setShowEditModal(true);
+    setMostraModalModifica(true);
   };
 
 
-  const handleModificaUtente = async (e: React.FormEvent) => {
+  const gestisciModificaUtente = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!editForm.nome.trim() || !editForm.cognome.trim()) {
-      setError('Nome e cognome sono obbligatori');
+    if (!formModifica.nome.trim() || !formModifica.cognome.trim()) {
+      setMessaggioErrore('Nome e cognome sono obbligatori');
       return;
     }
 
@@ -98,20 +101,55 @@ export default function ListaUtenza() {
     try {
       await axios.put(
         `${API_BASE_URL}/utenza/${utenteSelezionato.idUtente}`,
-        editForm,
+        formModifica,
         { headers: getAuthHeader() }
       );
       
-      setSuccessMessage('Utente modificato con successo');
-      setShowEditModal(false);
-      setError('');
+      setMessaggioSuccesso('Utente modificato con successo');
+      setMostraModalModifica(false);
+      setMessaggioErrore('');
       caricaUtenti();
       
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setMessaggioSuccesso(''), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Errore durante la modifica');
+      setMessaggioErrore(err.response?.data?.message || 'Errore durante la modifica');
     }
   };
+
+  const gestisciCambioStatoUtente = async (idUtente: number, nuovoStato: boolean) => {
+    if (window.confirm(`Sei sicuro di voler ${nuovoStato ? 'attivare' : 'disattivare'} questo utente?`)) {
+      try {
+        await axios.patch(
+          `${API_BASE_URL}/utenza/${idUtente}/stato`,
+          { stato: nuovoStato },
+          { headers: getAuthHeader() }
+        );
+        
+        setMessaggioSuccesso(`Utente ${nuovoStato ? 'attivato' : 'disattivato'} con successo`);
+        setMessaggioErrore('');
+        caricaUtenti();
+        
+        setTimeout(() => setMessaggioSuccesso(''), 3000);
+      } catch (err: any) {
+        setMessaggioErrore(err.response?.data?.message || 'Errore durante il cambio dello stato');
+      }
+    }
+  };
+
+  // Filtra gli utenti in base ai filtri
+  const utentiFiltrati = utenti.filter((utente) => {
+    const nomeCompleto = `${utente.nome} ${utente.cognome}`.toLowerCase();
+    const matchNome = filtroNome === '' || nomeCompleto.includes(filtroNome.toLowerCase());
+    
+    let matchStato = true;
+    if (filtroStato === 'attivi') {
+      matchStato = utente.stato === true;
+    } else if (filtroStato === 'inattivi') {
+      matchStato = utente.stato === false;
+    }
+    
+    return matchNome && matchStato;
+  });
 
 
   const UserIcon = () => (
@@ -122,10 +160,10 @@ export default function ListaUtenza() {
   );
 
 
-  if (loading) {
+  if (caricamentoInCorso) {
     return (
       <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
-        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Sidebar sidebarOpen={sidebarAperta} setSidebarOpen={setSidebarAperta} />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{
@@ -152,7 +190,7 @@ export default function ListaUtenza() {
       backgroundColor: '#f5f7fa',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Sidebar sidebarOpen={sidebarAperta} setSidebarOpen={setSidebarAperta} />
 
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -167,7 +205,7 @@ export default function ListaUtenza() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+              onClick={() => setSidebarAperta(!sidebarAperta)}
               style={{
                 padding: '8px 12px',
                 backgroundColor: 'transparent',
@@ -210,7 +248,7 @@ export default function ListaUtenza() {
         {/* Content */}
         <div style={{ padding: '32px' }}>
           {/* Messages */}
-          {error && (
+          {messaggioErrore && (
             <div style={{
               color: '#dc2626',
               backgroundColor: '#fee2e2',
@@ -220,12 +258,12 @@ export default function ListaUtenza() {
               fontSize: '14px',
               border: '1px solid #fecaca'
             }}>
-              {error}
+              {messaggioErrore}
             </div>
           )}
 
 
-          {successMessage && (
+          {messaggioSuccesso && (
             <div style={{
               color: '#065f46',
               backgroundColor: '#d1fae5',
@@ -235,9 +273,81 @@ export default function ListaUtenza() {
               fontSize: '14px',
               border: '1px solid #86efac'
             }}>
-              {successMessage}
+              {messaggioSuccesso}
             </div>
           )}
+
+          {/* Filtri */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            padding: '20px 24px',
+            marginBottom: '24px',
+            border: '1px solid #e5e7eb'
+          }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1f2937', marginTop: 0, marginBottom: '16px' }}>
+              Filtri
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Stato Utente
+                </label>
+                <select
+                  value={filtroStato}
+                  onChange={(e) => setFiltroStato(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    backgroundColor: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">Tutti</option>
+                  <option value="attivi">Attivi</option>
+                  <option value="inattivi">Inattivi</option>
+                </select>
+              </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Ricerca per Nome
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ricerca nome o cognome..."
+                  value={filtroNome}
+                  onChange={(e) => setFiltroNome(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
 
 
           {/* Lista Utenti */}
@@ -256,7 +366,7 @@ export default function ListaUtenza() {
               alignItems: 'center'
             }}>
               <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#1f2937', margin: 0 }}>
-                Utenti Registrati ({utenti.length})
+                Utenti Registrati ({utentiFiltrati.length} di {utenti.length})
               </h2>
             </div>
 
@@ -300,6 +410,17 @@ export default function ListaUtenza() {
                     </th>
                     <th style={{
                       padding: '14px 24px',
+                      textAlign: 'left',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Stato
+                    </th>
+                    <th style={{
+                      padding: '14px 24px',
                       textAlign: 'right',
                       fontSize: '11px',
                       fontWeight: 600,
@@ -312,7 +433,7 @@ export default function ListaUtenza() {
                   </tr>
                 </thead>
                 <tbody>
-                  {utenti.map((utente) => (
+                  {utentiFiltrati.map((utente) => (
                     <tr
                       key={utente.idUtente}
                       style={{
@@ -345,6 +466,18 @@ export default function ListaUtenza() {
                           {utente.ruolo}
                         </span>
                       </td>
+                      <td style={{ padding: '14px 24px' }}>
+                        <span style={{
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontWeight: 500,
+                          fontSize: '13px',
+                          backgroundColor: utente.stato ? '#d1fae5' : '#fee2e2',
+                          color: utente.stato ? '#065f46' : '#dc2626'
+                        }}>
+                          {utente.stato ? '✓ Attivo' : '✗ Inattivo'}
+                        </span>
+                      </td>
                       <td style={{
                         padding: '14px 24px',
                         textAlign: 'right'
@@ -372,7 +505,7 @@ export default function ListaUtenza() {
                             e.currentTarget.style.color = '#0d9488';
                           }}
                         >
-                          Visualizza Profilo
+                          Visualizza
                         </button>
                         <button
                           onClick={() => apriModalModifica(utente)}
@@ -385,12 +518,31 @@ export default function ListaUtenza() {
                             fontSize: '13px',
                             fontWeight: 500,
                             cursor: 'pointer',
+                            marginRight: '8px',
                             transition: 'all 0.2s'
                           }}
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0f766e'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0d9488'}
                         >
                           Modifica
+                        </button>
+                        <button
+                          onClick={() => gestisciCambioStatoUtente(utente.idUtente, !utente.stato)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: utente.stato ? '#dc2626' : '#059669',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                        >
+                          {utente.stato ? 'Disattiva' : 'Attiva'}
                         </button>
                       </td>
                     </tr>
@@ -404,7 +556,7 @@ export default function ListaUtenza() {
 
 
       {/* Modal Visualizza Profilo */}
-      {showModal && utenteSelezionato && (
+      {mostraModalVisualizza && utenteSelezionato && (
         <div style={{
           position: 'fixed',
           inset: 0,
@@ -434,7 +586,7 @@ export default function ListaUtenza() {
                 Profilo: {utenteSelezionato.nome} {utenteSelezionato.cognome}
               </h3>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setMostraModalVisualizza(false)}
                 style={{
                   backgroundColor: 'transparent',
                   border: 'none',
@@ -470,13 +622,26 @@ export default function ListaUtenza() {
                       {utenteSelezionato.ruolo}
                     </p>
                   </div>
+                  <div>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Stato Account</p>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontWeight: 500,
+                      fontSize: '13px',
+                      backgroundColor: utenteSelezionato.stato ? '#d1fae5' : '#fee2e2',
+                      color: utenteSelezionato.stato ? '#065f46' : '#dc2626'
+                    }}>
+                      {utenteSelezionato.stato ? '✓ Attivo' : '✗ Inattivo'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
 
               <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={() => setMostraModalVisualizza(false)}
                   style={{
                     padding: '10px 20px',
                     backgroundColor: '#6b7280',
@@ -498,7 +663,7 @@ export default function ListaUtenza() {
 
 
       {/* Modal Modifica Utente */}
-      {showEditModal && utenteSelezionato && (
+      {mostraModalModifica && utenteSelezionato && (
         <div style={{
           position: 'fixed',
           inset: 0,
@@ -526,7 +691,7 @@ export default function ListaUtenza() {
                 Modifica Utente
               </h3>
               <button
-                onClick={() => setShowEditModal(false)}
+                onClick={() => setMostraModalModifica(false)}
                 style={{
                   backgroundColor: 'transparent',
                   border: 'none',
@@ -541,7 +706,7 @@ export default function ListaUtenza() {
             </div>
 
 
-            <form onSubmit={handleModificaUtente}>
+            <form onSubmit={gestisciModificaUtente}>
               <div style={{ padding: '24px' }}>
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{
@@ -555,8 +720,8 @@ export default function ListaUtenza() {
                   </label>
                   <input
                     type="text"
-                    value={editForm.nome}
-                    onChange={(e) => setEditForm({ ...editForm, nome: e.target.value })}
+                    value={formModifica.nome}
+                    onChange={(e) => setFormModifica({ ...formModifica, nome: e.target.value })}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -583,8 +748,8 @@ export default function ListaUtenza() {
                   </label>
                   <input
                     type="text"
-                    value={editForm.cognome}
-                    onChange={(e) => setEditForm({ ...editForm, cognome: e.target.value })}
+                    value={formModifica.cognome}
+                    onChange={(e) => setFormModifica({ ...formModifica, cognome: e.target.value })}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -610,8 +775,8 @@ export default function ListaUtenza() {
                     Ruolo
                   </label>
                   <select
-                    value={editForm.ruolo}
-                    onChange={(e) => setEditForm({ ...editForm, ruolo: e.target.value })}
+                    value={formModifica.ruolo}
+                    onChange={(e) => setFormModifica({ ...formModifica, ruolo: e.target.value })}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -665,7 +830,7 @@ export default function ListaUtenza() {
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                   <button
                     type="button"
-                    onClick={() => setShowEditModal(false)}
+                    onClick={() => setMostraModalModifica(false)}
                     style={{
                       padding: '10px 20px',
                       backgroundColor: 'white',

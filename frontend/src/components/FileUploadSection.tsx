@@ -1,37 +1,52 @@
-
 import React from 'react';
 
-interface FileUploadSectionProps {
+interface ProprietaSezioneCaricamentoFile {
   files: File[];
   setFiles: React.Dispatch<React.SetStateAction<File[]>>;
   disabled?: boolean;
 }
 
-const FileUploadSection: React.FC<FileUploadSectionProps> = ({ 
-  files, 
-  setFiles, 
-  disabled = false 
+const FileUploadSection: React.FC<ProprietaSezioneCaricamentoFile> = ({ 
+  files: fileAllegati, 
+  setFiles: impostaFileAllegati, 
+  disabled: disabilitato = false 
 }) => {
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...newFiles]);
+  const gestisciCambioFile = (eventoInput: React.ChangeEvent<HTMLInputElement>) => {
+    if (eventoInput.target.files) {
+      const nuoviFile = Array.from(eventoInput.target.files);
+      impostaFileAllegati(fileEsistenti => [...fileEsistenti, ...nuoviFile]);
     }
   };
 
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+  const rimuoviFile = (indiceFile: number) => {
+    impostaFileAllegati(fileEsistenti => fileEsistenti.filter((_, indice) => indice !== indiceFile));
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.currentTarget.style.borderColor = "#d1d5db";
-    e.currentTarget.style.backgroundColor = "#f9fafb";
-    if (e.dataTransfer.files) {
-      const newFiles = Array.from(e.dataTransfer.files);
-      setFiles(prev => [...prev, ...newFiles]);
+  const gestisciRilascioFile = (eventoRilascio: React.DragEvent<HTMLDivElement>) => {
+    eventoRilascio.preventDefault();
+    eventoRilascio.currentTarget.style.borderColor = "#d1d5db";
+    eventoRilascio.currentTarget.style.backgroundColor = "#f9fafb";
+    if (eventoRilascio.dataTransfer.files) {
+      const nuoviFile = Array.from(eventoRilascio.dataTransfer.files);
+      impostaFileAllegati(fileEsistenti => [...fileEsistenti, ...nuoviFile]);
     }
+  };
+
+  const gestisciTrascina = (eventoTrascina: React.DragEvent<HTMLDivElement>) => {
+    if (disabilitato) return;
+    eventoTrascina.preventDefault();
+    eventoTrascina.currentTarget.style.borderColor = "#0d9488";
+    eventoTrascina.currentTarget.style.backgroundColor = "#f0fdfa";
+  };
+
+  const gestisciEsceDaAreaTrascina = (eventoTrascina: React.DragEvent<HTMLDivElement>) => {
+    eventoTrascina.currentTarget.style.borderColor = "#d1d5db";
+    eventoTrascina.currentTarget.style.backgroundColor = "#f9fafb";
+  };
+
+  const formattaDimensioneFile = (dimensioneInBytes: number): string => {
+    return (dimensioneInBytes / 1024).toFixed(2);
   };
 
   return (
@@ -51,36 +66,28 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
           borderRadius: "8px",
           padding: "24px",
           textAlign: "center",
-          backgroundColor: disabled ? "#f3f4f6" : "#f9fafb",
-          cursor: disabled ? "not-allowed" : "pointer",
+          backgroundColor: disabilitato ? "#f3f4f6" : "#f9fafb",
+          cursor: disabilitato ? "not-allowed" : "pointer",
           transition: "all 0.2s",
-          opacity: disabled ? 0.6 : 1
+          opacity: disabilitato ? 0.6 : 1
         }}
-        onDragOver={(e) => {
-          if (disabled) return;
-          e.preventDefault();
-          e.currentTarget.style.borderColor = "#0d9488";
-          e.currentTarget.style.backgroundColor = "#f0fdfa";
-        }}
-        onDragLeave={(e) => {
-          e.currentTarget.style.borderColor = "#d1d5db";
-          e.currentTarget.style.backgroundColor = "#f9fafb";
-        }}
-        onDrop={handleDrop}
+        onDragOver={gestisciTrascina}
+        onDragLeave={gestisciEsceDaAreaTrascina}
+        onDrop={gestisciRilascioFile}
       >
         <input
           type="file"
           multiple
           accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-          onChange={handleFileChange}
+          onChange={gestisciCambioFile}
           style={{ display: "none" }}
-          id="file-upload"
-          disabled={disabled}
+          id="input-caricamento-file"
+          disabled={disabilitato}
         />
         <label 
-          htmlFor="file-upload" 
+          htmlFor="input-caricamento-file" 
           style={{ 
-            cursor: disabled ? "not-allowed" : "pointer",
+            cursor: disabilitato ? "not-allowed" : "pointer",
             display: "block"
           }}
         >
@@ -115,10 +122,10 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
         </label>
       </div>
 
-      {files.length > 0 && (
+      {fileAllegati.length > 0 && (
         <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
-          {files.map((file, index) => (
-            <div key={index} style={{
+          {fileAllegati.map((fileSingolo, indice) => (
+            <div key={indice} style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -146,31 +153,31 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                     color: "#1f2937",
                     fontSize: "13px"
                   }}>
-                    {file.name}
+                    {fileSingolo.name}
                   </div>
                   <div style={{
                     fontSize: "12px",
                     color: "#6b7280",
                     marginTop: "2px"
                   }}>
-                    {(file.size / 1024).toFixed(2)} KB
+                    {formattaDimensioneFile(fileSingolo.size)} KB
                   </div>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => removeFile(index)}
-                disabled={disabled}
+                onClick={() => rimuoviFile(indice)}
+                disabled={disabilitato}
                 style={{
                   padding: "6px 10px",
                   backgroundColor: "#fee2e2",
                   border: "1px solid #fca5a5",
                   borderRadius: "4px",
-                  cursor: disabled ? "not-allowed" : "pointer",
+                  cursor: disabilitato ? "not-allowed" : "pointer",
                   color: "#dc2626",
                   fontSize: "16px",
                   lineHeight: 1,
-                  opacity: disabled ? 0.5 : 1
+                  opacity: disabilitato ? 0.5 : 1
                 }}
               >
                 ✕

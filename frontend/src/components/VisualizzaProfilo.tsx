@@ -5,48 +5,48 @@ import axios from "axios";
 import Sidebar from "./Sidebar";
 
 export default function VisualizzaProfilo() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = useState<{ email: string; ruolo: string }>({ email: "", ruolo: "" });
-  const [edit, setEdit] = useState(false);
+  const [sidebarAperta, setSidebarAperta] = useState(true);
+  const [utenteCorrente, setUtenteCorrente] = useState<{ email: string; ruolo: string }>({ email: "", ruolo: "" });
+  const [inModifica, setInModifica] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });
-  const [message, setMessage] = useState<{ type: string; text: string }>({ type: "", text: "" });
+  const [messaggio, setMessaggio] = useState<{ type: string; text: string }>({ type: "", text: "" });
 
   useEffect(() => {
     const u = authService.getUser();
     if (u) {
-      setUser({ email: u.email, ruolo: u.ruolo });
+      setUtenteCorrente({ email: u.email, ruolo: u.ruolo });
       setForm({ email: u.email, password: "", confirmPassword: "" });
     }
   }, []);
 
-  const isAdmin = authService.isAdmin();
+  const utenteEAmministratore = authService.isAdmin();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const gestisciCambio = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Permetti solo la modifica della password e conferma password
     if (e.target.name === "password" || e.target.name === "confirmPassword") {
       setForm({ ...form, [e.target.name]: e.target.value });
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const gestisciInvio = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage({ type: "", text: "" });
+    setMessaggio({ type: "", text: "" });
     
     // Validazione: password non vuota
     if (!form.password.trim()) {
-      setMessage({ type: "error", text: "Inserisci una nuova password per modificare il profilo." });
+      setMessaggio({ type: "error", text: "Inserisci una nuova password per modificare il profilo." });
       return;
     }
     
     // Validazione: le password devono coincidere
     if (form.password !== form.confirmPassword) {
-      setMessage({ type: "error", text: "Le password non coincidono. Riprova." });
+      setMessaggio({ type: "error", text: "Le password non coincidono. Riprova." });
       return;
     }
 
     // Validazione: lunghezza minima password
     if (form.password.length < 6) {
-      setMessage({ type: "error", text: "La password deve essere di almeno 6 caratteri." });
+      setMessaggio({ type: "error", text: "La password deve essere di almeno 6 caratteri." });
       return;
     }
     
@@ -54,14 +54,14 @@ export default function VisualizzaProfilo() {
       // Invia solo la password, l'email rimane invariata
       await axios.put(
         `${API_BASE_URL}/utenza/modifica`,
-        { email: user.email, password: form.password },
+        { email: utenteCorrente.email, password: form.password },
         { headers: { Authorization: `Bearer ${authService.getToken()}` } }
       );
-      setMessage({ type: "success", text: "Password aggiornata con successo!" });
-      setEdit(false);
-      setForm({ email: user.email, password: "", confirmPassword: "" });
+      setMessaggio({ type: "success", text: "Password aggiornata con successo!" });
+      setInModifica(false);
+      setForm({ email: utenteCorrente.email, password: "", confirmPassword: "" });
     } catch (err: any) {
-      setMessage({ type: "error", text: err.response?.data?.message || "Errore nell'aggiornamento." });
+      setMessaggio({ type: "error", text: err.response?.data?.message || "Errore nell'aggiornamento." });
     }
   };
 
@@ -72,7 +72,7 @@ export default function VisualizzaProfilo() {
       backgroundColor: "#f5f7fa",
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' 
     }}>
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Sidebar sidebarOpen={sidebarAperta} setSidebarOpen={setSidebarAperta} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <header style={{
@@ -84,7 +84,7 @@ export default function VisualizzaProfilo() {
           gap: "16px"
         }}>
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => setSidebarAperta(!sidebarAperta)}
             style={{
               padding: "8px 12px",
               backgroundColor: "transparent",
@@ -115,7 +115,7 @@ export default function VisualizzaProfilo() {
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             border: "1px solid #e5e7eb"
           }}>
-            {!edit && (
+            {!inModifica && (
               <>
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ 
@@ -140,14 +140,14 @@ export default function VisualizzaProfilo() {
                     </div>
                     <div>
                       <div style={{ fontSize: "18px", fontWeight: 600, color: "#1f2937" }}>
-                        {user.email}
+                        {utenteCorrente.email}
                       </div>
                       <div style={{ fontSize: "14px", color: "#6b7280", marginTop: "4px" }}>
                         Ruolo: <span style={{ 
                           fontWeight: 600, 
-                          color: isAdmin ? "#0d9488" : "#6b7280" 
+                          color: utenteEAmministratore ? "#0d9488" : "#6b7280" 
                         }}>
-                          {user.ruolo}
+                          {utenteCorrente.ruolo}
                         </span>
                       </div>
                     </div>
@@ -164,7 +164,7 @@ export default function VisualizzaProfilo() {
                         Email
                       </div>
                       <div style={{ fontSize: "14px", fontWeight: 500, color: "#1f2937" }}>
-                        {user.email}
+                        {utenteCorrente.email}
                       </div>
                     </div>
 
@@ -178,14 +178,14 @@ export default function VisualizzaProfilo() {
                         Ruolo
                       </div>
                       <div style={{ fontSize: "14px", fontWeight: 500, color: "#1f2937" }}>
-                        {user.ruolo}
+                        {utenteCorrente.ruolo}
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <button 
-                  onClick={() => setEdit(true)} 
+                  onClick={() => setInModifica(true)} 
                   style={{ 
                     width: "100%",
                     background: "#0d9488", 
@@ -206,8 +206,8 @@ export default function VisualizzaProfilo() {
               </>
             )}
 
-            {edit && (
-              <form onSubmit={handleSubmit}>
+            {inModifica && (
+              <form onSubmit={gestisciInvio}>
                 <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#1f2937", marginBottom: "20px" }}>
                   Modifica Profilo
                 </h3>
@@ -226,7 +226,7 @@ export default function VisualizzaProfilo() {
                   <input
                     type="email"
                     name="email"
-                    value={user.email}
+                    value={utenteCorrente.email}
                     readOnly
                     disabled
                     style={{ 
@@ -261,7 +261,7 @@ export default function VisualizzaProfilo() {
                     type="password"
                     name="password"
                     value={form.password}
-                    onChange={handleChange}
+                    onChange={gestisciCambio}
                     required
                     placeholder="Inserisci la nuova password (min. 6 caratteri)"
                     style={{ 
@@ -290,7 +290,7 @@ export default function VisualizzaProfilo() {
                     type="password"
                     name="confirmPassword"
                     value={form.confirmPassword}
-                    onChange={handleChange}
+                    onChange={gestisciCambio}
                     required
                     placeholder="Reinserisci la password"
                     style={{ 
@@ -314,18 +314,18 @@ export default function VisualizzaProfilo() {
                   )}
                 </div>
 
-                {message.text && (
+                {messaggio.text && (
                   <div style={{ 
                     padding: "12px 16px",
                     borderRadius: "8px",
                     marginBottom: 16,
-                    color: message.type === "success" ? "#16a34a" : "#e11d48",
-                    backgroundColor: message.type === "success" ? "#f0fdf4" : "#fef2f2",
-                    border: `1px solid ${message.type === "success" ? "#bbf7d0" : "#fecaca"}`,
+                    color: messaggio.type === "success" ? "#16a34a" : "#e11d48",
+                    backgroundColor: messaggio.type === "success" ? "#f0fdf4" : "#fef2f2",
+                    border: `1px solid ${messaggio.type === "success" ? "#bbf7d0" : "#fecaca"}`,
                     fontWeight: 600,
                     fontSize: "14px"
                   }}>
-                    {message.text}
+                    {messaggio.text}
                   </div>
                 )}
 
@@ -351,9 +351,9 @@ export default function VisualizzaProfilo() {
                   <button 
                     type="button" 
                     onClick={() => {
-                      setEdit(false);
-                      setMessage({ type: "", text: "" });
-                      setForm({ email: user.email, password: "", confirmPassword: "" });
+                      setInModifica(false);
+                      setMessaggio({ type: "", text: "" });
+                      setForm({ email: utenteCorrente.email, password: "", confirmPassword: "" });
                     }} 
                     style={{ 
                       flex: 1,

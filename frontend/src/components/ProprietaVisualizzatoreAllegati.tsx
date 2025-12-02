@@ -10,80 +10,83 @@ interface Allegato {
   percorso: string;
 }
 
-interface AttachmentsViewerProps {
+interface ProprietaVisualizzatoreAllegati {
   idIssue: number;
-  canEdit: boolean;
+  puoModificare: boolean;
 }
 
-const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit }) => {
-  const [allegati, setAllegati] = useState<Allegato[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+const VisualizzatoreAllegati: React.FC<ProprietaVisualizzatoreAllegati> = ({ 
+  idIssue, 
+  puoModificare 
+}) => {
+  const [listaAllegati, setListaAllegati] = useState<Allegato[]>([]);
+  const [caricamentoInCorso, setCaricamentoInCorso] = useState(true);
+  const [messaggioErrore, setMessaggioErrore] = useState('');
 
   useEffect(() => {
-    loadAllegati();
+    caricaAllegati();
   }, [idIssue]);
 
-  const loadAllegati = async () => {
+  const caricaAllegati = async () => {
     try {
-      setLoading(true);
-      const data = await allegatoService.getAllegatiByIssue(idIssue);
-      setAllegati(data);
-      setError('');
-    } catch (err: any) {
-      console.error('Errore caricamento allegati:', err);
-      setError('Errore nel caricamento degli allegati');
+      setCaricamentoInCorso(true);
+      const datiAllegati = await allegatoService.getAllegatiByIssue(idIssue);
+      setListaAllegati(datiAllegati);
+      setMessaggioErrore('');
+    } catch (errore: any) {
+      console.error('Errore caricamento allegati:', errore);
+      setMessaggioErrore('Errore nel caricamento degli allegati');
     } finally {
-      setLoading(false);
+      setCaricamentoInCorso(false);
     }
   };
 
-  const handleDownload = async (allegato: Allegato) => {
+  const gestisciDownload = async (allegatoDaScaricare: Allegato) => {
     try {
-      const response = await allegatoService.downloadAllegato(allegato.idAllegato);
+      const rispostaDownload = await allegatoService.downloadAllegato(allegatoDaScaricare.idAllegato);
       
-      const blob = new Blob([response.data], { type: allegato.tipoFile });
-      const url = window.URL.createObjectURL(blob);
+      const blobFile = new Blob([rispostaDownload.data], { type: allegatoDaScaricare.tipoFile });
+      const urlTemporaneo = window.URL.createObjectURL(blobFile);
       
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = allegato.nomeFile;
-      document.body.appendChild(link);
-      link.click();
+      const linkDownload = document.createElement('a');
+      linkDownload.href = urlTemporaneo;
+      linkDownload.download = allegatoDaScaricare.nomeFile;
+      document.body.appendChild(linkDownload);
+      linkDownload.click();
       
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.error('Errore download:', err);
+      document.body.removeChild(linkDownload);
+      window.URL.revokeObjectURL(urlTemporaneo);
+    } catch (errore: any) {
+      console.error('Errore download:', errore);
       alert('Errore durante il download del file');
     }
   };
 
-  const handleDelete = async (idAllegato: number) => {
+  const gestisciEliminazione = async (idAllegatoDaEliminare: number) => {
     if (!window.confirm('Sei sicuro di voler eliminare questo allegato?')) {
       return;
     }
 
     try {
-      await allegatoService.deleteAllegato(idAllegato);
-      await loadAllegati();
-    } catch (err: any) {
-      console.error('Errore eliminazione:', err);
+      await allegatoService.deleteAllegato(idAllegatoDaEliminare);
+      await caricaAllegati();
+    } catch (errore: any) {
+      console.error('Errore eliminazione:', errore);
       alert('Errore durante l\'eliminazione del file');
     }
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  const formattaDimensioneFile = (dimensioneInBytes: number): string => {
+    if (dimensioneInBytes === 0) return '0 Bytes';
+    const fattoreDivisione = 1024;
+    const unitaMisura = ['Bytes', 'KB', 'MB', 'GB'];
+    const indiceSufisso = Math.floor(Math.log(dimensioneInBytes) / Math.log(fattoreDivisione));
+    return Math.round(dimensioneInBytes / Math.pow(fattoreDivisione, indiceSufisso) * 100) / 100 + ' ' + unitaMisura[indiceSufisso];
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('it-IT', {
+  const formattaData = (stringaData: string): string => {
+    const oggettoData = new Date(stringaData);
+    return oggettoData.toLocaleDateString('it-IT', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -92,14 +95,14 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
     });
   };
 
-  const getFileIcon = (tipoFile: string): string => {
-    if (tipoFile.startsWith('image/')) return '🖼️';
-    if (tipoFile === 'application/pdf') return '📄';
-    if (tipoFile.includes('word')) return '📝';
+  const ottieniIconaFile = (tipoMimeFile: string): string => {
+    if (tipoMimeFile.startsWith('image/')) return '🖼️';
+    if (tipoMimeFile === 'application/pdf') return '📄';
+    if (tipoMimeFile.includes('word')) return '📝';
     return '📎';
   };
 
-  if (loading) {
+  if (caricamentoInCorso) {
     return (
       <div style={{
         backgroundColor: 'white',
@@ -115,7 +118,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
     );
   }
 
-  if (error) {
+  if (messaggioErrore) {
     return (
       <div style={{
         backgroundColor: '#fee2e2',
@@ -126,12 +129,12 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
         color: '#dc2626',
         fontSize: '14px'
       }}>
-        ⚠️ {error}
+        ⚠️ {messaggioErrore}
       </div>
     );
   }
 
-  if (allegati.length === 0) {
+  if (listaAllegati.length === 0) {
     return (
       <div style={{
         backgroundColor: 'white',
@@ -145,7 +148,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
           Nessun allegato
         </div>
         <div style={{ fontSize: '14px', color: '#6b7280' }}>
-          {canEdit ? 'Aggiungi allegati modificando l\'issue' : 'Questa issue non ha allegati'}
+          {puoModificare ? 'Aggiungi allegati modificando l\'issue' : 'Questa issue non ha allegati'}
         </div>
       </div>
     );
@@ -171,14 +174,14 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
           color: '#1f2937',
           margin: 0
         }}>
-          📎 Allegati ({allegati.length})
+          📎 Allegati ({listaAllegati.length})
         </h3>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {allegati.map((allegato) => (
+        {listaAllegati.map((allegatoCorrente) => (
           <div
-            key={allegato.idAllegato}
+            key={allegatoCorrente.idAllegato}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -189,13 +192,13 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
               borderRadius: '8px',
               transition: 'all 0.2s'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f3f4f6';
-              e.currentTarget.style.borderColor = '#d1d5db';
+            onMouseEnter={(eventoMouse) => {
+              eventoMouse.currentTarget.style.backgroundColor = '#f3f4f6';
+              eventoMouse.currentTarget.style.borderColor = '#d1d5db';
             }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#f9fafb';
-              e.currentTarget.style.borderColor = '#e5e7eb';
+            onMouseLeave={(eventoMouse) => {
+              eventoMouse.currentTarget.style.backgroundColor = '#f9fafb';
+              eventoMouse.currentTarget.style.borderColor = '#e5e7eb';
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
@@ -209,7 +212,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
                 justifyContent: 'center',
                 fontSize: '24px'
               }}>
-                {getFileIcon(allegato.tipoFile)}
+                {ottieniIconaFile(allegatoCorrente.tipoFile)}
               </div>
 
               <div style={{ flex: 1 }}>
@@ -220,7 +223,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
                   marginBottom: '4px',
                   wordBreak: 'break-word'
                 }}>
-                  {allegato.nomeFile}
+                  {allegatoCorrente.nomeFile}
                 </div>
                 <div style={{
                   fontSize: '12px',
@@ -229,16 +232,16 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
                   gap: '12px',
                   flexWrap: 'wrap'
                 }}>
-                  <span>{formatFileSize(allegato.dimensione)}</span>
+                  <span>{formattaDimensioneFile(allegatoCorrente.dimensione)}</span>
                   <span>•</span>
-                  <span>{formatDate(allegato.dataCaricamento)}</span>
+                  <span>{formattaData(allegatoCorrente.dataCaricamento)}</span>
                 </div>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
-                onClick={() => handleDownload(allegato)}
+                onClick={() => gestisciDownload(allegatoCorrente)}
                 style={{
                   padding: '8px 16px',
                   backgroundColor: '#0d9488',
@@ -253,15 +256,15 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
                   alignItems: 'center',
                   gap: '6px'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0f766e'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0d9488'}
+                onMouseEnter={(eventoMouse) => eventoMouse.currentTarget.style.backgroundColor = '#0f766e'}
+                onMouseLeave={(eventoMouse) => eventoMouse.currentTarget.style.backgroundColor = '#0d9488'}
               >
                 ⬇️ Scarica
               </button>
 
-              {canEdit && (
+              {puoModificare && (
                 <button
-                  onClick={() => handleDelete(allegato.idAllegato)}
+                  onClick={() => gestisciEliminazione(allegatoCorrente.idAllegato)}
                   style={{
                     padding: '8px 16px',
                     backgroundColor: '#fee2e2',
@@ -273,11 +276,11 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
                     cursor: 'pointer',
                     transition: 'all 0.2s'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#fecaca';
+                  onMouseEnter={(eventoMouse) => {
+                    eventoMouse.currentTarget.style.backgroundColor = '#fecaca';
                   }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#fee2e2';
+                  onMouseLeave={(eventoMouse) => {
+                    eventoMouse.currentTarget.style.backgroundColor = '#fee2e2';
                   }}
                 >
                   🗑️
@@ -291,4 +294,4 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
   );
 };
 
-export default AttachmentsViewer;
+export default VisualizzatoreAllegati;

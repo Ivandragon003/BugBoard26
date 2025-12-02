@@ -3,21 +3,21 @@ import { authService } from '../services/authService';
 
 function RecuperaPassword() {
   const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
-  const [isError, setIsError] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [messaggio, setMessaggio] = useState('');
+  const [èErrore, setèErrore] = useState(false);
+  const [inCaricamento, setInCaricamento] = useState(false);
   const [emailInviata, setEmailInviata] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const gestisciInvio = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setMessage('');
-    setIsError(false);
-    setIsLoading(true);
+    setMessaggio('');
+    setèErrore(false);
+    setInCaricamento(true);
 
     try {
       await authService.recuperaPassword(email);
-      setMessage('Email di recupero inviata con successo! Controlla la tua casella di posta.');
-      setIsError(false);
+      setMessaggio('Email di recupero inviata con successo! Controlla la tua casella di posta.');
+      setèErrore(false);
       setEmailInviata(true);
     } catch (error: unknown) {
       console.error('Errore recupero password:', error);
@@ -35,14 +35,14 @@ function RecuperaPassword() {
         errorMsg = 'Nessuna connessione internet';
       }
       
-      setMessage(errorMsg);
-      setIsError(true);
+      setMessaggio(errorMsg);
+      setèErrore(true);
     } finally {
-      setIsLoading(false);
+      setInCaricamento(false);
     }
   };
 
-  const handleTornaAlLogin = () => {
+  const tornaAlLogin = () => {
     window.location.href = '/';
   };
 
@@ -88,7 +88,7 @@ function RecuperaPassword() {
         </div>
 
         {!emailInviata ? (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={gestisciInvio}>
             <div style={{ marginBottom: '24px' }}>
               <label style={{
                 display: 'block',
@@ -118,40 +118,40 @@ function RecuperaPassword() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={inCaricamento}
               style={{
                 width: '100%',
                 padding: '12px 24px',
-                backgroundColor: isLoading ? '#9ca3af' : '#0d9488',
+                backgroundColor: inCaricamento ? '#9ca3af' : '#0d9488',
                 color: 'white',
                 fontSize: '14px',
                 fontWeight: '600',
                 border: 'none',
                 borderRadius: '8px',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
+                cursor: inCaricamento ? 'not-allowed' : 'pointer',
                 marginBottom: '16px'
               }}
             >
-              {isLoading ? 'Invio in corso...' : 'Invia email di recupero'}
+              {inCaricamento ? 'Invio in corso...' : 'Invia email di recupero'}
             </button>
 
-            {message && (
+            {messaggio && (
               <div style={{
                 padding: '12px 16px',
                 borderRadius: '8px',
                 fontSize: '14px',
-                backgroundColor: isError ? '#fef2f2' : '#f0fdf4',
-                color: isError ? '#991b1b' : '#166534',
-                border: `1px solid ${isError ? '#fecaca' : '#bbf7d0'}`,
+                backgroundColor: èErrore ? '#fef2f2' : '#f0fdf4',
+                color: èErrore ? '#991b1b' : '#166534',
+                border: `1px solid ${èErrore ? '#fecaca' : '#bbf7d0'}`,
                 marginBottom: '16px'
               }}>
-                {message}
+                {messaggio}
               </div>
             )}
 
             <button
               type="button"
-              onClick={handleTornaAlLogin}
+              onClick={tornaAlLogin}
               style={{
                 width: '100%',
                 padding: '12px 24px',
@@ -215,7 +215,7 @@ function RecuperaPassword() {
 
             <button
               type="button"
-              onClick={handleTornaAlLogin}
+              onClick={tornaAlLogin}
               style={{
                 width: '100%',
                 padding: '12px 24px',

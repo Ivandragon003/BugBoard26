@@ -16,83 +16,76 @@ interface Issue {
 }
 
 function Home() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [allIssues, setAllIssues] = useState<Issue[]>([]); // Per le statistiche totali
-  const [error, setError] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [filterType, setFilterType] = useState<string>("");
+  const naviga = useNavigate();
+  const posizioneCorrente = useLocation();
+  const [sidebarAperta, setSidebarAperta] = useState(true);
+  const [issueFiltrate, setIssueFiltrate] = useState<Issue[]>([]);
+  const [tutteLeIssue, setTutteLeIssue] = useState<Issue[]>([]);
+  const [messaggioErrore, setMessaggioErrore] = useState<string>("");
+  const [caricamentoInCorso, setCaricamentoInCorso] = useState<boolean>(true);
+  const [tipoFiltro, setTipoFiltro] = useState<string>("");
 
   useEffect(() => {
-    const token = authService.getToken();
-    if (!token) {
-      navigate("/login");
+    const tokenAutenticazione = authService.getToken();
+    if (!tokenAutenticazione) {
+      naviga("/login");
       return;
     }
-  }, [navigate]);
+  }, [naviga]);
 
-  // Carica issues filtrate quando cambia il filtro
   useEffect(() => {
-    loadFilteredIssues();
-  }, [filterType]);
+    caricaIssueFiltrate();
+  }, [tipoFiltro]);
 
-  // Carica anche tutte le issue per le statistiche totali
   useEffect(() => {
-    loadAllIssuesForStats();
+    caricaTutteLeIssuePerStatistiche();
   }, []);
 
-  const loadFilteredIssues = async () => {
+  const caricaIssueFiltrate = async () => {
     try {
-      setLoading(true);
+      setCaricamentoInCorso(true);
       
-      const params: any = {
+      const parametriFiltro: any = {
         archiviata: false,
         ordinamento: "data_recente"
       };
 
-      // Aggiungi filtro stato se selezionato
-      if (filterType && filterType !== "all") {
-        params.stato = filterType;
+      if (tipoFiltro && tipoFiltro !== "all") {
+        parametriFiltro.stato = tipoFiltro;
       }
 
-      const data = await issueService.filterIssuesAdvanced(params);
-      setIssues(data);
-      setError("");
-    } catch (err: any) {
-      console.error("Errore caricamento issues:", err);
-      setError(err.response?.data?.message || "Errore nel caricamento delle issue");
-      setIssues([]);
+      const datiIssue = await issueService.filterIssuesAdvanced(parametriFiltro);
+      setIssueFiltrate(datiIssue);
+      setMessaggioErrore("");
+    } catch (errore: any) {
+      console.error("Errore caricamento issues:", errore);
+      setMessaggioErrore(errore.response?.data?.message || "Errore nel caricamento delle issue");
+      setIssueFiltrate([]);
     } finally {
-      setLoading(false);
+      setCaricamentoInCorso(false);
     }
   };
 
-  const loadAllIssuesForStats = async () => {
+  const caricaTutteLeIssuePerStatistiche = async () => {
     try {
-      const data = await issueService.filterIssuesAdvanced({
+      const datiIssue = await issueService.filterIssuesAdvanced({
         archiviata: false,
         ordinamento: "data_recente"
       });
-      setAllIssues(data);
-    } catch (err: any) {
-      console.error("Errore caricamento statistiche:", err);
+      setTutteLeIssue(datiIssue);
+    } catch (errore: any) {
+      console.error("Errore caricamento statistiche:", errore);
     }
   };
 
-  // Calcola statistiche sempre su TUTTE le issue (non filtrate)
-  const issueStats = {
-    totali: allIssues.length,
-    todo: allIssues.filter(i => i.stato.toLowerCase() === 'todo').length,
-    inProgress: allIssues.filter(i => {
-      const stato = i.stato.toLowerCase();
-      return stato === 'inprogress' || stato === 'in_progress';
-    }).length,
-    done: allIssues.filter(i => i.stato.toLowerCase() === 'done').length,
+  const statisticheIssue = {
+    totali: tutteLeIssue.length,
+    daFare: tutteLeIssue.filter(issue => issue.stato === 'Todo').length,
+    inCorso: tutteLeIssue.filter(issue => issue.stato === 'inProgress').length,
+    completate: tutteLeIssue.filter(issue => issue.stato === 'Done').length,
   };
 
-  const ListIcon = () => (
+  const IconaLista = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M8 6H21" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round"/>
       <path d="M8 12H21" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round"/>
@@ -103,50 +96,49 @@ function Home() {
     </svg>
   );
 
-  const ClockIcon = () => (
+  const IconaOrologio = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="12" r="9" stroke="#6B7280" strokeWidth="2"/>
       <path d="M12 7V12L15 15" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   );
 
-  const TrendUpIcon = () => (
+  const IconaTendenzaCrescente = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M3 17L9 11L13 15L21 7" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       <path d="M15 7H21V13" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
 
-  const CheckCircleIcon = () => (
+  const IconaSpuntaCircolare = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="12" r="9" stroke="#10B981" strokeWidth="2"/>
       <path d="M8 12L11 15L16 9" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
 
-  const UserIcon = () => (
+  const IconaUtente = () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="8" r="4" stroke="#0d9488" strokeWidth="2"/>
       <path d="M6 21C6 17.686 8.686 15 12 15C15.314 15 18 17.686 18 21" stroke="#0d9488" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   );
 
-  const getStatoStyle = (stato: string) => {
-    switch (stato.toLowerCase()) {
-      case "todo":
+  const ottieniStileStato = (codiceStato: string) => {
+    switch (codiceStato) {
+      case "Todo":
         return { backgroundColor: "#e5e7eb", color: "#374151" };
-      case "inprogress":
-      case "in_progress":
+      case "inProgress":
         return { backgroundColor: "#fed7aa", color: "#9a3412" };
-      case "done":
+      case "Done":
         return { backgroundColor: "#86efac", color: "#166534" };
       default:
         return { backgroundColor: "#e5e7eb", color: "#374151" };
     }
   };
 
-  const getTipoStyle = (tipo: string) => {
-    switch (tipo.toLowerCase()) {
+  const ottieniStileTipo = (codiceTipo: string) => {
+    switch (codiceTipo.toLowerCase()) {
       case "documentation":
         return { backgroundColor: "#d1fae5", color: "#065f46" };
       case "feature":
@@ -161,8 +153,8 @@ function Home() {
     }
   };
 
-  const getPrioritaStyle = (priorita: string) => {
-    switch (priorita.toLowerCase()) {
+  const ottieniStilePriorita = (codicePriorita: string) => {
+    switch (codicePriorita.toLowerCase()) {
       case "critical":
         return { backgroundColor: "#fecaca", color: "#7f1d1d" };
       case "high":
@@ -176,19 +168,47 @@ function Home() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("it-IT", {
+  const formattaData = (stringaData: string) => {
+    if (!stringaData) return "N/A";
+    const oggettoData = new Date(stringaData);
+    return oggettoData.toLocaleDateString("it-IT", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     });
   };
 
-  const formatStato = (stato: string) => {
-    if (stato === "inProgress" || stato === "in_progress") return "In Progress";
-    return stato.charAt(0).toUpperCase() + stato.slice(1);
+  const formattaStato = (codiceStato: string) => {
+    const mappaStati: { [chiave: string]: string } = {
+      "Todo": "To Do",
+      "inProgress": "In Progress",
+      "Done": "Done"
+    };
+    return mappaStati[codiceStato] || codiceStato;
+  };
+
+  const gestisciHoverRigaIniziale = (eventoMouse: React.MouseEvent<HTMLTableRowElement>) => {
+    eventoMouse.currentTarget.style.backgroundColor = "#f9fafb";
+  };
+
+  const gestisciHoverRigaFinale = (eventoMouse: React.MouseEvent<HTMLTableRowElement>) => {
+    eventoMouse.currentTarget.style.backgroundColor = "transparent";
+  };
+
+  const gestisciCliccaRiga = (idIssue: number) => {
+    naviga(`/issues/${idIssue}`, { state: { from: "/home" } });
+  };
+
+  const gestisciHoverBottoneIniziale = (eventoMouse: React.MouseEvent<HTMLButtonElement>) => {
+    eventoMouse.currentTarget.style.backgroundColor = "#0f766e";
+    eventoMouse.currentTarget.style.transform = "translateY(-1px)";
+    eventoMouse.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
+  };
+
+  const gestisciHoverBottoneFinale = (eventoMouse: React.MouseEvent<HTMLButtonElement>) => {
+    eventoMouse.currentTarget.style.backgroundColor = "#0d9488";
+    eventoMouse.currentTarget.style.transform = "translateY(0)";
+    eventoMouse.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
   };
 
   return (
@@ -198,7 +218,7 @@ function Home() {
       backgroundColor: "#f5f7fa", 
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' 
     }}>
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Sidebar sidebarOpen={sidebarAperta} setSidebarOpen={setSidebarAperta} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <header style={{
@@ -211,7 +231,7 @@ function Home() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+              onClick={() => setSidebarAperta(!sidebarAperta)}
               style={{
                 padding: "8px 12px",
                 backgroundColor: "transparent",
@@ -234,7 +254,7 @@ function Home() {
             </div>
           </div>
           <div 
-            onClick={() => navigate('/profilo')}
+            onClick={() => naviga('/profilo')}
             style={{ 
               width: "36px",
               height: "36px",
@@ -246,12 +266,12 @@ function Home() {
               cursor: "pointer"
             }}
           >
-            <UserIcon />
+            <IconaUtente />
           </div>
         </header>
 
         <div style={{ padding: "32px" }}>
-          {error && (
+          {messaggioErrore && (
             <div style={{ 
               color: "#dc2626", 
               backgroundColor: "#fee2e2",
@@ -261,7 +281,7 @@ function Home() {
               fontSize: "14px",
               border: "1px solid #fecaca"
             }}>
-              {error}
+              {messaggioErrore}
             </div>
           )}
 
@@ -287,7 +307,7 @@ function Home() {
                 }}>
                   Filtra per stato
                 </label>
-                {filterType && filterType !== "all" && (
+                {tipoFiltro && tipoFiltro !== "all" && (
                   <span style={{
                     fontSize: "11px",
                     fontWeight: 600,
@@ -301,15 +321,15 @@ function Home() {
                 )}
               </div>
               <select 
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
+                value={tipoFiltro}
+                onChange={(eventoSelezione) => setTipoFiltro(eventoSelezione.target.value)}
                 style={{
                   padding: "10px 40px 10px 16px",
-                  border: filterType && filterType !== "all" ? "2px solid #0d9488" : "1px solid #d1d5db",
+                  border: tipoFiltro && tipoFiltro !== "all" ? "2px solid #0d9488" : "1px solid #d1d5db",
                   borderRadius: "8px",
                   fontSize: "14px",
                   color: "#374151",
-                  backgroundColor: filterType && filterType !== "all" ? "#f0fdfa" : "white",
+                  backgroundColor: tipoFiltro && tipoFiltro !== "all" ? "#f0fdfa" : "white",
                   cursor: "pointer",
                   outline: "none",
                   minWidth: "200px",
@@ -327,7 +347,7 @@ function Home() {
             </div>
 
             <button
-              onClick={() => navigate('/issues/nuova')}
+              onClick={() => naviga('/issues/nuova')}
               style={{
                 padding: "12px 24px",
                 backgroundColor: "#0d9488",
@@ -343,16 +363,8 @@ function Home() {
                 transition: "all 0.2s",
                 boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#0f766e";
-                e.currentTarget.style.transform = "translateY(-1px)";
-                e.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#0d9488";
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
-              }}
+              onMouseEnter={gestisciHoverBottoneIniziale}
+              onMouseLeave={gestisciHoverBottoneFinale}
             >
               <span style={{ fontSize: "18px" }}>➕</span> Nuova Issue
             </button>
@@ -365,10 +377,10 @@ function Home() {
             marginBottom: "32px",
             minHeight: "120px"
           }}>
-            {loading && allIssues.length === 0 ? (
+            {caricamentoInCorso && tutteLeIssue.length === 0 ? (
               <>
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} style={{
+                {[1, 2, 3, 4].map(indiceCarta => (
+                  <div key={indiceCarta} style={{
                     backgroundColor: "white",
                     borderRadius: "12px",
                     padding: "20px",
@@ -416,11 +428,11 @@ function Home() {
                       alignItems: "center",
                       justifyContent: "center"
                     }}>
-                      <ListIcon />
+                      <IconaLista />
                     </div>
                   </div>
                   <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
-                    {issueStats.totali}
+                    {statisticheIssue.totali}
                   </div>
                 </div>
 
@@ -449,11 +461,11 @@ function Home() {
                       alignItems: "center",
                       justifyContent: "center"
                     }}>
-                      <ClockIcon />
+                      <IconaOrologio />
                     </div>
                   </div>
                   <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
-                    {issueStats.todo}
+                    {statisticheIssue.daFare}
                   </div>
                 </div>
 
@@ -482,11 +494,11 @@ function Home() {
                       alignItems: "center",
                       justifyContent: "center"
                     }}>
-                      <TrendUpIcon />
+                      <IconaTendenzaCrescente />
                     </div>
                   </div>
                   <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
-                    {issueStats.inProgress}
+                    {statisticheIssue.inCorso}
                   </div>
                 </div>
 
@@ -515,11 +527,11 @@ function Home() {
                       alignItems: "center",
                       justifyContent: "center"
                     }}>
-                      <CheckCircleIcon />
+                      <IconaSpuntaCircolare />
                     </div>
                   </div>
                   <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937" }}>
-                    {issueStats.done}
+                    {statisticheIssue.completate}
                   </div>
                 </div>
               </>
@@ -544,7 +556,7 @@ function Home() {
                 Issue Recenti
               </h2>
               <button
-                onClick={() => navigate('/issues')}
+                onClick={() => naviga('/issues')}
                 style={{
                   padding: "8px 16px",
                   backgroundColor: "white",
@@ -560,13 +572,13 @@ function Home() {
               </button>
             </div>
 
-            {loading ? (
+            {caricamentoInCorso ? (
               <div style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
                 Caricamento in corso...
               </div>
-            ) : issues.length === 0 ? (
+            ) : issueFiltrate.length === 0 ? (
               <div style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
-                {filterType && filterType !== "all" 
+                {tipoFiltro && tipoFiltro !== "all" 
                   ? "Nessuna issue trovata con questo filtro."
                   : "Nessuna issue trovata. Crea la tua prima issue!"}
               </div>
@@ -633,17 +645,17 @@ function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {issues.slice(0, 5).map((issue) => (
+                    {issueFiltrate.slice(0, 5).map((issueSingola) => (
                       <tr 
-                        key={issue.idIssue} 
+                        key={issueSingola.idIssue} 
                         style={{ 
                           borderBottom: "1px solid #e5e7eb",
                           cursor: "pointer",
                           transition: "background-color 0.2s"
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f9fafb"}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-                        onClick={() => navigate(`/issues/${issue.idIssue}`, { state: { from: "/home" } })}
+                        onMouseEnter={gestisciHoverRigaIniziale}
+                        onMouseLeave={gestisciHoverRigaFinale}
+                        onClick={() => gestisciCliccaRiga(issueSingola.idIssue)}
                       >
                         <td style={{ 
                           padding: "14px 24px", 
@@ -651,7 +663,7 @@ function Home() {
                           fontWeight: 500,
                           fontSize: "14px"
                         }}>
-                          {issue.titolo}
+                          {issueSingola.titolo}
                         </td>
                         <td style={{ padding: "14px 24px" }}>
                           <span style={{ 
@@ -659,9 +671,9 @@ function Home() {
                             borderRadius: "12px", 
                             fontWeight: 500,
                             fontSize: "13px",
-                            ...getStatoStyle(issue.stato) 
+                            ...ottieniStileStato(issueSingola.stato) 
                           }}>
-                            {formatStato(issue.stato)}
+                            {formattaStato(issueSingola.stato)}
                           </span>
                         </td>
                         <td style={{ padding: "14px 24px" }}>
@@ -670,9 +682,9 @@ function Home() {
                             borderRadius: "12px", 
                             fontWeight: 500,
                             fontSize: "13px",
-                            ...getTipoStyle(issue.tipo) 
+                            ...ottieniStileTipo(issueSingola.tipo) 
                           }}>
-                            {issue.tipo}
+                            {issueSingola.tipo}
                           </span>
                         </td>
                         <td style={{ padding: "14px 24px" }}>
@@ -682,13 +694,13 @@ function Home() {
                             fontWeight: 500,
                             fontSize: "13px",
                             textTransform: "lowercase",
-                            ...getPrioritaStyle(issue.priorita) 
+                            ...ottieniStilePriorita(issueSingola.priorita) 
                           }}>
-                            {issue.priorita}
+                            {issueSingola.priorita}
                           </span>
                         </td>
                         <td style={{ padding: "14px 24px", color: "#6b7280", fontSize: "14px" }}>
-                          {formatDate(issue.dataCreazione)}
+                          {formattaData(issueSingola.dataCreazione)}
                         </td>
                       </tr>
                     ))}

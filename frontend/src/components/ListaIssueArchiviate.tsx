@@ -241,7 +241,7 @@ function ListaIssueArchiviate() {
                 >
                   <option>Tutti gli stati</option>
                   <option>Todo</option>
-                  <option>In Progress</option>
+                  <option>inProgress</option>
                   <option>Done</option>
                 </select>
               </div>
@@ -270,10 +270,10 @@ function ListaIssueArchiviate() {
                   }}
                 >
                   <option>Tutti i tipi</option>
-                  <option>Bug</option>
-                  <option>Features</option>
-                  <option>Question</option>
-                  <option>Documentation</option>
+                  <option>bug</option>
+                  <option>features</option>
+                  <option>question</option>
+                  <option>documentation</option>
                 </select>
               </div>
 
@@ -301,11 +301,11 @@ function ListaIssueArchiviate() {
                   }}
                 >
                   <option>Tutte le priorità</option>
-                  <option>Nessuna</option>
-                  <option>Bassa</option>
-                  <option>Media</option>
-                  <option>Alta</option>
-                  <option>Critica</option>
+                  <option>none</option>
+                  <option>low</option>
+                  <option>medium</option>
+                  <option>high</option>
+                  <option>critical</option>
                 </select>
               </div>
 
@@ -514,7 +514,7 @@ function ListaIssueArchiviate() {
                             display: "inline-block",
                           }}
                         >
-                          {issue.stato === "inProgress" ? "In corso" : issue.stato}
+                          {issue.stato === "inProgress" ? "In Progress" : issue.stato === "Todo" ? "To Do" : issue.stato}
                         </span>
                       </td>
                       <td style={{ padding: "14px 16px", textAlign: "center" }}>
