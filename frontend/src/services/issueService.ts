@@ -41,13 +41,6 @@ export const issueService = {
     return response.data;
   },
 
-  updateIssue: async (id: number, issueData: any) => {
-    const response = await axios.put(`${API_BASE_URL}/issue/modifica/${id}`, issueData, {
-      headers: getAuthHeader()
-    });
-    return response.data;
-  },
-
   deleteIssue: async (id: number) => {
     const response = await axios.delete(`${API_BASE_URL}/issue/elimina/${id}`, {
       headers: getAuthHeader()
