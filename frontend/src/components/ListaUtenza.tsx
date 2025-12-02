@@ -1,0 +1,817 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import { authService } from '../services/authService';
+import { issueService } from '../services/issueService';
+import axios from 'axios';
+import API_BASE_URL from '../config';
+
+interface Utente {
+  idUtente: number;
+  id?: number;
+  nome: string;
+  cognome: string;
+  email: string;
+  ruolo: string;
+}
+
+interface Issue {
+  idIssue: number;
+  titolo: string;
+  descrizione: string;
+  stato: string;
+  tipo: string;
+  priorita: string;
+  archiviata: boolean;
+  dataCreazione: string;
+  utentiAssegnati?: Utente[];
+}
+
+const getAuthHeader = () => ({
+  Authorization: `Bearer ${localStorage.getItem('authToken')}`
+});
+
+export default function ListaUtenza() {
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [utenti, setUtenti] = useState<Utente[]>([]);
+  const [utenteSelezionato, setUtenteSelezionato] = useState<Utente | null>(null);
+  const [issueAssegnate, setIssueAssegnate] = useState<Issue[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ nome: '', cognome: '' });
+
+  useEffect(() => {
+    if (!authService.isAuthenticated()) {
+      navigate('/login');
+      return;
+    }
+    
+    if (!authService.isAdmin()) {
+      navigate('/home');
+      return;
+    }
+    
+    caricaUtenti();
+  }, [navigate]);
+
+  const caricaUtenti = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/utenza/lista`, {
+        headers: getAuthHeader()
+      });
+      setUtenti(response.data);
+      setError('');
+    } catch (err: any) {
+      setError('Errore nel caricamento degli utenti');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const visualizzaProfiloUtente = async (utente: Utente) => {
+    try {
+      setUtenteSelezionato(utente);
+      const allIssues = await issueService.getAllIssues();
+      
+      const issueUtente = allIssues.filter((issue: Issue) =>
+        issue.utentiAssegnati?.some(u => u.idUtente === utente.idUtente || u.id === utente.idUtente)
+      );
+      
+      setIssueAssegnate(issueUtente);
+      setShowModal(true);
+    } catch (err) {
+      setError('Errore nel caricamento delle issue assegnate');
+      console.error(err);
+    }
+  };
+
+  const apriModalModifica = (utente: Utente) => {
+    setUtenteSelezionato(utente);
+    setEditForm({
+      nome: utente.nome,
+      cognome: utente.cognome
+    });
+    setShowEditModal(true);
+  };
+
+  const handleModificaUtente = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editForm.nome.trim() || !editForm.cognome.trim()) {
+      setError('Nome e cognome sono obbligatori');
+      return;
+    }
+
+    if (!utenteSelezionato) return;
+
+    try {
+      await axios.put(
+        `${API_BASE_URL}/utenza/${utenteSelezionato.idUtente}`,
+        editForm,
+        { headers: getAuthHeader() }
+      );
+      
+      setSuccessMessage('Utente modificato con successo');
+      setShowEditModal(false);
+      setError('');
+      caricaUtenti();
+      
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Errore durante la modifica');
+    }
+  };
+
+  const getPrioritaColor = (priorita: string) => {
+    switch (priorita.toLowerCase()) {
+      case 'critical':
+        return { backgroundColor: '#fecaca', color: '#7f1d1d' };
+      case 'high':
+        return { backgroundColor: '#fee2e2', color: '#991b1b' };
+      case 'medium':
+        return { backgroundColor: '#fef3c7', color: '#92400e' };
+      case 'low':
+        return { backgroundColor: '#f3f4f6', color: '#374151' };
+      default:
+        return { backgroundColor: '#f3f4f6', color: '#374151' };
+    }
+  };
+
+  const getStatoStyle = (stato: string) => {
+    switch (stato.toLowerCase()) {
+      case 'todo':
+        return { backgroundColor: '#e5e7eb', color: '#374151' };
+      case 'inprogress':
+      case 'in_progress':
+        return { backgroundColor: '#fed7aa', color: '#9a3412' };
+      case 'done':
+        return { backgroundColor: '#86efac', color: '#166534' };
+      default:
+        return { backgroundColor: '#e5e7eb', color: '#374151' };
+    }
+  };
+
+  const getTipoStyle = (tipo: string) => {
+    switch (tipo.toLowerCase()) {
+      case 'documentation':
+        return { backgroundColor: '#d1fae5', color: '#065f46' };
+      case 'feature':
+      case 'features':
+        return { backgroundColor: '#dbeafe', color: '#1e40af' };
+      case 'bug':
+        return { backgroundColor: '#fee2e2', color: '#991b1b' };
+      case 'question':
+        return { backgroundColor: '#e9d5ff', color: '#6b21a8' };
+      default:
+        return { backgroundColor: '#e5e7eb', color: '#374151' };
+    }
+  };
+
+  const formatStato = (stato: string) => {
+    if (stato === 'inProgress' || stato === 'in_progress') return 'In Progress';
+    return stato.charAt(0).toUpperCase() + stato.slice(1);
+  };
+
+  const UserIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="8" r="4" stroke="#0d9488" strokeWidth="2"/>
+      <path d="M6 21C6 17.686 8.686 15 12 15C15.314 15 18 17.686 18 21" stroke="#0d9488" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              border: '4px solid #f3f4f6',
+              borderTop: '4px solid #0d9488',
+              borderRadius: '50%',
+              margin: '0 auto',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <p style={{ marginTop: '16px', color: '#6b7280' }}>Caricamento...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ 
+      display: 'flex', 
+      minHeight: '100vh', 
+      backgroundColor: '#f5f7fa',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+    }}>
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <header style={{
+          backgroundColor: 'white',
+          borderBottom: '1px solid #e5e7eb',
+          padding: '16px 32px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                padding: '8px 12px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '20px',
+                color: '#374151'
+              }}
+            >
+              ☰
+            </button>
+            <div>
+              <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#1f2937', margin: 0 }}>
+                Gestione Utenti
+              </h2>
+              <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>
+                Amministrazione utenti e assegnazioni
+              </div>
+            </div>
+          </div>
+          <div 
+            onClick={() => navigate('/profilo')}
+            style={{ 
+              width: '36px',
+              height: '36px',
+              backgroundColor: '#e0f2f1',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+          >
+            <UserIcon />
+          </div>
+        </header>
+
+        {/* Content */}
+        <div style={{ padding: '32px' }}>
+          {/* Messages */}
+          {error && (
+            <div style={{
+              color: '#dc2626',
+              backgroundColor: '#fee2e2',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              marginBottom: '24px',
+              fontSize: '14px',
+              border: '1px solid #fecaca'
+            }}>
+              {error}
+            </div>
+          )}
+
+          {successMessage && (
+            <div style={{
+              color: '#065f46',
+              backgroundColor: '#d1fae5',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              marginBottom: '24px',
+              fontSize: '14px',
+              border: '1px solid #86efac'
+            }}>
+              {successMessage}
+            </div>
+          )}
+
+          {/* Lista Utenti */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            overflow: 'hidden',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '2px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#1f2937', margin: 0 }}>
+                Utenti Registrati ({utenti.length})
+              </h2>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #d1d5db' }}>
+                    <th style={{
+                      padding: '14px 24px',
+                      textAlign: 'left',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Nome Completo
+                    </th>
+                    <th style={{
+                      padding: '14px 24px',
+                      textAlign: 'left',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Email
+                    </th>
+                    <th style={{
+                      padding: '14px 24px',
+                      textAlign: 'left',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Ruolo
+                    </th>
+                    <th style={{
+                      padding: '14px 24px',
+                      textAlign: 'right',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Azioni
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {utenti.map((utente) => (
+                    <tr
+                      key={utente.idUtente}
+                      style={{
+                        borderBottom: '1px solid #e5e7eb',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <td style={{
+                        padding: '14px 24px',
+                        color: '#1f2937',
+                        fontWeight: 500,
+                        fontSize: '14px'
+                      }}>
+                        {utente.nome} {utente.cognome}
+                      </td>
+                      <td style={{ padding: '14px 24px', color: '#6b7280', fontSize: '14px' }}>
+                        {utente.email}
+                      </td>
+                      <td style={{ padding: '14px 24px' }}>
+                        <span style={{
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontWeight: 500,
+                          fontSize: '13px',
+                          backgroundColor: utente.ruolo === 'Amministratore' ? '#e9d5ff' : '#dbeafe',
+                          color: utente.ruolo === 'Amministratore' ? '#6b21a8' : '#1e40af'
+                        }}>
+                          {utente.ruolo}
+                        </span>
+                      </td>
+                      <td style={{
+                        padding: '14px 24px',
+                        textAlign: 'right'
+                      }}>
+                        <button
+                          onClick={() => visualizzaProfiloUtente(utente)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: 'transparent',
+                            color: '#0d9488',
+                            border: '1px solid #0d9488',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            marginRight: '8px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#0d9488';
+                            e.currentTarget.style.color = 'white';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#0d9488';
+                          }}
+                        >
+                          Visualizza Profilo
+                        </button>
+                        <button
+                          onClick={() => apriModalModifica(utente)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#0d9488',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0f766e'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0d9488'}
+                        >
+                          Modifica
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal Visualizza Profilo */}
+      {showModal && utenteSelezionato && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{
+              padding: '24px',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#1f2937', margin: 0 }}>
+                Profilo: {utenteSelezionato.nome} {utenteSelezionato.cognome}
+              </h3>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  padding: '4px 8px'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              {/* Info Utente */}
+              <div style={{
+                backgroundColor: '#f9fafb',
+                padding: '16px',
+                borderRadius: '8px',
+                marginBottom: '24px'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Email</p>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#1f2937', margin: 0 }}>
+                      {utenteSelezionato.email}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Ruolo</p>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#1f2937', margin: 0 }}>
+                      {utenteSelezionato.ruolo}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Issue Assegnate */}
+              <div>
+                <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#1f2937', marginBottom: '16px' }}>
+                  Issue Assegnate ({issueAssegnate.length})
+                </h4>
+
+                {issueAssegnate.length === 0 ? (
+                  <div style={{
+                    padding: '48px',
+                    textAlign: 'center',
+                    color: '#6b7280',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '8px'
+                  }}>
+                    Nessuna issue assegnata a questo utente
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    {issueAssegnate.map((issue) => (
+                      <div
+                        key={issue.idIssue}
+                        style={{
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          marginBottom: '12px',
+                          backgroundColor: 'white',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
+                        onClick={() => {
+                          setShowModal(false);
+                          navigate(`/issues/${issue.idIssue}`);
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'start',
+                          marginBottom: '8px'
+                        }}>
+                          <h5 style={{ fontSize: '15px', fontWeight: 600, color: '#1f2937', margin: 0 }}>
+                            {issue.titolo}
+                          </h5>
+                          <span style={{
+                            padding: '4px 12px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            ...getStatoStyle(issue.stato)
+                          }}>
+                            {formatStato(issue.stato)}
+                          </span>
+                        </div>
+
+                        {issue.descrizione && (
+                          <p style={{
+                            fontSize: '13px',
+                            color: '#6b7280',
+                            marginBottom: '12px',
+                            lineHeight: '1.5'
+                          }}>
+                            {issue.descrizione}
+                          </p>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            ...getPrioritaColor(issue.priorita)
+                          }}>
+                            {issue.priorita}
+                          </span>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            ...getTipoStyle(issue.tipo)
+                          }}>
+                            {issue.tipo}
+                          </span>
+                          {issue.archiviata && (
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: 500,
+                              backgroundColor: '#fef3c7',
+                              color: '#92400e'
+                            }}>
+                              Archiviata
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setShowModal(false)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Chiudi
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Modifica Utente */}
+      {showEditModal && utenteSelezionato && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '450px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{
+              padding: '24px',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#1f2937', margin: 0 }}>
+                Modifica Utente
+              </h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  padding: '4px 8px'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleModificaUtente}>
+              <div style={{ padding: '24px' }}>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#374151',
+                    marginBottom: '8px'
+                  }}>
+                    Nome
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.nome}
+                    onChange={(e) => setEditForm({ ...editForm, nome: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                    required
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#374151',
+                    marginBottom: '8px'
+                  }}>
+                    Cognome
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.cognome}
+                    onChange={(e) => setEditForm({ ...editForm, cognome: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                    required
+                  />
+                </div>
+
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#fef3c7',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  marginBottom: '20px'
+                }}>
+                  <p style={{ fontSize: '13px', color: '#92400e', margin: 0 }}>
+                    <strong>Nota:</strong> Email e password non possono essere modificate da qui
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: 'white',
+                      color: '#374151',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: '#0d9488',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Salva Modifiche
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
