@@ -5,6 +5,10 @@ import { allegatoService } from "../services/allegatoService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
 import AttachmentsViewer from "./AttachmentsViewer";
+import axios from "axios";
+import API_BASE_URL from "../config";
+import Select from 'react-select';
+
 
 interface Issue {
   idIssue: number;
@@ -30,6 +34,12 @@ interface Issue {
     cognome: string;
     email: string;
   } | null;
+  assegnatario: {
+    idUtente: number;
+    nome: string;
+    cognome: string;
+    email: string;
+  } | null;
 }
 
 interface FormData {
@@ -38,6 +48,7 @@ interface FormData {
   stato: string;
   tipo: string;
   priorita: string;
+  idAssegnatario: number | null;
 }
 
 interface User {
@@ -70,6 +81,7 @@ function DettagliIssue() {
   const [success, setSuccess] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
     open: false,
@@ -83,6 +95,7 @@ function DettagliIssue() {
     stato: "",
     tipo: "",
     priorita: "",
+    idAssegnatario: null,
   });
 
   const getBackPath = (): string => {
@@ -128,6 +141,19 @@ function DettagliIssue() {
     }
   }, [navigate]);
 
+  const loadUsers = useCallback(async () => {
+    try {
+      console.log("📥 Caricamento lista utenti...");
+      const response = await axios.get(`${API_BASE_URL}/utenza/lista`, {
+        headers: { Authorization: `Bearer ${authService.getToken()}` }
+      });
+      console.log("✅ Utenti caricati:", response.data);
+      setUsers(response.data);
+    } catch (err) {
+      console.error("❌ Errore caricamento utenti:", err);
+    }
+  }, []);
+
   const loadIssue = useCallback(async () => {
     try {
       setLoading(true);
@@ -141,6 +167,7 @@ function DettagliIssue() {
         stato: data.stato,
         tipo: data.tipo,
         priorita: data.priorita,
+        idAssegnatario: data.assegnatario?.idUtente || null,
       });
       setError("");
     } catch (err: any) {
@@ -158,9 +185,16 @@ function DettagliIssue() {
   }, [id]);
 
   useEffect(() => {
-    if (isCheckingAuth || !id) return;
-    loadIssue();
-  }, [id, isCheckingAuth, loadIssue]);
+  if (isCheckingAuth || !id) return;
+  loadIssue();
+}, [id, isCheckingAuth, loadIssue]);
+useEffect(() => {
+  if (!user || isCheckingAuth) return;
+  const adminCheck = user?.ruolo === "Amministratore" || user?.role === "admin";
+  if (adminCheck) {
+    loadUsers();
+  }
+}, [user, isCheckingAuth, loadUsers]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -245,6 +279,12 @@ function DettagliIssue() {
   };
 
   const handleArchive = () => {
+    if (issue && issue.stato !== "Done") {
+      setError("Non è possibile archiviare un'issue che non è stata completata.");
+      setTimeout(() => setError(""), 5000);
+      return;
+    }
+
     setShowConfirm({
       open: true,
       title: "Archivia Issue",
@@ -261,12 +301,15 @@ function DettagliIssue() {
           setTimeout(() => setSuccess(""), 3000);
         } catch (err: any) {
           console.error("❌ Errore archiviazione:", err);
-          let errorMessage = "Errore nell'archiviazione";
+          let errorMessage = "Errore nell'archiviazione dell'issue";
           if (err.response?.data?.message) {
             errorMessage = err.response.data.message;
+          } else if (err.message) {
+            errorMessage = err.message;
           }
           setError(errorMessage);
           setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+          setTimeout(() => setError(""), 5000);
         }
       },
     });
@@ -361,15 +404,6 @@ function DettagliIssue() {
 
   const canChangeStato = (): boolean => {
     return formData.stato !== "Done" && !issue?.archiviata;
-  };
-
-  const handleAdvanceStato = () => {
-    if (canChangeStato()) {
-      setFormData((prev) => ({
-        ...prev,
-        stato: getNextStato(prev.stato),
-      }));
-    }
   };
 
   const isArchived = issue?.archiviata || false;
@@ -634,8 +668,11 @@ function DettagliIssue() {
                         padding: "12px", 
                         border: "1px solid #d1d5db", 
                         borderRadius: "8px", 
-                        fontSize: "14px", 
-                        boxSizing: "border-box" 
+                        fontSize: "15px",
+                        fontFamily: "inherit",
+                        color: "#4b5563",
+                        boxSizing: "border-box",
+                        outline: "none"
                       }}
                     />
                     <div style={{ 
@@ -678,10 +715,13 @@ function DettagliIssue() {
                         padding: "12px", 
                         border: "1px solid #d1d5db", 
                         borderRadius: "8px", 
-                        fontSize: "14px",
-                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif", 
+                        fontSize: "15px",
+                        fontFamily: "inherit",
+                        color: "#4b5563",
+                        lineHeight: 1.6,
                         resize: "vertical", 
-                        boxSizing: "border-box" 
+                        boxSizing: "border-box",
+                        outline: "none"
                       }}
                     />
                     <div style={{ 
@@ -851,6 +891,7 @@ function DettagliIssue() {
                         stato: issue.stato,
                         tipo: issue.tipo,
                         priorita: issue.priorita,
+                        idAssegnatario: issue.assegnatario?.idUtente || null,
                       });
                       setFiles([]);
                     }}
@@ -900,22 +941,52 @@ function DettagliIssue() {
                   Stato
                 </label>
                 {editMode && canChangeStato() ? (
-                  <button 
-                    onClick={handleAdvanceStato} 
+                  <select
+                    name="stato"
+                    value={formData.stato}
+                    onChange={(e) => {
+                      const nuovoStato = e.target.value;
+                      setShowConfirm({
+                        open: true,
+                        title: "Modifica Stato",
+                        message: `Sei sicuro di voler cambiare lo stato da "${getStatoLabel(formData.stato)}" a "${getStatoLabel(nuovoStato)}"?`,
+                        action: async () => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            stato: nuovoStato,
+                          }));
+                          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+                        },
+                      });
+                    }}
                     style={{ 
-                      padding: "8px 16px", 
-                      backgroundColor: "#dbeafe", 
-                      color: "#1e40af", 
-                      border: "1px solid #93c5fd", 
+                      width: "100%", 
+                      padding: "8px 12px", 
+                      border: "1px solid #d1d5db", 
                       borderRadius: "6px", 
                       fontSize: "14px", 
-                      fontWeight: 600, 
-                      cursor: "pointer", 
-                      width: "100%" 
+                      boxSizing: "border-box",
+                      backgroundColor: "white",
+                      cursor: "pointer"
                     }}
                   >
-                    {getStatoLabel(formData.stato)} → {getStatoLabel(getNextStato(formData.stato))}
-                  </button>
+                    {formData.stato === "Todo" && (
+                      <>
+                        <option value="Todo">To Do</option>
+                        <option value="inProgress">In Progress</option>
+                        <option value="Done">Done</option>
+                      </>
+                    )}
+                    {formData.stato === "inProgress" && (
+                      <>
+                        <option value="inProgress">In Progress</option>
+                        <option value="Done">Done</option>
+                      </>
+                    )}
+                    {formData.stato === "Done" && (
+                      <option value="Done">Done</option>
+                    )}
+                  </select>
                 ) : (
                   <span style={{ 
                     padding: "6px 12px", 
@@ -1022,6 +1093,66 @@ function DettagliIssue() {
                   </span>
                 )}
               </div>
+
+              {/* Assegnatario - SOLO PER ADMIN */}
+              {isAdmin && (
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={{ 
+                    display: "block", 
+                    fontSize: "13px", 
+                    fontWeight: 600, 
+                    color: "#6b7280", 
+                    marginBottom: "8px" 
+                  }}>
+                    Assegnatario
+                  </label>
+                  {editMode ? (
+                    <select
+                      name="idAssegnatario"
+                      value={formData.idAssegnatario || ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          idAssegnatario: value ? Number(value) : null,
+                        }));
+                      }}
+                      style={{ 
+                        width: "100%", 
+                        padding: "8px 12px", 
+                        border: "1px solid #d1d5db", 
+                        borderRadius: "6px", 
+                        fontSize: "14px", 
+                        boxSizing: "border-box" 
+                      }}
+                    >
+                      <option value="">Non assegnato</option>
+                      {users.map((u) => (
+                        <option key={u.id || u.idUtente} value={u.id || u.idUtente}>
+                          {u.nome} {u.cognome} ({u.email})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: "14px", color: "#1f2937" }}>
+                      {issue.assegnatario ? (
+                        <>
+                          <div style={{ fontWeight: 600 }}>
+                            {issue.assegnatario.nome} {issue.assegnatario.cognome}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                            {issue.assegnatario.email}
+                          </div>
+                        </>
+                      ) : (
+                        <span style={{ color: "#9ca3af", fontStyle: "italic" }}>
+                          Non assegnato
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
 
@@ -1151,7 +1282,7 @@ function DettagliIssue() {
 
           {/* Sezione Allegati */}
           <div style={{ marginTop: "20px" }}>
-            <AttachmentsViewer idIssue={Number(id)} canEdit={canEdit}/>
+            <AttachmentsViewer idIssue={Number(id)} canEdit={canEdit} />
           </div>
         </div>
       </div>
@@ -1186,11 +1317,11 @@ function DettagliIssue() {
             </p>
             <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
               <button 
-                onClick={() => setShowConfirm({ open: false, title: "", message: "", action: async () => {} })} 
+                onClick={handleConfirmAction} 
                 style={{ 
                   padding: "10px 24px", 
-                  backgroundColor: "#f3f4f6", 
-                  color: "#374151", 
+                  backgroundColor: "#10b981", 
+                  color: "white", 
                   border: "none", 
                   borderRadius: "8px", 
                   fontSize: "14px", 
@@ -1198,10 +1329,18 @@ function DettagliIssue() {
                   cursor: "pointer" 
                 }}
               >
-                Annulla
+                Conferma
               </button>
               <button 
-                onClick={handleConfirmAction} 
+                onClick={() => {
+                  if (issue) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      stato: issue.stato,
+                    }));
+                  }
+                  setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+                }} 
                 style={{ 
                   padding: "10px 24px", 
                   backgroundColor: "#dc2626", 
@@ -1213,7 +1352,7 @@ function DettagliIssue() {
                   cursor: "pointer" 
                 }}
               >
-                Conferma
+                Annulla
               </button>
             </div>
           </div>

@@ -30,6 +30,7 @@ public class IssueController {
 		String statoStr = (String) payload.get("stato");
 		String tipoStr = (String) payload.get("tipo");
 		Integer idCreatore = (Integer) payload.get("idCreatore");
+		Integer idAssegnatario = (Integer) payload.get("idAssegnatario");
 
 		if (titolo == null || titolo.isBlank()) {
 			throw new InvalidInputException("Il titolo è obbligatorio");
@@ -47,6 +48,14 @@ public class IssueController {
 				.orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idCreatore));
 
 		Issue issue = new Issue(titolo, descrizione, priorita, stato, tipo, creatore);
+		
+		// Gestisci assegnatario se presente
+		if (idAssegnatario != null) {
+			Utenza assegnatario = utenzaDAO.findById(idAssegnatario)
+					.orElseThrow(() -> new NotFoundException("Utente assegnatario non trovato con id: " + idAssegnatario));
+			issue.setAssegnatario(assegnatario);
+		}
+		
 		return issueDAO.save(issue);
 	}
 
@@ -71,6 +80,30 @@ public class IssueController {
 		if (payload.containsKey("tipo"))
 			issue.setTipo(parseTipo((String) payload.get("tipo")));
 
+<<<<<<< HEAD
+=======
+		// Gestisci assegnatario
+		if (payload.containsKey("idAssegnatario")) {
+			Object idAssegnatarioObj = payload.get("idAssegnatario");
+			if (idAssegnatarioObj == null) {
+				issue.setAssegnatario(null);
+			} else {
+				Integer idAssegnatario = null;
+				if (idAssegnatarioObj instanceof Integer) {
+					idAssegnatario = (Integer) idAssegnatarioObj;
+				} else if (idAssegnatarioObj instanceof String) {
+					idAssegnatario = Integer.parseInt((String) idAssegnatarioObj);
+				}
+				
+				if (idAssegnatario != null) {
+					Utenza assegnatario = utenzaDAO.findById(idAssegnatario)
+							.orElseThrow(() -> new NotFoundException("Utente assegnatario non trovato con id: " + idAssegnatario));
+					issue.setAssegnatario(assegnatario);
+				}
+			}
+		}
+	
+>>>>>>> 960e4108ec1442e573e62054a5a2c28c79dd7c4a
 		if (payload.containsKey("stato")) {
 			Stato nuovoStato = parseStato((String) payload.get("stato"));
 			Stato statoAttuale = issue.getStato();
@@ -288,6 +321,10 @@ public class IssueController {
 		return stats;
 	}
 
+<<<<<<< HEAD
+=======
+	// Metodi per gestione utenti assegnati (lista multipla - se la usi ancora)
+>>>>>>> 960e4108ec1442e573e62054a5a2c28c79dd7c4a
 	@PostMapping("/{idIssue}/assegna/{idUtente}")
 	@Transactional
 	public Issue assegnaUtente(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {

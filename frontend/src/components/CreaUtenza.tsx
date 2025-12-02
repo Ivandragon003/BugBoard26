@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { authService } from "../services/authService";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -9,7 +9,6 @@ export default function CreaUtenza() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
-  // Funzione per generare password casuale
   const generatePassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*";
     let password = "";
@@ -29,7 +28,6 @@ export default function CreaUtenza() {
   const [generatedEmail, setGeneratedEmail] = useState("");
   const [message, setMessage] = useState({ type: "", text: "" });
 
-  // Blocca la pagina se non sei admin
   if (!authService.isAdmin()) {
     return (
       <div style={{ 
@@ -64,7 +62,6 @@ export default function CreaUtenza() {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
 
-    // Genera email automaticamente quando cambiano nome o cognome
     if (name === "nome" || name === "cognome") {
       const nome = name === "nome" ? value : form.nome;
       const cognome = name === "cognome" ? value : form.cognome;
@@ -106,7 +103,6 @@ export default function CreaUtenza() {
       
       setMessage({ type: "success", text: "Utente creato con successo!" });
       
-      // Reset del form dopo successo
       setForm({
         nome: "",
         cognome: "",
@@ -118,7 +114,6 @@ export default function CreaUtenza() {
       setTimeout(() => navigate("/home"), 1500);
       
     } catch (err: any) {
-      // Cattura il messaggio di errore dal backend
       const errorMessage = err.response?.data?.message || 
                           err.response?.data?.error ||
                           "Errore nella creazione dell'utente";
@@ -227,14 +222,14 @@ export default function CreaUtenza() {
                 <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
                   Password (autogenerata)
                 </label>
-                <div style={{ position: "relative" }}>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   <input
                     type="text"
                     value={form.password}
                     readOnly
                     style={{ 
-                      width: "100%", 
-                      padding: "10px 120px 10px 10px", 
+                      flex: 1,
+                      padding: "10px 12px", 
                       border: "1px solid #0d9488", 
                       borderRadius: 6, 
                       fontSize: 14,
@@ -248,18 +243,18 @@ export default function CreaUtenza() {
                     type="button"
                     onClick={handleRegeneratePassword}
                     style={{
-                      position: "absolute",
-                      right: 8,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      padding: "6px 12px",
+                      padding: "10px 16px",
                       backgroundColor: "#0d9488",
                       color: "white",
                       border: "none",
-                      borderRadius: 4,
-                      fontSize: 12,
+                      borderRadius: 6,
+                      fontSize: 13,
                       fontWeight: 600,
-                      cursor: "pointer"
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px"
                     }}
                   >
                     🔄 Rigenera
