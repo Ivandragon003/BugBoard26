@@ -1094,65 +1094,72 @@ useEffect(() => {
                 )}
               </div>
 
-              {/* Assegnatario - SOLO PER ADMIN */}
-              {isAdmin && (
-                <div style={{ marginBottom: "20px" }}>
-                  <label style={{ 
-                    display: "block", 
-                    fontSize: "13px", 
-                    fontWeight: 600, 
-                    color: "#6b7280", 
-                    marginBottom: "8px" 
-                  }}>
-                    Assegnatario
-                  </label>
-                  {editMode ? (
-                    <select
-                      name="idAssegnatario"
-                      value={formData.idAssegnatario || ""}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          idAssegnatario: value ? Number(value) : null,
-                        }));
-                      }}
-                      style={{ 
-                        width: "100%", 
-                        padding: "8px 12px", 
-                        border: "1px solid #d1d5db", 
-                        borderRadius: "6px", 
-                        fontSize: "14px", 
-                        boxSizing: "border-box" 
-                      }}
-                    >
-                      <option value="">Non assegnato</option>
-                      {users.map((u) => (
-                        <option key={u.id || u.idUtente} value={u.id || u.idUtente}>
-                          {u.nome} {u.cognome} ({u.email})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div style={{ fontSize: "14px", color: "#1f2937" }}>
-                      {issue.assegnatario ? (
-                        <>
-                          <div style={{ fontWeight: 600 }}>
-                            {issue.assegnatario.nome} {issue.assegnatario.cognome}
-                          </div>
-                          <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                            {issue.assegnatario.email}
-                          </div>
-                        </>
-                      ) : (
-                        <span style={{ color: "#9ca3af", fontStyle: "italic" }}>
-                          Non assegnato
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+			  {/* Assegnatario - SOLO PER ADMIN */}
+			  {isAdmin && (
+			    <div style={{ marginBottom: "20px" }}>
+			      <label style={{ 
+			        display: "block", 
+			        fontSize: "13px", 
+			        fontWeight: 600, 
+			        color: "#6b7280", 
+			        marginBottom: "8px" 
+			      }}>
+			        Assegnatario
+			      </label>
+			      {editMode ? (
+			        <Select
+			          isClearable
+			          placeholder="Cerca utente..."
+			          noOptionsMessage={() => "Nessun utente trovato"}
+			          value={
+			            formData.idAssegnatario
+			              ? {
+			                  value: formData.idAssegnatario,
+			                  label: `${users.find((u) => (u.id || u.idUtente) === formData.idAssegnatario)?.nome} ${users.find((u) => (u.id || u.idUtente) === formData.idAssegnatario)?.cognome}`
+			                }
+			              : null
+			          }
+			          options={users.map((u) => ({
+			            value: u.id || u.idUtente,
+			            label: `${u.nome} ${u.cognome} (${u.email})`
+			          }))}
+			          onChange={(selectedOption) => {
+			            setFormData((prev) => ({
+			              ...prev,
+			              idAssegnatario: selectedOption ? selectedOption.value : null,
+			            }));
+			          }}
+			          styles={{
+			            control: (base) => ({
+			              ...base,
+			              borderColor: '#d1d5db',
+			              borderRadius: '6px',
+			              fontSize: '14px',
+			              padding: '2px',
+			            }),
+			          }}
+			        />
+			      ) : (
+			        <div style={{ fontSize: "14px", color: "#1f2937" }}>
+			          {issue.assegnatario ? (
+			            <>
+			              <div style={{ fontWeight: 600 }}>
+			                {issue.assegnatario.nome} {issue.assegnatario.cognome}
+			              </div>
+			              <div style={{ fontSize: "12px", color: "#6b7280" }}>
+			                {issue.assegnatario.email}
+			              </div>
+			            </>
+			          ) : (
+			            <span style={{ color: "#9ca3af", fontStyle: "italic" }}>
+			              Non assegnato
+			            </span>
+			          )}
+			        </div>
+			      )}
+			    </div>
+			  )}
+
 
               <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
 

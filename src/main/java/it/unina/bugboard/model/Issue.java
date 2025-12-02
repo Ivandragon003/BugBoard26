@@ -65,6 +65,11 @@ public class Issue {
 	@OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonIgnore
 	private List<Allegato> allegati = new ArrayList<>();
+	
+	@ManyToOne
+	@JoinColumn(name = "id_assegnatario")
+	private Utenza assegnatario;
+
 
 	public Issue() {
 		this.dataCreazione = LocalDateTime.now();
@@ -218,4 +223,13 @@ public class Issue {
 	public void setAllegati(List<Allegato> allegati) {
 		this.allegati = allegati;
 	}
+	
+	public Utenza getAssegnatario() {
+	    return assegnatario;
+	}
+
+	public void setAssegnatario(Utenza assegnatario) {
+	    this.assegnatario = assegnatario;
+	}
+
 }
