@@ -40,7 +40,7 @@ function ListaIssue() {
     try {
       setLoading(true);
       
-      // Prepara i parametri per il backend
+      //Prepara i parametri per il backend
       const params: any = {
         archiviata: false,
         ordinamento: sortOrder
