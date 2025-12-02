@@ -4,6 +4,8 @@ import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.Ruolo;
 import it.unina.bugboard.model.Utenza;
 import it.unina.bugboard.exception.InvalidFieldException;
+import it.unina.bugboard.exception.NotFoundException;
+import it.unina.bugboard.exception.InvalidInputException;
 import it.unina.bugboard.util.AccessTokenUtil;
 import it.unina.bugboard.util.PasswordUtil;
 import it.unina.bugboard.util.EmailUtil;
@@ -160,57 +162,30 @@ public class UtenzaController {
 
     // ---------------- AGGIORNA UTENZA (solo admin) ----------------
     @PutMapping("/{id}")
-    public Map<String, Object> aggiornaUtenza(@PathVariable Integer id, 
-                                               @RequestBody Map<String, String> utenzaData,
-                                               @RequestHeader("Authorization") String token) {
-        Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-        
-        // Solo gli amministratori possono modificare gli utenti
-        if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
-            throw new InvalidFieldException("Solo gli amministratori possono modificare gli utenti");
-        }
+    public Utenza modificaUtenza(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
+        Utenza utenza = utenzaDAO.findById(id)
+                .orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + id));
 
-        Utenza utenzaDaModificare = utenzaDAO.findById(id)
-            .orElseThrow(() -> new InvalidFieldException("Utente non trovato"));
-
-        // Un amministratore non può modificare altri amministratori
-        if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore) && 
-            !utenzaDaModificare.getIdUtente().equals(utenteCorrente.getIdUtente())) {
-            throw new InvalidFieldException("Non puoi modificare altri amministratori");
-        }
-
-        // Aggiorna nome e cognome
-        if (utenzaData.containsKey("nome"))
-            utenzaDaModificare.setNome(utenzaData.get("nome"));
-        if (utenzaData.containsKey("cognome"))
-            utenzaDaModificare.setCognome(utenzaData.get("cognome"));
-
-        // Gestione ruolo: non può essere cambiato per gli amministratori
-        if (utenzaData.containsKey("ruolo")) {
-            if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore)) {
-                throw new InvalidFieldException("Non puoi cambiare il ruolo di un amministratore");
+        // ✅ IMPEDISCI IL DOWNGRADE DA AMMINISTRATORE A UTENTE
+        if (utenza.getRuolo() == Ruolo.Amministratore && payload.containsKey("ruolo")) {
+            String nuovoRuolo = (String) payload.get("ruolo");
+            if ("Utente".equalsIgnoreCase(nuovoRuolo)) {
+                throw new InvalidInputException("Non è possibile rimuovere i privilegi di amministratore. Un amministratore può solo rimanere tale.");
             }
-            String nuovoRuoloStr = utenzaData.get("ruolo");
-            nuovoRuoloStr = nuovoRuoloStr.substring(0, 1).toUpperCase() + nuovoRuoloStr.substring(1).toLowerCase();
-            Ruolo nuovoRuolo = Ruolo.valueOf(nuovoRuoloStr);
-            
-            // Non permettere di trasformare un utente normale in amministratore
-            if (nuovoRuolo.equals(Ruolo.Amministratore)) {
-                throw new InvalidFieldException("Non puoi promuovere un utente ad amministratore tramite questa funzione");
-            }
-            
-            utenzaDaModificare.setRuolo(nuovoRuolo);
         }
 
-        Utenza utenzaAggiornata = utenzaDAO.save(utenzaDaModificare);
-        return Map.of("message", "Utenza aggiornata con successo", "utenza",
-            Map.of("id", utenzaAggiornata.getIdUtente(), 
-                   "nome", utenzaAggiornata.getNome(), 
-                   "cognome", utenzaAggiornata.getCognome(), 
-                   "email", utenzaAggiornata.getEmail(),
-                   "ruolo", utenzaAggiornata.getRuolo().toString(),
-                   "stato", utenzaAggiornata.getStato()));
+        if (payload.containsKey("nome"))
+            utenza.setNome((String) payload.get("nome"));
+
+        if (payload.containsKey("cognome"))
+            utenza.setCognome((String) payload.get("cognome"));
+
+        if (payload.containsKey("ruolo"))
+            utenza.setRuolo(parseRuolo((String) payload.get("ruolo")));
+
+        return utenzaDAO.save(utenza);
     }
+
 
     // ---------------- DISATTIVA UTENZA (solo admin) ----------------
     @DeleteMapping("/{id}")
@@ -331,5 +306,17 @@ public class UtenzaController {
                 return utenteMap;
             })
             .collect(Collectors.toList());
+    }
+
+    // ---------------- METODO HELPER: PARSE RUOLO ----------------
+    private Ruolo parseRuolo(String value) {
+        if (value == null)
+            throw new InvalidInputException("Ruolo non può essere null");
+
+        return switch (value.toLowerCase()) {
+            case "utente" -> Ruolo.Utente;
+            case "amministratore" -> Ruolo.Amministratore;
+            default -> throw new InvalidInputException("Ruolo non valido: " + value);
+        };
     }
 }

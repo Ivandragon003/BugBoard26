@@ -4,6 +4,7 @@ import { issueService } from "../services/issueService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
 
+
 interface Issue {
   idIssue: number;
   titolo: string;

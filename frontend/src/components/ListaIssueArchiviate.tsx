@@ -241,7 +241,7 @@ function ListaIssueArchiviate() {
                 >
                   <option>Tutti gli stati</option>
                   <option>Todo</option>
-                  <option>inProgress</option>
+                  <option>In Progress</option>
                   <option>Done</option>
                 </select>
               </div>
@@ -270,10 +270,10 @@ function ListaIssueArchiviate() {
                   }}
                 >
                   <option>Tutti i tipi</option>
-                  <option>bug</option>
-                  <option>features</option>
-                  <option>question</option>
-                  <option>documentation</option>
+                  <option>Bug</option>
+                  <option>Features</option>
+                  <option>Question</option>
+                  <option>Documentation</option>
                 </select>
               </div>
 
@@ -301,11 +301,11 @@ function ListaIssueArchiviate() {
                   }}
                 >
                   <option>Tutte le priorità</option>
-                  <option>none</option>
-                  <option>low</option>
-                  <option>medium</option>
-                  <option>high</option>
-                  <option>critical</option>
+                  <option>Nessuna</option>
+                  <option>Bassa</option>
+                  <option>Media</option>
+                  <option>Alta</option>
+                  <option>Critica</option>
                 </select>
               </div>
 

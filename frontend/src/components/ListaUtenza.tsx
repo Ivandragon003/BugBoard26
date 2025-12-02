@@ -5,6 +5,7 @@ import { authService } from '../services/authService';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 
+
 interface Utente {
   idUtente: number;
   id?: number;
@@ -14,9 +15,11 @@ interface Utente {
   ruolo: string;
 }
 
+
 const getAuthHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem('authToken')}`
 });
+
 
 export default function ListaUtenza() {
   const navigate = useNavigate();
@@ -29,6 +32,7 @@ export default function ListaUtenza() {
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({ nome: '', cognome: '', ruolo: '' });
+
 
   useEffect(() => {
     if (!authService.isAuthenticated()) {
@@ -43,6 +47,7 @@ export default function ListaUtenza() {
     
     caricaUtenti();
   }, [navigate]);
+
 
   const caricaUtenti = async () => {
     try {
@@ -60,10 +65,12 @@ export default function ListaUtenza() {
     }
   };
 
+
   const visualizzaProfiloUtente = (utente: Utente) => {
     setUtenteSelezionato(utente);
     setShowModal(true);
   };
+
 
   const apriModalModifica = (utente: Utente) => {
     setUtenteSelezionato(utente);
@@ -75,6 +82,7 @@ export default function ListaUtenza() {
     setShowEditModal(true);
   };
 
+
   const handleModificaUtente = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -83,7 +91,9 @@ export default function ListaUtenza() {
       return;
     }
 
+
     if (!utenteSelezionato) return;
+
 
     try {
       await axios.put(
@@ -103,12 +113,14 @@ export default function ListaUtenza() {
     }
   };
 
+
   const UserIcon = () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="8" r="4" stroke="#0d9488" strokeWidth="2"/>
       <path d="M6 21C6 17.686 8.686 15 12 15C15.314 15 18 17.686 18 21" stroke="#0d9488" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   );
+
 
   if (loading) {
     return (
@@ -132,6 +144,7 @@ export default function ListaUtenza() {
     );
   }
 
+
   return (
     <div style={{ 
       display: 'flex', 
@@ -140,6 +153,7 @@ export default function ListaUtenza() {
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
@@ -192,6 +206,7 @@ export default function ListaUtenza() {
           </div>
         </header>
 
+
         {/* Content */}
         <div style={{ padding: '32px' }}>
           {/* Messages */}
@@ -209,6 +224,7 @@ export default function ListaUtenza() {
             </div>
           )}
 
+
           {successMessage && (
             <div style={{
               color: '#065f46',
@@ -222,6 +238,7 @@ export default function ListaUtenza() {
               {successMessage}
             </div>
           )}
+
 
           {/* Lista Utenti */}
           <div style={{
@@ -242,6 +259,7 @@ export default function ListaUtenza() {
                 Utenti Registrati ({utenti.length})
               </h2>
             </div>
+
 
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -384,6 +402,7 @@ export default function ListaUtenza() {
         </div>
       </div>
 
+
       {/* Modal Visualizza Profilo */}
       {showModal && utenteSelezionato && (
         <div style={{
@@ -429,6 +448,7 @@ export default function ListaUtenza() {
               </button>
             </div>
 
+
             <div style={{ padding: '24px' }}>
               {/* Info Utente */}
               <div style={{
@@ -453,6 +473,7 @@ export default function ListaUtenza() {
                 </div>
               </div>
 
+
               <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => setShowModal(false)}
@@ -474,6 +495,7 @@ export default function ListaUtenza() {
           </div>
         </div>
       )}
+
 
       {/* Modal Modifica Utente */}
       {showEditModal && utenteSelezionato && (
@@ -518,6 +540,7 @@ export default function ListaUtenza() {
               </button>
             </div>
 
+
             <form onSubmit={handleModificaUtente}>
               <div style={{ padding: '24px' }}>
                 <div style={{ marginBottom: '20px' }}>
@@ -547,6 +570,7 @@ export default function ListaUtenza() {
                   />
                 </div>
 
+
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{
                     display: 'block',
@@ -574,6 +598,7 @@ export default function ListaUtenza() {
                   />
                 </div>
 
+
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{
                     display: 'block',
@@ -599,10 +624,30 @@ export default function ListaUtenza() {
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="Utente">Utente</option>
-                    <option value="Amministratore">Amministratore</option>
+                    {/* ✅ SE È AMMINISTRATORE, MOSTRA SOLO "AMMINISTRATORE" */}
+                    {utenteSelezionato.ruolo === 'Amministratore' ? (
+                      <option value="Amministratore">Amministratore</option>
+                    ) : (
+                      <>
+                        <option value="Utente">Utente</option>
+                        <option value="Amministratore">Amministratore</option>
+                      </>
+                    )}
                   </select>
+                  
+                  {/* ✅ AVVISO SE È AMMINISTRATORE */}
+                  {utenteSelezionato.ruolo === 'Amministratore' && (
+                    <p style={{ 
+                      fontSize: '12px', 
+                      color: '#0d9488', 
+                      marginTop: '6px',
+                      marginBottom: 0 
+                    }}>
+                      ℹ️ Un amministratore non può essere declassato a utente
+                    </p>
+                  )}
                 </div>
+
 
                 <div style={{
                   padding: '12px',
@@ -615,6 +660,7 @@ export default function ListaUtenza() {
                     <strong>Nota:</strong> Email e password non possono essere modificate da qui
                   </p>
                 </div>
+
 
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                   <button
@@ -654,6 +700,7 @@ export default function ListaUtenza() {
           </div>
         </div>
       )}
+
 
       <style>{`
         @keyframes spin {
