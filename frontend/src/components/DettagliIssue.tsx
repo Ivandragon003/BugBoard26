@@ -33,12 +33,6 @@ interface Issue {
     cognome: string;
     email: string;
   } | null;
-  assegnatario: {
-    idUtente: number;
-    nome: string;
-    cognome: string;
-    email: string;
-  } | null;
 }
 
 interface FormData {

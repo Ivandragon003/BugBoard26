@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { authService } from '../services/authService';
-import { issueService } from '../services/issueService';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 
@@ -15,18 +14,6 @@ interface Utente {
   ruolo: string;
 }
 
-interface Issue {
-  idIssue: number;
-  titolo: string;
-  descrizione: string;
-  stato: string;
-  tipo: string;
-  priorita: string;
-  archiviata: boolean;
-  dataCreazione: string;
-  utentiAssegnati?: Utente[];
-}
-
 const getAuthHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem('authToken')}`
 });
@@ -36,7 +23,6 @@ export default function ListaUtenza() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [utenteSelezionato, setUtenteSelezionato] = useState<Utente | null>(null);
-  const [issueAssegnate, setIssueAssegnate] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -74,21 +60,9 @@ export default function ListaUtenza() {
     }
   };
 
-  const visualizzaProfiloUtente = async (utente: Utente) => {
-    try {
-      setUtenteSelezionato(utente);
-      const allIssues = await issueService.getAllIssues();
-      
-      const issueUtente = allIssues.filter((issue: Issue) =>
-        issue.utentiAssegnati?.some(u => u.idUtente === utente.idUtente || u.id === utente.idUtente)
-      );
-      
-      setIssueAssegnate(issueUtente);
-      setShowModal(true);
-    } catch (err) {
-      setError('Errore nel caricamento delle issue assegnate');
-      console.error(err);
-    }
+  const visualizzaProfiloUtente = (utente: Utente) => {
+    setUtenteSelezionato(utente);
+    setShowModal(true);
   };
 
   const apriModalModifica = (utente: Utente) => {
@@ -127,56 +101,6 @@ export default function ListaUtenza() {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Errore durante la modifica');
     }
-  };
-
-  const getPrioritaColor = (priorita: string) => {
-    switch (priorita.toLowerCase()) {
-      case 'critical':
-        return { backgroundColor: '#fecaca', color: '#7f1d1d' };
-      case 'high':
-        return { backgroundColor: '#fee2e2', color: '#991b1b' };
-      case 'medium':
-        return { backgroundColor: '#fef3c7', color: '#92400e' };
-      case 'low':
-        return { backgroundColor: '#f3f4f6', color: '#374151' };
-      default:
-        return { backgroundColor: '#f3f4f6', color: '#374151' };
-    }
-  };
-
-  const getStatoStyle = (stato: string) => {
-    switch (stato.toLowerCase()) {
-      case 'todo':
-        return { backgroundColor: '#e5e7eb', color: '#374151' };
-      case 'inprogress':
-      case 'in_progress':
-        return { backgroundColor: '#fed7aa', color: '#9a3412' };
-      case 'done':
-        return { backgroundColor: '#86efac', color: '#166534' };
-      default:
-        return { backgroundColor: '#e5e7eb', color: '#374151' };
-    }
-  };
-
-  const getTipoStyle = (tipo: string) => {
-    switch (tipo.toLowerCase()) {
-      case 'documentation':
-        return { backgroundColor: '#d1fae5', color: '#065f46' };
-      case 'feature':
-      case 'features':
-        return { backgroundColor: '#dbeafe', color: '#1e40af' };
-      case 'bug':
-        return { backgroundColor: '#fee2e2', color: '#991b1b' };
-      case 'question':
-        return { backgroundColor: '#e9d5ff', color: '#6b21a8' };
-      default:
-        return { backgroundColor: '#e5e7eb', color: '#374151' };
-    }
-  };
-
-  const formatStato = (stato: string) => {
-    if (stato === 'inProgress' || stato === 'in_progress') return 'In Progress';
-    return stato.charAt(0).toUpperCase() + stato.slice(1);
   };
 
   const UserIcon = () => (
@@ -527,112 +451,6 @@ export default function ListaUtenza() {
                     </p>
                   </div>
                 </div>
-              </div>
-
-              {/* Issue Assegnate */}
-              <div>
-                <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#1f2937', marginBottom: '16px' }}>
-                  Issue Assegnate ({issueAssegnate.length})
-                </h4>
-
-                {issueAssegnate.length === 0 ? (
-                  <div style={{
-                    padding: '48px',
-                    textAlign: 'center',
-                    color: '#6b7280',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '8px'
-                  }}>
-                    Nessuna issue assegnata a questo utente
-                  </div>
-                ) : (
-                  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                    {issueAssegnate.map((issue) => (
-                      <div
-                        key={issue.idIssue}
-                        style={{
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          padding: '16px',
-                          marginBottom: '12px',
-                          backgroundColor: 'white',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}
-                        onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
-                        onClick={() => {
-                          setShowModal(false);
-                          navigate(`/issues/${issue.idIssue}`);
-                        }}
-                      >
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'start',
-                          marginBottom: '8px'
-                        }}>
-                          <h5 style={{ fontSize: '15px', fontWeight: 600, color: '#1f2937', margin: 0 }}>
-                            {issue.titolo}
-                          </h5>
-                          <span style={{
-                            padding: '4px 12px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            ...getStatoStyle(issue.stato)
-                          }}>
-                            {formatStato(issue.stato)}
-                          </span>
-                        </div>
-
-                        {issue.descrizione && (
-                          <p style={{
-                            fontSize: '13px',
-                            color: '#6b7280',
-                            marginBottom: '12px',
-                            lineHeight: '1.5'
-                          }}>
-                            {issue.descrizione}
-                          </p>
-                        )}
-
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            ...getPrioritaColor(issue.priorita)
-                          }}>
-                            {issue.priorita}
-                          </span>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            ...getTipoStyle(issue.tipo)
-                          }}>
-                            {issue.tipo}
-                          </span>
-                          {issue.archiviata && (
-                            <span style={{
-                              padding: '4px 10px',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: 500,
-                              backgroundColor: '#fef3c7',
-                              color: '#92400e'
-                            }}>
-                              Archiviata
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
