@@ -1,7 +1,6 @@
 package it.unina.bugboard.controller;
 
 import it.unina.bugboard.dao.IssueDAO;
-
 import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.*;
 import it.unina.bugboard.exception.*;
@@ -11,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/issue")
@@ -71,7 +71,6 @@ public class IssueController {
 		if (payload.containsKey("tipo"))
 			issue.setTipo(parseTipo((String) payload.get("tipo")));
 
-	
 		if (payload.containsKey("stato")) {
 			Stato nuovoStato = parseStato((String) payload.get("stato"));
 			Stato statoAttuale = issue.getStato();
@@ -90,6 +89,102 @@ public class IssueController {
 
 		issue.setDataUltimaModifica(LocalDateTime.now());
 		return issueDAO.save(issue);
+	}
+
+	
+	@GetMapping("/filtra-avanzato")
+	public List<Issue> filtraAvanzato(
+			@RequestParam(required = false) String stato,
+			@RequestParam(required = false) String priorita,
+			@RequestParam(required = false) String tipo,
+			@RequestParam(required = false) String ricerca,
+			@RequestParam(required = false) String ordinamento,
+			@RequestParam(required = false, defaultValue = "false") Boolean archiviata) {
+
+		
+		List<Issue> issues = archiviata ? issueDAO.findByArchiviata(true) : issueDAO.findByArchiviataFalse();
+
+		
+		if (stato != null && !stato.isEmpty()) {
+			Stato statoEnum = parseStato(stato);
+			issues = issues.stream()
+					.filter(i -> i.getStato() == statoEnum)
+					.collect(Collectors.toList());
+		}
+
+		if (priorita != null && !priorita.isEmpty()) {
+			Priorita prioritaEnum = parsePriorita(priorita);
+			issues = issues.stream()
+					.filter(i -> i.getPriorita() == prioritaEnum)
+					.collect(Collectors.toList());
+		}
+
+		if (tipo != null && !tipo.isEmpty()) {
+			Tipo tipoEnum = parseTipo(tipo);
+			issues = issues.stream()
+					.filter(i -> i.getTipo() == tipoEnum)
+					.collect(Collectors.toList());
+		}
+
+		// Ricerca per titolo
+		if (ricerca != null && !ricerca.isEmpty()) {
+			String ricercaLower = ricerca.toLowerCase();
+			issues = issues.stream()
+					.filter(i -> i.getTitolo().toLowerCase().contains(ricercaLower))
+					.collect(Collectors.toList());
+		}
+
+		// Ordinamento
+		if (ordinamento != null && !ordinamento.isEmpty()) {
+			switch (ordinamento.toLowerCase()) {
+				case "data_recente":
+					issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
+					break;
+				case "data_vecchio":
+					issues.sort((a, b) -> a.getDataCreazione().compareTo(b.getDataCreazione()));
+					break;
+				case "titolo_az":
+					issues.sort((a, b) -> a.getTitolo().compareToIgnoreCase(b.getTitolo()));
+					break;
+				case "titolo_za":
+					issues.sort((a, b) -> b.getTitolo().compareToIgnoreCase(a.getTitolo()));
+					break;
+				case "priorita_alta":
+					issues.sort((a, b) -> {
+						int ordineA = getPrioritaOrdine(a.getPriorita());
+						int ordineB = getPrioritaOrdine(b.getPriorita());
+						return Integer.compare(ordineA, ordineB);
+					});
+					break;
+				case "priorita_bassa":
+					issues.sort((a, b) -> {
+						int ordineA = getPrioritaOrdine(a.getPriorita());
+						int ordineB = getPrioritaOrdine(b.getPriorita());
+						return Integer.compare(ordineB, ordineA);
+					});
+					break;
+				default:
+					// Default: data più recente
+					issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
+			}
+		} else {
+			// Default sorting
+			issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
+		}
+
+		return issues;
+	}
+
+	// Helper per ordinamento priorità
+	private int getPrioritaOrdine(Priorita priorita) {
+		switch (priorita) {
+			case critical: return 0;
+			case high: return 1;
+			case medium: return 2;
+			case low: return 3;
+			case none: return 4;
+			default: return 5;
+		}
 	}
 
 	@GetMapping("/filtra")
@@ -193,7 +288,6 @@ public class IssueController {
 		return stats;
 	}
 
-
 	@PostMapping("/{idIssue}/assegna/{idUtente}")
 	@Transactional
 	public Issue assegnaUtente(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {
@@ -211,7 +305,6 @@ public class IssueController {
 		return issue;
 	}
 
-
 	@DeleteMapping("/{idIssue}/rimuovi-assegnazione/{idUtente}")
 	@Transactional
 	public Issue rimuoviAssegnazione(@PathVariable Integer idIssue, @PathVariable Integer idUtente) {
@@ -222,7 +315,6 @@ public class IssueController {
 		return issueDAO.save(issue);
 	}
 
-	
 	@GetMapping("/{idIssue}/utenti-assegnati")
 	public List<Utenza> getUtentiAssegnati(@PathVariable Integer idIssue) {
 		Issue issue = issueDAO.findById(idIssue)

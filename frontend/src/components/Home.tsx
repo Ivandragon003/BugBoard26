@@ -4,7 +4,6 @@ import { issueService } from "../services/issueService";
 import Sidebar from "./Sidebar";
 import { authService } from "../services/authService";
 
-
 interface Issue {
   idIssue: number;
   titolo: string;
@@ -17,16 +16,15 @@ interface Issue {
   archiviata?: boolean;
 }
 
-
 function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [allIssues, setAllIssues] = useState<Issue[]>([]); // Per le statistiche totali
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
-  const [filterType, setFilterType] = useState<string>("all");
-
+  const [filterType, setFilterType] = useState<string>("");
 
   useEffect(() => {
     const token = authService.getToken();
@@ -34,46 +32,66 @@ function Home() {
       navigate("/login");
       return;
     }
-    loadIssues();
-  }, [navigate, location.pathname]);
+  }, [navigate]);
 
-  const loadIssues = async () => {
+  // Carica issues filtrate quando cambia il filtro
+  useEffect(() => {
+    loadFilteredIssues();
+  }, [filterType]);
+
+  // Carica anche tutte le issue per le statistiche totali
+  useEffect(() => {
+    loadAllIssuesForStats();
+  }, []);
+
+  const loadFilteredIssues = async () => {
     try {
       setLoading(true);
-      const data = await issueService.getAllIssues();
-      const nonArchived = data.filter((issue: Issue) => !issue.archiviata);
-      setIssues(nonArchived);
+      
+      const params: any = {
+        archiviata: false,
+        ordinamento: "data_recente"
+      };
+
+      // Aggiungi filtro stato se selezionato
+      if (filterType && filterType !== "all") {
+        params.stato = filterType;
+      }
+
+      const data = await issueService.filterIssuesAdvanced(params);
+      setIssues(data);
       setError("");
     } catch (err: any) {
       console.error("Errore caricamento issues:", err);
       setError(err.response?.data?.message || "Errore nel caricamento delle issue");
+      setIssues([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getFilteredIssues = () => {
-    if (filterType === "all") return issues;
-    
-    return issues.filter(i => {
-      const statoNorm = i.stato.toLowerCase().replace('_', '');
-      const filterNorm = filterType.toLowerCase().replace('_', '');
-      return statoNorm === filterNorm;
-    });
+  const loadAllIssuesForStats = async () => {
+    try {
+      const data = await issueService.filterIssuesAdvanced({
+        archiviata: false,
+        ordinamento: "data_recente"
+      });
+      setAllIssues(data);
+    } catch (err: any) {
+      console.error("Errore caricamento statistiche:", err);
+    }
   };
 
-  const filteredIssues = getFilteredIssues();
-
+  // Calcola statistiche sempre su TUTTE le issue (non filtrate)
   const issueStats = {
-    totali: filteredIssues.length,
-    todo: filteredIssues.filter(i => i.stato.toLowerCase() === 'todo').length,
-    inProgress: filteredIssues.filter(i => {
+    totali: allIssues.length,
+    todo: allIssues.filter(i => i.stato.toLowerCase() === 'todo').length,
+    inProgress: allIssues.filter(i => {
       const stato = i.stato.toLowerCase();
       return stato === 'inprogress' || stato === 'in_progress';
     }).length,
-    done: filteredIssues.filter(i => i.stato.toLowerCase() === 'done').length,
+    done: allIssues.filter(i => i.stato.toLowerCase() === 'done').length,
   };
-
 
   const ListIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -248,7 +266,6 @@ function Home() {
             </div>
           )}
 
-          {/* FIX 2: Indicatore visivo filtro attivo */}
           <div style={{ 
             backgroundColor: "white",
             borderRadius: "12px",
@@ -271,7 +288,7 @@ function Home() {
                 }}>
                   Filtra per stato
                 </label>
-                {filterType !== "all" && (
+                {filterType && filterType !== "all" && (
                   <span style={{
                     fontSize: "11px",
                     fontWeight: 600,
@@ -289,11 +306,11 @@ function Home() {
                 onChange={(e) => setFilterType(e.target.value)}
                 style={{
                   padding: "10px 40px 10px 16px",
-                  border: filterType !== "all" ? "2px solid #0d9488" : "1px solid #d1d5db",
+                  border: filterType && filterType !== "all" ? "2px solid #0d9488" : "1px solid #d1d5db",
                   borderRadius: "8px",
                   fontSize: "14px",
                   color: "#374151",
-                  backgroundColor: filterType !== "all" ? "#f0fdfa" : "white",
+                  backgroundColor: filterType && filterType !== "all" ? "#f0fdfa" : "white",
                   cursor: "pointer",
                   outline: "none",
                   minWidth: "200px",
@@ -303,10 +320,10 @@ function Home() {
                   backgroundPosition: "right 12px center"
                 }}
               >
-                <option value="all">Tutte le issue</option>
-                <option value="todo">Fare</option>
-                <option value="inprogress">In corso</option>
-                <option value="done">Fatto</option>
+                <option value="">Tutte le issue</option>
+                <option value="Todo">Fare</option>
+                <option value="inProgress">In corso</option>
+                <option value="Done">Fatto</option>
               </select>
             </div>
 
@@ -342,7 +359,6 @@ function Home() {
             </button>
           </div>
 
-          {/* FIX 1: Loading state per le cards statistiche */}
           <div style={{ 
             display: "grid", 
             gridTemplateColumns: "repeat(4, 1fr)",
@@ -350,7 +366,7 @@ function Home() {
             marginBottom: "32px",
             minHeight: "120px"
           }}>
-            {loading ? (
+            {loading && allIssues.length === 0 ? (
               <>
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} style={{
@@ -549,9 +565,11 @@ function Home() {
               <div style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
                 Caricamento in corso...
               </div>
-            ) : filteredIssues.length === 0 ? (
+            ) : issues.length === 0 ? (
               <div style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
-                Nessuna issue trovata. Crea la tua prima issue!
+                {filterType && filterType !== "all" 
+                  ? "Nessuna issue trovata con questo filtro."
+                  : "Nessuna issue trovata. Crea la tua prima issue!"}
               </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
@@ -616,7 +634,7 @@ function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredIssues.slice(0, 5).map((issue) => (
+                    {issues.slice(0, 5).map((issue) => (
                       <tr 
                         key={issue.idIssue} 
                         style={{ 

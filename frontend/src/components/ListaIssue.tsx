@@ -19,14 +19,13 @@ function ListaIssue() {
   const navigate = useNavigate();
   const location = useLocation();
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [filteredIssues, setFilteredIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statoFilter, setStatoFilter] = useState("Tutti gli stati");
-  const [tipoFilter, setTipoFilter] = useState("Tutti i tipi");
-  const [prioritaFilter, setPrioritaFilter] = useState("Tutte le priorità");
-  const [sortOrder, setSortOrder] = useState("Data (più recente)");
+  const [statoFilter, setStatoFilter] = useState("");
+  const [tipoFilter, setTipoFilter] = useState("");
+  const [prioritaFilter, setPrioritaFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState("data_recente");
 
   useEffect(() => {
     const token = authService.getToken();
@@ -34,59 +33,45 @@ function ListaIssue() {
       navigate("/login");
       return;
     }
-    loadIssues();
-  }, [navigate, location.pathname]);
+  }, [navigate]);
 
-  const loadIssues = async () => {
+  // Carica issue quando cambiano i filtri
+  useEffect(() => {
+    loadFilteredIssues();
+  }, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder]);
+
+  const loadFilteredIssues = async () => {
     try {
       setLoading(true);
-      const data = await issueService.getAllIssues();
-      const nonArchived = data.filter((issue: Issue) => !issue.archiviata);
-      setIssues(nonArchived);
-      setFilteredIssues(nonArchived);
+      
+      // Prepara i parametri per il backend
+      const params: any = {
+        archiviata: false,
+        ordinamento: sortOrder
+      };
+
+      if (statoFilter) params.stato = statoFilter;
+      if (tipoFilter) params.tipo = tipoFilter;
+      if (prioritaFilter) params.priorita = prioritaFilter;
+      if (searchTerm) params.ricerca = searchTerm;
+
+      // Chiama il backend con tutti i filtri
+      const data = await issueService.filterIssuesAdvanced(params);
+      setIssues(data);
     } catch (error) {
       console.error("Errore caricamento issue:", error);
+      setIssues([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    let filtered = issues;
-
-    if (searchTerm) {
-      filtered = filtered.filter((issue) =>
-        issue.titolo.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (statoFilter !== "Tutti gli stati") {
-      filtered = filtered.filter((issue) => issue.stato === statoFilter);
-    }
-
-    if (tipoFilter !== "Tutti i tipi") {
-      filtered = filtered.filter((issue) => issue.tipo === tipoFilter);
-    }
-
-    if (prioritaFilter !== "Tutte le priorità") {
-      filtered = filtered.filter((issue) => issue.priorita === prioritaFilter);
-    }
-
-    if (sortOrder === "Data (più recente)") {
-      filtered.sort((a, b) => new Date(b.dataCreazione).getTime() - new Date(a.dataCreazione).getTime());
-    } else if (sortOrder === "Data (meno recente)") {
-      filtered.sort((a, b) => new Date(a.dataCreazione).getTime() - new Date(b.dataCreazione).getTime());
-    }
-
-    setFilteredIssues(filtered);
-  }, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder, issues]);
-
   const handleReset = () => {
     setSearchTerm("");
-    setStatoFilter("Tutti gli stati");
-    setTipoFilter("Tutti i tipi");
-    setPrioritaFilter("Tutte le priorità");
-    setSortOrder("Data (più recente)");
+    setStatoFilter("");
+    setTipoFilter("");
+    setPrioritaFilter("");
+    setSortOrder("data_recente");
   };
 
   const formatDate = (dateString: string) => {
@@ -94,15 +79,65 @@ function ListaIssue() {
     return date.toLocaleDateString("it-IT");
   };
 
-  // FIX 2: Controlla se ci sono filtri attivi
   const hasActiveFilters = () => {
     return searchTerm !== "" || 
-           statoFilter !== "Tutti gli stati" || 
-           tipoFilter !== "Tutti i tipi" || 
-           prioritaFilter !== "Tutte le priorità";
+           statoFilter !== "" || 
+           tipoFilter !== "" || 
+           prioritaFilter !== "";
   };
 
-  if (loading) {
+  // Stili come Home.tsx
+  const getStatoStyle = (stato: string) => {
+    switch (stato.toLowerCase()) {
+      case "todo":
+        return { backgroundColor: "#e5e7eb", color: "#374151" };
+      case "inprogress":
+      case "in_progress":
+        return { backgroundColor: "#fed7aa", color: "#9a3412" };
+      case "done":
+        return { backgroundColor: "#86efac", color: "#166534" };
+      default:
+        return { backgroundColor: "#e5e7eb", color: "#374151" };
+    }
+  };
+
+  const getTipoStyle = (tipo: string) => {
+    switch (tipo.toLowerCase()) {
+      case "documentation":
+        return { backgroundColor: "#d1fae5", color: "#065f46" };
+      case "feature":
+      case "features":
+        return { backgroundColor: "#dbeafe", color: "#1e40af" };
+      case "bug":
+        return { backgroundColor: "#fee2e2", color: "#991b1b" };
+      case "question":
+        return { backgroundColor: "#e9d5ff", color: "#6b21a8" };
+      default:
+        return { backgroundColor: "#e5e7eb", color: "#374151" };
+    }
+  };
+
+  const getPrioritaStyle = (priorita: string) => {
+    switch (priorita.toLowerCase()) {
+      case "critical":
+        return { backgroundColor: "#fecaca", color: "#7f1d1d" };
+      case "high":
+        return { backgroundColor: "#fee2e2", color: "#991b1b" };
+      case "medium":
+        return { backgroundColor: "#fef3c7", color: "#92400e" };
+      case "low":
+        return { backgroundColor: "#f3f4f6", color: "#374151" };
+      default:
+        return { backgroundColor: "#f3f4f6", color: "#374151" };
+    }
+  };
+
+  const formatStato = (stato: string) => {
+    if (stato === "inProgress" || stato === "in_progress") return "In Progress";
+    return stato.charAt(0).toUpperCase() + stato.slice(1);
+  };
+
+  if (loading && issues.length === 0) {
     return (
       <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
         <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -154,7 +189,6 @@ function ListaIssue() {
         </header>
 
         <div style={{ flex: 1, padding: "32px" }}>
-          {/* FIX 2: Indicatore filtri attivi */}
           {hasActiveFilters() && (
             <div style={{
               backgroundColor: "#d1fae5",
@@ -170,7 +204,7 @@ function ListaIssue() {
             }}>
               <span style={{ fontSize: "16px" }}>🔍</span>
               <strong>Filtri attivi:</strong>
-              <span>Mostrando {filteredIssues.length} di {issues.length} issue</span>
+              <span>Mostrando {issues.length} issue{loading && " (aggiornamento...)"}</span>
             </div>
           )}
 
@@ -218,11 +252,11 @@ function ListaIssue() {
                   style={{
                     width: "100%",
                     padding: "10px 14px",
-                    border: statoFilter !== "Tutti gli stati" ? "2px solid #0d9488" : "1px solid #d1d5db",
+                    border: statoFilter ? "2px solid #0d9488" : "1px solid #d1d5db",
                     borderRadius: "8px",
                     fontSize: "14px",
                     boxSizing: "border-box",
-                    backgroundColor: statoFilter !== "Tutti gli stati" ? "#f0fdfa" : "#f9fafb",
+                    backgroundColor: statoFilter ? "#f0fdfa" : "#f9fafb",
                     cursor: "pointer",
                     appearance: "none",
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
@@ -231,10 +265,10 @@ function ListaIssue() {
                     paddingRight: "36px",
                   }}
                 >
-                  <option>Tutti gli stati</option>
-                  <option>Todo</option>
-                  <option>inProgress</option>
-                  <option>Done</option>
+                  <option value="">Tutti gli stati</option>
+                  <option value="Todo">Todo</option>
+                  <option value="inProgress">In Progress</option>
+                  <option value="Done">Done</option>
                 </select>
               </div>
 
@@ -248,11 +282,11 @@ function ListaIssue() {
                   style={{
                     width: "100%",
                     padding: "10px 14px",
-                    border: tipoFilter !== "Tutti i tipi" ? "2px solid #0d9488" : "1px solid #d1d5db",
+                    border: tipoFilter ? "2px solid #0d9488" : "1px solid #d1d5db",
                     borderRadius: "8px",
                     fontSize: "14px",
                     boxSizing: "border-box",
-                    backgroundColor: tipoFilter !== "Tutti i tipi" ? "#f0fdfa" : "#f9fafb",
+                    backgroundColor: tipoFilter ? "#f0fdfa" : "#f9fafb",
                     cursor: "pointer",
                     appearance: "none",
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
@@ -261,11 +295,11 @@ function ListaIssue() {
                     paddingRight: "36px",
                   }}
                 >
-                  <option>Tutti i tipi</option>
-                  <option>bug</option>
-                  <option>features</option>
-                  <option>question</option>
-                  <option>documentation</option>
+                  <option value="">Tutti i tipi</option>
+                  <option value="bug">Bug</option>
+                  <option value="features">Features</option>
+                  <option value="question">Question</option>
+                  <option value="documentation">Documentation</option>
                 </select>
               </div>
 
@@ -279,11 +313,11 @@ function ListaIssue() {
                   style={{
                     width: "100%",
                     padding: "10px 14px",
-                    border: prioritaFilter !== "Tutte le priorità" ? "2px solid #0d9488" : "1px solid #d1d5db",
+                    border: prioritaFilter ? "2px solid #0d9488" : "1px solid #d1d5db",
                     borderRadius: "8px",
                     fontSize: "14px",
                     boxSizing: "border-box",
-                    backgroundColor: prioritaFilter !== "Tutte le priorità" ? "#f0fdfa" : "#f9fafb",
+                    backgroundColor: prioritaFilter ? "#f0fdfa" : "#f9fafb",
                     cursor: "pointer",
                     appearance: "none",
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
@@ -292,12 +326,12 @@ function ListaIssue() {
                     paddingRight: "36px",
                   }}
                 >
-                  <option>Tutte le priorità</option>
-                  <option>none</option>
-                  <option>low</option>
-                  <option>medium</option>
-                  <option>high</option>
-                  <option>critical</option>
+                  <option value="">Tutte le priorità</option>
+                  <option value="none">None</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
                 </select>
               </div>
 
@@ -324,8 +358,12 @@ function ListaIssue() {
                     paddingRight: "36px",
                   }}
                 >
-                  <option>Data (più recente)</option>
-                  <option>Data (meno recente)</option>
+                  <option value="data_recente">Data (più recente)</option>
+                  <option value="data_vecchio">Data (più vecchio)</option>
+                  <option value="titolo_az">Titolo (A-Z)</option>
+                  <option value="titolo_za">Titolo (Z-A)</option>
+                  <option value="priorita_alta">Priorità (alta-bassa)</option>
+                  <option value="priorita_bassa">Priorità (bassa-alta)</option>
                 </select>
               </div>
 
@@ -356,7 +394,6 @@ function ListaIssue() {
             </div>
           </div>
 
-          {/* FIX 4: Rimossi emoji dalle tabelle */}
           <div
             style={{
               backgroundColor: "white",
@@ -446,7 +483,21 @@ function ListaIssue() {
                 </tr>
               </thead>
               <tbody>
-                {filteredIssues.length === 0 ? (
+                {loading && issues.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      style={{
+                        padding: "48px 16px",
+                        textAlign: "center",
+                        color: "#6b7280",
+                        fontSize: "15px",
+                      }}
+                    >
+                      Caricamento...
+                    </td>
+                  </tr>
+                ) : issues.length === 0 ? (
                   <tr>
                     <td
                       colSpan={5}
@@ -461,7 +512,7 @@ function ListaIssue() {
                     </td>
                   </tr>
                 ) : (
-                  filteredIssues.map((issue) => (
+                  issues.map((issue) => (
                     <tr
                       key={issue.idIssue}
                       style={{
@@ -487,38 +538,26 @@ function ListaIssue() {
                       <td style={{ padding: "14px 16px", textAlign: "center" }}>
                         <span
                           style={{
-                            padding: "5px 10px",
-                            backgroundColor:
-                              issue.stato === "Done"
-                                ? "#dcfce7"
-                                : issue.stato === "inProgress"
-                                ? "#fef08a"
-                                : "#f3f4f6",
-                            color:
-                              issue.stato === "Done"
-                                ? "#15803d"
-                                : issue.stato === "inProgress"
-                                ? "#854d0e"
-                                : "#6b7280",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            fontWeight: 600,
+                            padding: "4px 12px",
+                            borderRadius: "12px",
+                            fontSize: "13px",
+                            fontWeight: 500,
                             display: "inline-block",
+                            ...getStatoStyle(issue.stato)
                           }}
                         >
-                          {issue.stato === "inProgress" ? "In corso" : issue.stato}
+                          {formatStato(issue.stato)}
                         </span>
                       </td>
                       <td style={{ padding: "14px 16px", textAlign: "center" }}>
                         <span
                           style={{
-                            padding: "5px 10px",
-                            backgroundColor: "#dbeafe",
-                            color: "#1e40af",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            fontWeight: 600,
+                            padding: "4px 12px",
+                            borderRadius: "12px",
+                            fontSize: "13px",
+                            fontWeight: 500,
                             display: "inline-block",
+                            ...getTipoStyle(issue.tipo)
                           }}
                         >
                           {issue.tipo}
@@ -527,28 +566,13 @@ function ListaIssue() {
                       <td style={{ padding: "14px 16px", textAlign: "center" }}>
                         <span
                           style={{
-                            padding: "5px 10px",
-                            backgroundColor:
-                              issue.priorita === "critical"
-                                ? "#fee2e2"
-                                : issue.priorita === "high"
-                                ? "#fef3c7"
-                                : issue.priorita === "medium"
-                                ? "#fef3c7"
-                                : "#f3f4f6",
-                            color:
-                              issue.priorita === "critical"
-                                ? "#991b1b"
-                                : issue.priorita === "high"
-                                ? "#b45309"
-                                : issue.priorita === "medium"
-                                ? "#b45309"
-                                : "#6b7280",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            fontWeight: 600,
+                            padding: "4px 12px",
+                            borderRadius: "12px",
+                            fontSize: "13px",
+                            fontWeight: 500,
+                            textTransform: "lowercase",
                             display: "inline-block",
-                            textTransform: "capitalize",
+                            ...getPrioritaStyle(issue.priorita)
                           }}
                         >
                           {issue.priorita}
@@ -557,7 +581,7 @@ function ListaIssue() {
                       <td
                         style={{
                           padding: "14px 16px",
-                          fontSize: "13px",
+                          fontSize: "14px",
                           color: "#6b7280",
                           textAlign: "center",
                         }}

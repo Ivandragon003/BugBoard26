@@ -65,7 +65,6 @@ export const issueService = {
     return response.data;
   },
 
-  // NUOVA FUNZIONE: Disarchiviazione
   unarchiveIssue: async (id: number) => {
     const response = await axios.put(
       `${API_BASE_URL}/issue/disarchivia/${id}`,
@@ -103,6 +102,33 @@ export const issueService = {
     const response = await axios.get(url, {
       headers: getAuthHeader()
     });
+    return response.data;
+  },
+
+  // NUOVA FUNZIONE: Filtraggio avanzato con ricerca e ordinamento
+  filterIssuesAdvanced: async (params: {
+    stato?: string;
+    priorita?: string;
+    tipo?: string;
+    ricerca?: string;
+    ordinamento?: string;
+    archiviata?: boolean;
+  }) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.stato) queryParams.append('stato', params.stato);
+    if (params.priorita) queryParams.append('priorita', params.priorita);
+    if (params.tipo) queryParams.append('tipo', params.tipo);
+    if (params.ricerca) queryParams.append('ricerca', params.ricerca);
+    if (params.ordinamento) queryParams.append('ordinamento', params.ordinamento);
+    if (params.archiviata !== undefined) queryParams.append('archiviata', params.archiviata.toString());
+    
+    const response = await axios.get(
+      `${API_BASE_URL}/issue/filtra-avanzato?${queryParams.toString()}`,
+      {
+        headers: getAuthHeader()
+      }
+    );
     return response.data;
   }
 };
