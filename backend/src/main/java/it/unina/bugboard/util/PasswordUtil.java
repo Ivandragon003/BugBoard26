@@ -11,7 +11,7 @@ public class PasswordUtil {
     private static final String CHAR_SET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
     private final SecureRandom random = new SecureRandom();
 
-    // Usa camelCase coerente con il controller
+    
     public String hashPassword(String rawPassword) {
         return encoder.encode(rawPassword);
     }
