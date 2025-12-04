@@ -30,8 +30,8 @@ public class ValidationUtil {
     }
 
     public void validaPassword(String password) {
-        if (password == null || password.length() < 8) {
-            throw new InvalidFieldException("Password troppo corta (minimo 8 caratteri)");
+        if (password == null || password.length() < 6) {
+            throw new InvalidFieldException("Password troppo corta (minimo 6 caratteri)");
         }
     }
 
