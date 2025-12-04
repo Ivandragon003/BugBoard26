@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react"; 
+import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
@@ -17,7 +17,6 @@ interface Issue {
 
 function ListaIssue() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -35,36 +34,31 @@ function ListaIssue() {
     }
   }, [navigate]);
 
-  // Carica issue quando cambiano i filtri
-  useEffect(() => {
-    loadFilteredIssues();
-  }, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder]);
+  
 
-  const loadFilteredIssues = async () => {
-    try {
-      setLoading(true);
-      
-      // Prepara i parametri per il backend
-      const params: any = {
-        archiviata: false,
-        ordinamento: sortOrder
-      };
+ const loadFilteredIssues = useCallback(async () => {
+  try {
+    setLoading(true);
+    
+    const params: any = {
+      archiviata: false,
+      ordinamento: sortOrder
+    };
 
-      if (statoFilter) params.stato = statoFilter;
-      if (tipoFilter) params.tipo = tipoFilter;
-      if (prioritaFilter) params.priorita = prioritaFilter;
-      if (searchTerm) params.ricerca = searchTerm;
+    if (statoFilter) params.stato = statoFilter;
+    if (tipoFilter) params.tipo = tipoFilter;
+    if (prioritaFilter) params.priorita = prioritaFilter;
+    if (searchTerm) params.ricerca = searchTerm;
 
-      // Chiama il backend con tutti i filtri
-      const data = await issueService.filterIssuesAdvanced(params);
-      setIssues(data);
-    } catch (error) {
-      console.error("Errore caricamento issue:", error);
-      setIssues([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const data = await issueService.filterIssuesAdvanced(params);
+    setIssues(data);
+  } catch (error) {
+    console.error("Errore caricamento issue:", error);
+    setIssues([]);
+  } finally {
+    setLoading(false);
+  }
+}, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder]);
 
   const handleReset = () => {
     setSearchTerm("");
@@ -78,6 +72,10 @@ function ListaIssue() {
     const date = new Date(dateString);
     return date.toLocaleDateString("it-IT");
   };
+
+ useEffect(() => {
+  loadFilteredIssues();
+}, [loadFilteredIssues]);
 
   const hasActiveFilters = () => {
     return searchTerm !== "" || 

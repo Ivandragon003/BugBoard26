@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { allegatoService } from '../services/allegatoService';
 
 interface Allegato {
@@ -20,11 +20,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    loadAllegati();
-  }, [idIssue]);
-
-  const loadAllegati = async () => {
+  const loadAllegati = useCallback(async () => {
     try {
       setLoading(true);
       const data = await allegatoService.getAllegatiByIssue(idIssue);
@@ -36,7 +32,11 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
     } finally {
       setLoading(false);
     }
-  };
+  }, [idIssue]);
+
+  useEffect(() => {
+    loadAllegati();
+  }, [loadAllegati]);
 
   const handleDownload = async (allegato: Allegato) => {
     try {

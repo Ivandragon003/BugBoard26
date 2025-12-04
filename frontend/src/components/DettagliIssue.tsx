@@ -5,9 +5,6 @@ import { allegatoService } from "../services/allegatoService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
 import AttachmentsViewer from "./AttachmentsViewer";
-import axios from "axios";
-import API_BASE_URL from "../config";        
-
 
 interface Issue {
   idIssue: number;
@@ -63,15 +60,15 @@ function DettagliIssue() {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [uploadResults, setUploadResults] = useState<Array<{fileName: string; success: boolean; error?: string}>>([]);
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editMode, setEditMode] = useState(false);
+  const [editMode] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [uploadResults, setUploadResults] = useState<Array<{fileName: string, success: boolean, error?: string}>>([]);
   const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
     open: false,
     title: "",
@@ -159,9 +156,9 @@ function DettagliIssue() {
   }, [id]);
 
   useEffect(() => {
-  if (isCheckingAuth || !id) return;
-  loadIssue();
-}, [id, isCheckingAuth, loadIssue]);
+    if (isCheckingAuth || !id) return;
+    loadIssue();
+  }, [id, isCheckingAuth, loadIssue]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -291,12 +288,6 @@ function DettagliIssue() {
     return statoMap[s] || s;
   };
 
-  const getNextStato = (currentStato: string): string => {
-    if (currentStato === "Todo") return "inProgress";
-    if (currentStato === "inProgress") return "Done";
-    return currentStato;
-  };
-
   const canChangeStato = (): boolean => {
     return formData.stato !== "Done" && !issue?.archiviata;
   };
@@ -340,6 +331,7 @@ function DettagliIssue() {
 
   const backPath = getBackPath();
   const backLabel = backPath === "/issues/archiviate" ? "← Torna alle Archiviate" : "← Torna alla lista";
+
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>

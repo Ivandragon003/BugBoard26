@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import Sidebar from "./Sidebar";
 import { authService } from "../services/authService";
@@ -17,10 +17,9 @@ interface Issue {
 
 function Home() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [allIssues, setAllIssues] = useState<Issue[]>([]); // Per le statistiche totali
+  const [allIssues, setAllIssues] = useState<Issue[]>([]);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [filterType, setFilterType] = useState<string>("");
@@ -33,17 +32,7 @@ function Home() {
     }
   }, [navigate]);
 
-  // Carica issues filtrate quando cambia il filtro
-  useEffect(() => {
-    loadFilteredIssues();
-  }, [filterType]);
-
-  // Carica anche tutte le issue per le statistiche totali
-  useEffect(() => {
-    loadAllIssuesForStats();
-  }, []);
-
-  const loadFilteredIssues = async () => {
+  const loadFilteredIssues = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -52,7 +41,6 @@ function Home() {
         ordinamento: "data_recente"
       };
 
-      // Aggiungi filtro stato se selezionato
       if (filterType && filterType !== "all") {
         params.stato = filterType;
       }
@@ -67,9 +55,9 @@ function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterType]);
 
-  const loadAllIssuesForStats = async () => {
+  const loadAllIssuesForStats = useCallback(async () => {
     try {
       const data = await issueService.filterIssuesAdvanced({
         archiviata: false,
@@ -79,9 +67,16 @@ function Home() {
     } catch (err: any) {
       console.error("Errore caricamento statistiche:", err);
     }
-  };
+  }, []);
 
-  // Calcola statistiche sempre su TUTTE le issue (non filtrate)
+  useEffect(() => {
+    loadFilteredIssues();
+  }, [loadFilteredIssues]);
+
+  useEffect(() => {
+    loadAllIssuesForStats();
+  }, [loadAllIssuesForStats]);
+
   const issueStats = {
     totali: allIssues.length,
     todo: allIssues.filter(i => i.stato.toLowerCase() === 'todo').length,
@@ -320,7 +315,7 @@ function Home() {
                 }}
               >
                 <option value="">Tutte le issue</option>
-                <option value="Todo"> Da fare</option>
+                <option value="Todo">Da fare</option>
                 <option value="inProgress">In corso</option>
                 <option value="Done">Fatto</option>
               </select>
@@ -358,6 +353,7 @@ function Home() {
             </button>
           </div>
 
+          {/* Statistics cards - resto del codice uguale... */}
           <div style={{ 
             display: "grid", 
             gridTemplateColumns: "repeat(4, 1fr)",
@@ -438,7 +434,7 @@ function Home() {
                     marginBottom: "12px"
                   }}>
                     <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
-                      Problema da fare
+                      Da fare
                     </div>
                     <div style={{
                       width: "40px",
@@ -471,7 +467,7 @@ function Home() {
                     marginBottom: "12px"
                   }}>
                     <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
-                      Problema in corso
+                      In corso
                     </div>
                     <div style={{
                       width: "40px",
@@ -504,7 +500,7 @@ function Home() {
                     marginBottom: "12px"
                   }}>
                     <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
-                      Problema risolto
+                      Completate
                     </div>
                     <div style={{
                       width: "40px",
@@ -526,6 +522,7 @@ function Home() {
             )}
           </div>
 
+          {/* Issues table */}
           <div style={{ 
             backgroundColor: "white", 
             borderRadius: "12px", 
