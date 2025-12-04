@@ -29,13 +29,14 @@ function CreaIssue() {
     setLoading(true);
 
     try {
-      const dataToSend = {
-        titolo,
-        descrizione,
-        stato,
-        tipo,
-        priorita
-      };
+    const dataToSend = {
+      titolo,
+      descrizione,
+      stato,
+      tipo,
+      priorita,
+      idCreatore: 1  
+    };
 
       console.log("📤 Creazione issue:", dataToSend);
       const nuovaIssue = await issueService.createIssue(dataToSend);
