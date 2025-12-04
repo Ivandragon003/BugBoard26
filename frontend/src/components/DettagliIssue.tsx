@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { issueService } from "../services/issueService";
-import { allegatoService } from "../services/allegatoService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
 import AttachmentsViewer from "./AttachmentsViewer";
@@ -68,8 +67,7 @@ function DettagliIssue() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [uploadResults, setUploadResults] = useState<Array<{fileName: string, success: boolean, error?: string}>>([]);
-  const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
+const [uploadResults] = useState<Array<{fileName: string, success: boolean, error?: string}>>([]);  const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
     open: false,
     title: "",
     message: "",

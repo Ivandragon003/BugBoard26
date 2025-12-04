@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import { allegatoService } from "../services/allegatoService";
-import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
-import axios from "axios";
-import API_BASE_URL from "../config";
+
 
 function CreaIssue() {
   const navigate = useNavigate();
@@ -20,8 +18,7 @@ function CreaIssue() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const user = authService.getUser();
-  const isAdmin = user?.ruolo === "Amministratore" || user?.role === "admin";
+
 
 
 
