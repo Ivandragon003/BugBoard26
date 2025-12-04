@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
-
 
 interface Issue {
   idIssue: number;
@@ -18,6 +17,7 @@ interface Issue {
 
 function ListaIssue() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -36,11 +36,15 @@ function ListaIssue() {
   }, [navigate]);
 
   // Carica issue quando cambiano i filtri
-  const loadFilteredIssues = useCallback(async () => {
+  useEffect(() => {
+    loadFilteredIssues();
+  }, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder]);
+
+  const loadFilteredIssues = async () => {
     try {
       setLoading(true);
       
-      //Prepara i parametri per il backend
+      // Prepara i parametri per il backend
       const params: any = {
         archiviata: false,
         ordinamento: sortOrder
@@ -60,11 +64,7 @@ function ListaIssue() {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder]);
-
-  useEffect(() => {
-    loadFilteredIssues();
-  }, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder, loadFilteredIssues]);
+  };
 
   const handleReset = () => {
     setSearchTerm("");
@@ -88,12 +88,13 @@ function ListaIssue() {
 
   // Stili come Home.tsx
   const getStatoStyle = (stato: string) => {
-    switch (stato) {
-      case "Todo":
+    switch (stato.toLowerCase()) {
+      case "todo":
         return { backgroundColor: "#e5e7eb", color: "#374151" };
-      case "inProgress":
+      case "inprogress":
+      case "in_progress":
         return { backgroundColor: "#fed7aa", color: "#9a3412" };
-      case "Done":
+      case "done":
         return { backgroundColor: "#86efac", color: "#166534" };
       default:
         return { backgroundColor: "#e5e7eb", color: "#374151" };
@@ -132,12 +133,8 @@ function ListaIssue() {
   };
 
   const formatStato = (stato: string) => {
-    const statoMap: { [key: string]: string } = {
-      "Todo": "To Do",
-      "inProgress": "In Progress",
-      "Done": "Done"
-    };
-    return statoMap[stato] || stato;
+    if (stato === "inProgress" || stato === "in_progress") return "In Progress";
+    return stato.charAt(0).toUpperCase() + stato.slice(1);
   };
 
   if (loading && issues.length === 0) {
@@ -269,7 +266,7 @@ function ListaIssue() {
                   }}
                 >
                   <option value="">Tutti gli stati</option>
-                  <option value="Todo">To Do</option>
+                  <option value="Todo">Todo</option>
                   <option value="inProgress">In Progress</option>
                   <option value="Done">Done</option>
                 </select>
@@ -299,10 +296,10 @@ function ListaIssue() {
                   }}
                 >
                   <option value="">Tutti i tipi</option>
-                  <option value="bug">bug</option>
-                  <option value="features">features</option>
-                  <option value="question">question</option>
-                  <option value="documentation">documentation</option>
+                  <option value="bug">Bug</option>
+                  <option value="features">Features</option>
+                  <option value="question">Question</option>
+                  <option value="documentation">Documentation</option>
                 </select>
               </div>
 
@@ -330,11 +327,11 @@ function ListaIssue() {
                   }}
                 >
                   <option value="">Tutte le priorità</option>
-                  <option value="none">none</option>
-                  <option value="low">low</option>
-                  <option value="medium">medium</option>
-                  <option value="high">high</option>
-                  <option value="critical">critical</option>
+                  <option value="none">None</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
                 </select>
               </div>
 

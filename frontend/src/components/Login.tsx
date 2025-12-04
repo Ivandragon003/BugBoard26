@@ -5,30 +5,30 @@ import { Link } from 'react-router-dom';
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [messaggio, setMessaggio] = useState('');
-  const [èErrore, setèErrore] = useState(false);
-  const [inCaricamento, setInCaricamento] = useState(false);
+  const [message, setMessage] = useState('');
+  const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const gestisciInvio = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setMessaggio('');
-    setèErrore(false);
-    setInCaricamento(true);
+    setMessage('');
+    setIsError(false);
+    setIsLoading(true);
 
     try {
       await authService.login(email, password);
-      setMessaggio('Login riuscito!');
-      setèErrore(false);
+      setMessage('Login riuscito!');
+      setIsError(false);
       setTimeout(() => {
         window.location.href = '/home';
       }, 500);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       const errorMsg = err.response?.data?.message || 'Credenziali non valide o errore di rete';
-      setMessaggio(errorMsg);
-      setèErrore(true);
+      setMessage(errorMsg);
+      setIsError(true);
     } finally {
-      setInCaricamento(false);
+      setIsLoading(false);
     }
   };
 
@@ -73,7 +73,7 @@ function Login() {
           </p>
         </div>
 
-        <form onSubmit={gestisciInvio}>
+        <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px' }}>
             <label style={{
               display: 'block',
@@ -130,33 +130,33 @@ function Login() {
 
           <button
             type="submit"
-            disabled={inCaricamento}
+            disabled={isLoading}
             style={{
               width: '100%',
               padding: '12px 24px',
-              backgroundColor: inCaricamento ? '#9ca3af' : '#0d9488',
+              backgroundColor: isLoading ? '#9ca3af' : '#0d9488',
               color: 'white',
               fontSize: '14px',
               fontWeight: '600',
               border: 'none',
               borderRadius: '8px',
-              cursor: inCaricamento ? 'not-allowed' : 'pointer',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
               marginBottom: '16px'
             }}
           >
-            {inCaricamento ? 'Accesso in corso...' : 'Accedi'}
+            {isLoading ? 'Accesso in corso...' : 'Accedi'}
           </button>
 
-          {messaggio && (
+          {message && (
             <div style={{
               padding: '12px 16px',
               borderRadius: '8px',
               fontSize: '14px',
-              backgroundColor: èErrore ? '#fef2f2' : '#f0fdf4',
-              color: èErrore ? '#991b1b' : '#166534',
-              border: `1px solid ${èErrore ? '#fecaca' : '#bbf7d0'}`
+              backgroundColor: isError ? '#fef2f2' : '#f0fdf4',
+              color: isError ? '#991b1b' : '#166534',
+              border: `1px solid ${isError ? '#fecaca' : '#bbf7d0'}`
             }}>
-              {messaggio}
+              {message}
             </div>
           )}
         </form>

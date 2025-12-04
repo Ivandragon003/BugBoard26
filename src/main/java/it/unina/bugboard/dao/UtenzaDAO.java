@@ -63,7 +63,5 @@ public interface UtenzaDAO extends JpaRepository<Utenza, Integer> {
 
 	List<Utenza> findAllByOrderByCognomeAscNomeAsc();
 
-	List<Utenza> findByStato(Boolean stato);
-
 	void deleteByCreatoreIdUtente(Integer idCreatore);
 }

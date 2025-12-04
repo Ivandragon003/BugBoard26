@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import { allegatoService } from "../services/allegatoService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
+import axios from "axios";
+import API_BASE_URL from "../config";
 
 function CreaIssue() {
   const navigate = useNavigate();
@@ -30,29 +32,26 @@ function CreaIssue() {
     setLoading(true);
 
     try {
-      const user = authService.getUser();
-      if (!user || !user.id) {
-        setError("Utente non autenticato");
-        setLoading(false);
-        return;
-      }
-
       const dataToSend = {
         titolo,
         descrizione,
         stato,
         tipo,
-        priorita,
-        idCreatore: user.id
+        priorita
       };
+
+      console.log("📤 Creazione issue:", dataToSend);
       const nuovaIssue = await issueService.createIssue(dataToSend);
+      console.log("✅ Issue creata:", nuovaIssue);
 
       if (files.length > 0) {
+        console.log(`📎 Upload di ${files.length} allegati...`);
         for (const file of files) {
           try {
             await allegatoService.uploadAllegato(file, nuovaIssue.idIssue);
+            console.log(`✅ Allegato caricato: ${file.name}`);
           } catch (uploadErr) {
-            console.error(`Errore upload ${file.name}:`, uploadErr);
+            console.error(`❌ Errore upload ${file.name}:`, uploadErr);
           }
         }
       }
@@ -204,10 +203,10 @@ function CreaIssue() {
                       boxSizing: "border-box"
                     }}
                   >
-                    <option value="bug">bug</option>
-                    <option value="features">features</option>
-                    <option value="question">question</option>
-                    <option value="documentation">documentation</option>
+                    <option value="bug">Bug</option>
+                    <option value="features">Feature</option>
+                    <option value="question">Question</option>
+                    <option value="documentation">Documentation</option>
                   </select>
                 </div>
 
@@ -233,11 +232,11 @@ function CreaIssue() {
                       boxSizing: "border-box"
                     }}
                   >
-                    <option value="none">none</option>
-                    <option value="low">low</option>
-                    <option value="medium">medium</option>
-                    <option value="high">high</option>
-                    <option value="critical">critical</option>
+                    <option value="none">None</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
                   </select>
                 </div>
               </div>

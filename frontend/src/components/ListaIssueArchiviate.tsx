@@ -514,7 +514,7 @@ function ListaIssueArchiviate() {
                             display: "inline-block",
                           }}
                         >
-                          {issue.stato === "inProgress" ? "In Progress" : issue.stato === "Todo" ? "To Do" : issue.stato}
+                          {issue.stato === "inProgress" ? "In corso" : issue.stato}
                         </span>
                       </td>
                       <td style={{ padding: "14px 16px", textAlign: "center" }}>

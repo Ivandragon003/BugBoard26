@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { issueService } from "../services/issueService";
+import { allegatoService } from "../services/allegatoService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
-import VisualizzatoreAllegati from "./ProprietaVisualizzatoreAllegati";
+import AttachmentsViewer from "./AttachmentsViewer";
+import axios from "axios";
+import API_BASE_URL from "../config";        
+
 
 interface Issue {
   idIssue: number;
@@ -29,7 +33,7 @@ interface Issue {
   } | null;
 }
 
-interface DatiForm {
+interface FormData {
   titolo: string;
   descrizione: string;
   stato: string;
@@ -37,7 +41,7 @@ interface DatiForm {
   priorita: string;
 }
 
-interface Utente {
+interface User {
   id?: number;
   idUtente?: number;
   nome: string;
@@ -47,36 +51,46 @@ interface Utente {
   role?: string;
 }
 
-interface DialogoConferma {
-  aperto: boolean;
-  titolo: string;
-  messaggio: string;
-  azione: () => Promise<void>;
+interface ConfirmDialog {
+  open: boolean;
+  title: string;
+  message: string;
+  action: () => Promise<void>;
 }
 
 function DettagliIssue() {
-  const naviga = useNavigate();
-  const posizioneCorrente = useLocation();
-  const { id: idParametro } = useParams<{ id: string }>();
-  const [sidebarAperta, setSidebarAperta] = useState(true);
-  const [issueCorrente, setIssueCorrente] = useState<Issue | null>(null);
-  const [caricamentoInCorso, setCaricamentoInCorso] = useState(true);
-  const [messaggioErrore, setMessaggioErrore] = useState("");
-  const [messaggioSuccesso, setMessaggioSuccesso] = useState("");
-  const [verificaAutenticazioneInCorso, setVerificaAutenticazioneInCorso] = useState(true);
-  const [utenteCorrente, setUtenteCorrente] = useState<Utente | null>(null);
-  const [mostraConferma, setMostraConferma] = useState<DialogoConferma>({
-    aperto: false,
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { id } = useParams<{ id: string }>();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [uploadResults, setUploadResults] = useState<Array<{fileName: string; success: boolean; error?: string}>>([]);
+  const [issue, setIssue] = useState<Issue | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
+    open: false,
+    title: "",
+    message: "",
+    action: async () => {},
+  });
+  const [formData, setFormData] = useState<FormData>({
     titolo: "",
-    messaggio: "",
-    azione: async () => {},
+    descrizione: "",
+    stato: "",
+    tipo: "",
+    priorita: "",
   });
 
-  const ottieniPercorsoRitorno = (): string => {
-    if (posizioneCorrente.state?.from === "/issues/archiviate") {
+  const getBackPath = (): string => {
+    if (location.state?.from === "/issues/archiviate") {
       return "/issues/archiviate";
     }
-    if (posizioneCorrente.state?.from === "/issues") {
+    if (location.state?.from === "/issues") {
       return "/issues";
     }
     return "/issues";
@@ -85,161 +99,178 @@ function DettagliIssue() {
   useEffect(() => {
     console.log("=== VERIFICA AUTENTICAZIONE ===");
     try {
-      const tokenAutenticazione = authService.getToken();
-      const utenteAttuale = authService.getUser();
-      console.log("Token presente:", !!tokenAutenticazione);
-      console.log("User presente:", !!utenteAttuale);
-      if (!tokenAutenticazione || !utenteAttuale) {
+      const token = authService.getToken();
+      const currentUser = authService.getUser();
+      console.log("Token presente:", !!token);
+      console.log("User presente:", !!currentUser);
+      if (!token || !currentUser) {
         console.error("❌ Non autenticato");
-        naviga("/login");
+        navigate("/login");
         return;
       }
 
-      const idUtente = utenteAttuale.id || utenteAttuale.idUtente;
-      if (!idUtente) {
+      const userId = currentUser.id || currentUser.idUtente;
+      if (!userId) {
         console.error("❌ User senza ID");
-        naviga("/login");
+        navigate("/login");
         return;
       }
 
-      const utenteNormalizzato: Utente = {
-        ...utenteAttuale,
-        id: idUtente,
+      const normalizedUser: User = {
+        ...currentUser,
+        id: userId,
       };
-      console.log("✅ Autenticazione OK - User ID:", idUtente);
-      setUtenteCorrente(utenteNormalizzato);
-      setVerificaAutenticazioneInCorso(false);
-    } catch (erroreAutenticazione) {
-      console.error("❌ Errore autenticazione:", erroreAutenticazione);
-      naviga("/login");
+      console.log("✅ Autenticazione OK - User ID:", userId);
+      setUser(normalizedUser);
+      setIsCheckingAuth(false);
+    } catch (err) {
+      console.error("❌ Errore autenticazione:", err);
+      navigate("/login");
     }
-  }, [naviga]);
+  }, [navigate]);
 
-  const caricaIssue = useCallback(async () => {
+  const loadIssue = useCallback(async () => {
     try {
-      setCaricamentoInCorso(true);
-      console.log("📥 Caricamento issue:", idParametro);
-      const datiIssue = await issueService.getIssueById(Number(idParametro));
-      console.log("✅ Issue caricata:", datiIssue);
-      setIssueCorrente(datiIssue);
-      setMessaggioErrore("");
-    } catch (errore: any) {
-      console.error("❌ Errore caricamento:", errore);
-      let testoErrore = "Errore nel caricamento dell'issue";
-      if (errore.response?.data?.message) {
-        testoErrore = errore.response.data.message;
-      } else if (errore.message) {
-        testoErrore = errore.message;
+      setLoading(true);
+      console.log("📥 Caricamento issue:", id);
+      const data = await issueService.getIssueById(Number(id));
+      console.log("✅ Issue caricata:", data);
+      setIssue(data);
+      setFormData({
+        titolo: data.titolo,
+        descrizione: data.descrizione,
+        stato: data.stato,
+        tipo: data.tipo,
+        priorita: data.priorita,
+      });
+      setError("");
+    } catch (err: any) {
+      console.error("❌ Errore caricamento:", err);
+      let errorMessage = "Errore nel caricamento dell'issue";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
       }
-      setMessaggioErrore(testoErrore);
+      setError(errorMessage);
     } finally {
-      setCaricamentoInCorso(false);
+      setLoading(false);
     }
-  }, [idParametro]);
+  }, [id]);
 
   useEffect(() => {
-    if (verificaAutenticazioneInCorso || !idParametro) return;
-    caricaIssue();
-  }, [idParametro, verificaAutenticazioneInCorso, caricaIssue]);
+  if (isCheckingAuth || !id) return;
+  loadIssue();
+}, [id, isCheckingAuth, loadIssue]);
 
-  const gestisciArchiviazione = () => {
-    if (issueCorrente && issueCorrente.stato !== "Done") {
-      setMessaggioErrore("Non è possibile archiviare un'issue che non è stata completata.");
-      setTimeout(() => setMessaggioErrore(""), 5000);
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleArchive = () => {
+    if (issue && issue.stato !== "Done") {
+      setError("Non è possibile archiviare un'issue che non è stata completata.");
+      setTimeout(() => setError(""), 5000);
       return;
     }
 
-    setMostraConferma({
-      aperto: true,
-      titolo: "Archivia Issue",
-      messaggio: "Sei sicuro di voler archiviare questa issue?",
-      azione: async () => {
-        if (!utenteCorrente) return;
+    setShowConfirm({
+      open: true,
+      title: "Archivia Issue",
+      message: "Sei sicuro di voler archiviare questa issue?",
+      action: async () => {
+        if (!user) return;
         try {
-          console.log("📦 Archiviazione:", idParametro);
-          await issueService.archiveIssue(Number(idParametro), utenteCorrente.id || utenteCorrente.idUtente || 0);
+          console.log("📦 Archiviazione:", id);
+          await issueService.archiveIssue(Number(id), user.id || user.idUtente || 0);
           console.log("✅ Issue archiviata");
-          setMostraConferma({ aperto: false, titolo: "", messaggio: "", azione: async () => {} });
-          setMessaggioSuccesso("Issue archiviata con successo!");
-          await caricaIssue();
-          setTimeout(() => setMessaggioSuccesso(""), 3000);
-        } catch (errore: any) {
-          console.error("❌ Errore archiviazione:", errore);
-          let testoErrore = "Errore nell'archiviazione dell'issue";
-          if (errore.response?.data?.message) {
-            testoErrore = errore.response.data.message;
-          } else if (errore.message) {
-            testoErrore = errore.message;
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+          setSuccess("Issue archiviata con successo!");
+          await loadIssue();
+          setTimeout(() => setSuccess(""), 3000);
+        } catch (err: any) {
+          console.error("❌ Errore archiviazione:", err);
+          let errorMessage = "Errore nell'archiviazione dell'issue";
+          if (err.response?.data?.message) {
+            errorMessage = err.response.data.message;
+          } else if (err.message) {
+            errorMessage = err.message;
           }
-          setMessaggioErrore(testoErrore);
-          setMostraConferma({ aperto: false, titolo: "", messaggio: "", azione: async () => {} });
-          setTimeout(() => setMessaggioErrore(""), 5000);
+          setError(errorMessage);
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+          setTimeout(() => setError(""), 5000);
         }
       },
     });
   };
 
-  const gestisciDisarchiviazione = () => {
-    setMostraConferma({
-      aperto: true,
-      titolo: "Disarchivia Issue",
-      messaggio: "Sei sicuro di voler disarchiviare questa issue?",
-      azione: async () => {
+  const handleUnarchive = () => {
+    setShowConfirm({
+      open: true,
+      title: "Disarchivia Issue",
+      message: "Sei sicuro di voler disarchiviare questa issue?",
+      action: async () => {
         try {
-          console.log("📤 Disarchiviazione:", idParametro);
-          await issueService.unarchiveIssue(Number(idParametro));
+          console.log("📤 Disarchiviazione:", id);
+          await issueService.unarchiveIssue(Number(id));
           console.log("✅ Issue disarchiviata");
-          setMostraConferma({ aperto: false, titolo: "", messaggio: "", azione: async () => {} });
-          setMessaggioSuccesso("Issue disarchiviata con successo!");
-          await caricaIssue();
-          setTimeout(() => setMessaggioSuccesso(""), 3000);
-        } catch (errore: any) {
-          console.error("❌ Errore disarchiviazione:", errore);
-          let testoErrore = "Errore nella disarchiviazione";
-          if (errore.response?.data?.message) {
-            testoErrore = errore.response.data.message;
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+          setSuccess("Issue disarchiviata con successo!");
+          await loadIssue();
+          setTimeout(() => setSuccess(""), 3000);
+        } catch (err: any) {
+          console.error("❌ Errore disarchiviazione:", err);
+          let errorMessage = "Errore nella disarchiviazione";
+          if (err.response?.data?.message) {
+            errorMessage = err.response.data.message;
           }
-          setMessaggioErrore(testoErrore);
-          setMostraConferma({ aperto: false, titolo: "", messaggio: "", azione: async () => {} });
+          setError(errorMessage);
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
         }
       },
     });
   };
 
-  const gestisciEliminazione = () => {
-    setMostraConferma({
-      aperto: true,
-      titolo: "Elimina Issue",
-      messaggio: "Sei sicuro di voler eliminare questa issue? Questa azione non può essere annullata.",
-      azione: async () => {
+  const handleDelete = () => {
+    setShowConfirm({
+      open: true,
+      title: "Elimina Issue",
+      message: "Sei sicuro di voler eliminare questa issue? Questa azione non può essere annullata.",
+      action: async () => {
         try {
-          console.log("🗑️ Eliminazione:", idParametro);
-          await issueService.deleteIssue(Number(idParametro));
+          console.log("🗑️ Eliminazione:", id);
+          await issueService.deleteIssue(Number(id));
           console.log("✅ Issue eliminata");
-          const percorsoRitorno = ottieniPercorsoRitorno();
-          naviga(percorsoRitorno);
-        } catch (errore: any) {
-          console.error("❌ Errore eliminazione:", errore);
-          let testoErrore = "Errore nell'eliminazione";
-          if (errore.response?.data?.message) {
-            testoErrore = errore.response.data.message;
+          const backPath = getBackPath();
+          navigate(backPath);
+        } catch (err: any) {
+          console.error("❌ Errore eliminazione:", err);
+          let errorMessage = "Errore nell'eliminazione";
+          if (err.response?.data?.message) {
+            errorMessage = err.response.data.message;
           }
-          setMessaggioErrore(testoErrore);
-          setMostraConferma({ aperto: false, titolo: "", messaggio: "", azione: async () => {} });
+          setError(errorMessage);
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
         }
       },
     });
   };
 
-  const gestisciConfermaAzione = async () => {
-    await mostraConferma.azione();
+  const handleConfirmAction = async () => {
+    await showConfirm.action();
   };
 
-  const formattaData = (stringaData: string | null | undefined): string => {
-    if (!stringaData) return "-";
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return "-";
     try {
-      const oggettoData = new Date(stringaData);
-      return oggettoData.toLocaleDateString("it-IT", {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("it-IT", {
         day: "2-digit",
         month: "long",
         year: "numeric",
@@ -251,27 +282,33 @@ function DettagliIssue() {
     }
   };
 
-  const ottieniEtichettaStato = (codiceStato: string): string => {
-    const mappaStati: { [chiave: string]: string } = {
+  const getStatoLabel = (s: string): string => {
+    const statoMap: { [key: string]: string } = {
       Todo: "To Do",
       inProgress: "In Progress",
       Done: "Done",
     };
-    return mappaStati[codiceStato] || codiceStato;
+    return statoMap[s] || s;
   };
 
-  const puoCambiareStato = (): boolean => {
-    return issueCorrente?.stato !== "Done" && !issueCorrente?.archiviata;
+  const getNextStato = (currentStato: string): string => {
+    if (currentStato === "Todo") return "inProgress";
+    if (currentStato === "inProgress") return "Done";
+    return currentStato;
   };
 
-  const issueArchiviata = issueCorrente?.archiviata || false;
-  const puoModificare = !issueArchiviata;
-  const utenteEAmministratore = utenteCorrente?.ruolo === "Amministratore" || utenteCorrente?.role === "admin";
+  const canChangeStato = (): boolean => {
+    return formData.stato !== "Done" && !issue?.archiviata;
+  };
 
-  if (verificaAutenticazioneInCorso) {
+  const isArchived = issue?.archiviata || false;
+  const canEdit = !isArchived;
+  const isAdmin = user?.ruolo === "Amministratore" || user?.role === "admin";
+
+  if (isCheckingAuth) {
     return (
       <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-        <Sidebar sidebarOpen={sidebarAperta} setSidebarOpen={setSidebarAperta} />
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ fontSize: "18px", color: "#6b7280" }}>Caricamento...</div>
         </div>
@@ -279,10 +316,10 @@ function DettagliIssue() {
     );
   }
 
-  if (caricamentoInCorso) {
+  if (loading) {
     return (
       <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-        <Sidebar sidebarOpen={sidebarAperta} setSidebarOpen={setSidebarAperta} />
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ fontSize: "18px", color: "#6b7280" }}>Caricamento issue...</div>
         </div>
@@ -290,10 +327,10 @@ function DettagliIssue() {
     );
   }
 
-  if (!issueCorrente) {
+  if (!issue) {
     return (
       <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-        <Sidebar sidebarOpen={sidebarAperta} setSidebarOpen={setSidebarAperta} />
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ fontSize: "18px", color: "#dc2626" }}>Issue non trovata</div>
         </div>
@@ -301,12 +338,12 @@ function DettagliIssue() {
     );
   }
 
-  const percorsoRitorno = ottieniPercorsoRitorno();
-  const etichettaRitorno = percorsoRitorno === "/issues/archiviate" ? "← Torna alle Archiviate" : "← Torna alla lista";
+  const backPath = getBackPath();
+  const backLabel = backPath === "/issues/archiviate" ? "← Torna alle Archiviate" : "← Torna alla lista";
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-      <Sidebar sidebarOpen={sidebarAperta} setSidebarOpen={setSidebarAperta} />
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Header */}
         <header style={{ 
@@ -319,7 +356,7 @@ function DettagliIssue() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <button 
-              onClick={() => naviga(percorsoRitorno)} 
+              onClick={() => navigate(backPath)} 
               style={{ 
                 padding: "8px 12px", 
                 backgroundColor: "transparent", 
@@ -329,7 +366,7 @@ function DettagliIssue() {
                 color: "#374151" 
               }}
             >
-              {etichettaRitorno}
+              {backLabel}
             </button>
             <div>
               <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
@@ -341,9 +378,9 @@ function DettagliIssue() {
             </div>
           </div>
           <div style={{ display: "flex", gap: "12px" }}>
-            {utenteEAmministratore && !issueArchiviata && (
+            {isAdmin && !isArchived && (
               <button 
-                onClick={gestisciArchiviazione} 
+                onClick={handleArchive} 
                 style={{ 
                   padding: "10px 20px", 
                   backgroundColor: "#f59e0b", 
@@ -358,9 +395,9 @@ function DettagliIssue() {
                 📦 Archivia
               </button>
             )}
-            {utenteEAmministratore && issueArchiviata && (
+            {isAdmin && isArchived && (
               <button 
-                onClick={gestisciDisarchiviazione} 
+                onClick={handleUnarchive} 
                 style={{ 
                   padding: "10px 20px", 
                   backgroundColor: "#10b981", 
@@ -375,9 +412,9 @@ function DettagliIssue() {
                 📤 Disarchivia
               </button>
             )}
-            {utenteEAmministratore && (
+            {isAdmin && (
               <button 
-                onClick={gestisciEliminazione} 
+                onClick={handleDelete} 
                 style={{ 
                   padding: "10px 20px", 
                   backgroundColor: "#dc2626", 
@@ -397,7 +434,7 @@ function DettagliIssue() {
 
         {/* Main Content */}
         <div style={{ padding: "24px 16px", maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
-          {messaggioErrore && (
+          {error && (
             <div style={{ 
               color: "#dc2626", 
               backgroundColor: "#fee2e2", 
@@ -407,11 +444,11 @@ function DettagliIssue() {
               fontSize: "14px", 
               border: "1px solid #fecaca" 
             }}>
-              ⚠️ {messaggioErrore}
+              ⚠️ {error}
             </div>
           )}
           
-          {messaggioSuccesso && (
+          {success && (
             <div style={{ 
               color: "#065f46", 
               backgroundColor: "#d1fae5", 
@@ -421,11 +458,45 @@ function DettagliIssue() {
               fontSize: "14px", 
               border: "1px solid #6ee7b7" 
             }}>
-              ✅ {messaggioSuccesso}
+              ✅ {success}
             </div>
           )}
 
-          {issueArchiviata && (
+          {uploadResults.length > 0 && (
+            <div style={{ 
+              backgroundColor: "#fef3c7", 
+              padding: "16px", 
+              borderRadius: "8px", 
+              marginBottom: "24px", 
+              border: "1px solid #fde68a" 
+            }}>
+              <div style={{ fontWeight: 600, color: "#92400e", marginBottom: "12px", fontSize: "14px" }}>
+                📎 Risultati Upload Allegati
+              </div>
+              {uploadResults.map((result, index) => (
+                <div 
+                  key={index} 
+                  style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "8px", 
+                    marginBottom: "6px", 
+                    fontSize: "13px" 
+                  }}
+                >
+                  <span>{result.success ? '✅' : '❌'}</span>
+                  <span style={{ color: "#92400e" }}>{result.fileName}</span>
+                  {result.error && (
+                    <span style={{ color: "#dc2626", fontSize: "12px" }}>
+                      ({result.error})
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isArchived && (
             <div style={{ 
               color: "#92400e", 
               backgroundColor: "#fef3c7", 
@@ -462,9 +533,40 @@ function DettagliIssue() {
                 }}>
                   Titolo *
                 </label>
-                <div style={{ fontSize: "24px", fontWeight: 600, color: "#1f2937" }}>
-                  {issueCorrente.titolo}
-                </div>
+                {editMode ? (
+                  <>
+                    <input
+                      type="text"
+                      name="titolo"
+                      value={formData.titolo}
+                      onChange={handleInputChange}
+                      maxLength={200}
+                      style={{ 
+                        width: "100%", 
+                        padding: "12px", 
+                        border: "1px solid #d1d5db", 
+                        borderRadius: "8px", 
+                        fontSize: "15px",
+                        fontFamily: "inherit",
+                        color: "#4b5563",
+                        boxSizing: "border-box",
+                        outline: "none"
+                      }}
+                    />
+                    <div style={{ 
+                      fontSize: "12px", 
+                      color: "#6b7280", 
+                      marginTop: "4px", 
+                      textAlign: "right" 
+                    }}>
+                      {formData.titolo.length}/200
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: "24px", fontWeight: 600, color: "#1f2937" }}>
+                    {issue.titolo}
+                  </div>
+                )}
               </div>
 
               {/* Descrizione */}
@@ -478,15 +580,167 @@ function DettagliIssue() {
                 }}>
                   Descrizione *
                 </label>
-                <div style={{ 
-                  fontSize: "15px", 
-                  color: "#4b5563", 
-                  lineHeight: 1.6, 
-                  whiteSpace: "pre-wrap" 
-                }}>
-                  {issueCorrente.descrizione}
-                </div>
+                {editMode ? (
+                  <>
+                    <textarea
+                      name="descrizione"
+                      value={formData.descrizione}
+                      onChange={handleInputChange}
+                      maxLength={5000}
+                      rows={8}
+                      style={{ 
+                        width: "100%", 
+                        padding: "12px", 
+                        border: "1px solid #d1d5db", 
+                        borderRadius: "8px", 
+                        fontSize: "15px",
+                        fontFamily: "inherit",
+                        color: "#4b5563",
+                        lineHeight: 1.6,
+                        resize: "vertical", 
+                        boxSizing: "border-box",
+                        outline: "none"
+                      }}
+                    />
+                    <div style={{ 
+                      fontSize: "12px", 
+                      color: "#6b7280", 
+                      marginTop: "4px", 
+                      textAlign: "right" 
+                    }}>
+                      {formData.descrizione.length}/5000
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ 
+                    fontSize: "15px", 
+                    color: "#4b5563", 
+                    lineHeight: 1.6, 
+                    whiteSpace: "pre-wrap" 
+                  }}>
+                    {issue.descrizione}
+                  </div>
+                )}
               </div>
+
+              {/* Allegati File - SOLO IN EDIT MODE */}
+              {editMode && (
+                <div style={{ marginBottom: "24px" }}>
+                  <label style={{ 
+                    display: "block", 
+                    fontSize: "14px", 
+                    fontWeight: 600, 
+                    color: "#374151", 
+                    marginBottom: "8px" 
+                  }}>
+                    Allega File (facoltativo)
+                  </label>
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.style.borderColor = "#0d9488";
+                      e.currentTarget.style.backgroundColor = "#f0fdfa";
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#d1d5db";
+                      e.currentTarget.style.backgroundColor = "#f9fafb";
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.style.borderColor = "#d1d5db";
+                      e.currentTarget.style.backgroundColor = "#f9fafb";
+                      if (e.dataTransfer.files) {
+                        const newFiles = Array.from(e.dataTransfer.files);
+                        setFiles((prev) => [...prev, ...newFiles]);
+                      }
+                    }}
+                    style={{
+                      border: "2px dashed #d1d5db",
+                      borderRadius: "8px",
+                      padding: "24px",
+                      textAlign: "center",
+                      backgroundColor: "#f9fafb",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="file"
+                      id="file-input"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          const newFiles = Array.from(e.target.files);
+                          setFiles((prev) => [...prev, ...newFiles]);
+                        }
+                      }}
+                      style={{ display: "none" }}
+                    />
+                    <label htmlFor="file-input" style={{ cursor: "pointer", display: "block" }}>
+                      <div style={{ fontSize: "24px", marginBottom: "8px" }}>⬆️</div>
+                      <div style={{ 
+                        fontSize: "14px", 
+                        fontWeight: 600, 
+                        color: "#1f2937", 
+                        marginBottom: "4px" 
+                      }}>
+                        Trascina file qui o clicca
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                        Formati supportati: JPEG, PNG, GIF, WebP - Max 5MB
+                      </div>
+                    </label>
+                  </div>
+                  {files && files.length > 0 && (
+                    <div style={{ marginTop: "16px" }}>
+                      <div style={{ 
+                        fontSize: "12px", 
+                        fontWeight: 600, 
+                        color: "#6b7280", 
+                        marginBottom: "8px" 
+                      }}>
+                        File selezionati:
+                      </div>
+                      {files.map((file: any, index: number) => (
+                        <div 
+                          key={index} 
+                          style={{ 
+                            display: "flex", 
+                            justifyContent: "space-between", 
+                            alignItems: "center", 
+                            padding: "8px 12px", 
+                            backgroundColor: "#f3f4f6", 
+                            borderRadius: "6px", 
+                            marginBottom: "6px", 
+                            fontSize: "12px" 
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, color: "#1f2937" }}>{file.name}</div>
+                            <div style={{ color: "#6b7280" }}>{(file.size / 1024).toFixed(2)} KB</div>
+                          </div>
+                          <button
+                            onClick={() =>
+                              setFiles((prev) => prev.filter((_, i) => i !== index))
+                            }
+                            style={{
+                              padding: "6px 10px",
+                              backgroundColor: "#fee2e2",
+                              border: "1px solid #fca5a5",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              color: "#dc2626",
+                              fontSize: "16px",
+                              lineHeight: "1",
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
             </div>
 
@@ -518,17 +772,66 @@ function DettagliIssue() {
                 }}>
                   Stato
                 </label>
-                <span style={{ 
-                  padding: "6px 12px", 
-                  backgroundColor: issueCorrente.stato === "Done" ? "#d1fae5" : issueCorrente.stato === "inProgress" ? "#fef3c7" : "#e5e7eb",
-                  color: issueCorrente.stato === "Done" ? "#065f46" : issueCorrente.stato === "inProgress" ? "#92400e" : "#374151",
-                  borderRadius: "6px", 
-                  fontSize: "14px", 
-                  fontWeight: 600, 
-                  display: "inline-block" 
-                }}>
-                  {ottieniEtichettaStato(issueCorrente.stato)}
-                </span>
+                {editMode && canChangeStato() ? (
+                  <select
+                    name="stato"
+                    value={formData.stato}
+                    onChange={(e) => {
+                      const nuovoStato = e.target.value;
+                      setShowConfirm({
+                        open: true,
+                        title: "Modifica Stato",
+                        message: `Sei sicuro di voler cambiare lo stato da "${getStatoLabel(formData.stato)}" a "${getStatoLabel(nuovoStato)}"?`,
+                        action: async () => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            stato: nuovoStato,
+                          }));
+                          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+                        },
+                      });
+                    }}
+                    style={{ 
+                      width: "100%", 
+                      padding: "8px 12px", 
+                      border: "1px solid #d1d5db", 
+                      borderRadius: "6px", 
+                      fontSize: "14px", 
+                      boxSizing: "border-box",
+                      backgroundColor: "white",
+                      cursor: "pointer"
+                    }}
+                  >
+                    {formData.stato === "Todo" && (
+                      <>
+                        <option value="Todo">To Do</option>
+                        <option value="inProgress">In Progress</option>
+                        <option value="Done">Done</option>
+                      </>
+                    )}
+                    {formData.stato === "inProgress" && (
+                      <>
+                        <option value="inProgress">In Progress</option>
+                        <option value="Done">Done</option>
+                      </>
+                    )}
+                    {formData.stato === "Done" && (
+                      <option value="Done">Done</option>
+                    )}
+                  </select>
+                ) : (
+                  <span style={{ 
+                    padding: "6px 12px", 
+                    backgroundColor: formData.stato === "Done" ? "#d1fae5" : formData.stato === "inProgress" ? "#fef3c7" : "#e5e7eb",
+                    color: formData.stato === "Done" ? "#065f46" : formData.stato === "inProgress" ? "#92400e" : "#374151",
+                    borderRadius: "6px", 
+                    fontSize: "14px", 
+                    fontWeight: 600, 
+                    display: "inline-block" 
+                  }}>
+                    {getStatoLabel(formData.stato)}
+                  </span>
+                )}
               </div>
 
               {/* Tipo */}
@@ -542,17 +845,38 @@ function DettagliIssue() {
                 }}>
                   Tipo
                 </label>
-                <span style={{ 
-                  padding: "6px 12px", 
-                  backgroundColor: "#dbeafe", 
-                  color: "#1e40af", 
-                  borderRadius: "6px", 
-                  fontSize: "14px", 
-                  fontWeight: 600, 
-                  display: "inline-block" 
-                }}>
-                  {issueCorrente.tipo}
-                </span>
+                {editMode ? (
+                  <select
+                    name="tipo"
+                    value={formData.tipo}
+                    onChange={handleInputChange}
+                    style={{ 
+                      width: "100%", 
+                      padding: "8px 12px", 
+                      border: "1px solid #d1d5db", 
+                      borderRadius: "6px", 
+                      fontSize: "14px", 
+                      boxSizing: "border-box" 
+                    }}
+                  >
+                    <option value="bug">Bug</option>
+                    <option value="features">Feature</option>
+                    <option value="question">Question</option>
+                    <option value="documentation">Documentation</option>
+                  </select>
+                ) : (
+                  <span style={{ 
+                    padding: "6px 12px", 
+                    backgroundColor: "#dbeafe", 
+                    color: "#1e40af", 
+                    borderRadius: "6px", 
+                    fontSize: "14px", 
+                    fontWeight: 600, 
+                    display: "inline-block" 
+                  }}>
+                    {formData.tipo}
+                  </span>
+                )}
               </div>
 
               {/* Priorità */}
@@ -566,18 +890,40 @@ function DettagliIssue() {
                 }}>
                   Priorità
                 </label>
-                <span style={{ 
-                  padding: "6px 12px", 
-                  backgroundColor: issueCorrente.priorita === "critical" ? "#fecaca" : issueCorrente.priorita === "high" ? "#fed7aa" : issueCorrente.priorita === "medium" ? "#fef3c7" : "#f3f4f6",
-                  color: issueCorrente.priorita === "critical" ? "#7f1d1d" : issueCorrente.priorita === "high" ? "#9a3412" : issueCorrente.priorita === "medium" ? "#92400e" : "#374151",
-                  borderRadius: "6px", 
-                  fontSize: "14px", 
-                  fontWeight: 600, 
-                  display: "inline-block", 
-                  textTransform: "capitalize" 
-                }}>
-                  {issueCorrente.priorita}
-                </span>
+                {editMode ? (
+                  <select
+                    name="priorita"
+                    value={formData.priorita}
+                    onChange={handleInputChange}
+                    style={{ 
+                      width: "100%", 
+                      padding: "8px 12px", 
+                      border: "1px solid #d1d5db", 
+                      borderRadius: "6px", 
+                      fontSize: "14px", 
+                      boxSizing: "border-box" 
+                    }}
+                  >
+                    <option value="none">None</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                ) : (
+                  <span style={{ 
+                    padding: "6px 12px", 
+                    backgroundColor: formData.priorita === "critical" ? "#fecaca" : formData.priorita === "high" ? "#fed7aa" : formData.priorita === "medium" ? "#fef3c7" : "#f3f4f6",
+                    color: formData.priorita === "critical" ? "#7f1d1d" : formData.priorita === "high" ? "#9a3412" : formData.priorita === "medium" ? "#92400e" : "#374151",
+                    borderRadius: "6px", 
+                    fontSize: "14px", 
+                    fontWeight: 600, 
+                    display: "inline-block", 
+                    textTransform: "capitalize" 
+                  }}>
+                    {formData.priorita}
+                  </span>
+                )}
               </div>
 
               <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
@@ -593,12 +939,12 @@ function DettagliIssue() {
                   ID Issue
                 </div>
                 <div style={{ fontSize: "14px", color: "#1f2937", fontFamily: "monospace" }}>
-                  #{issueCorrente.idIssue}
+                  #{issue.idIssue}
                 </div>
               </div>
 
               {/* Creatore */}
-              {issueCorrente.creatore && (
+              {issue.creatore && (
                 <div style={{ marginBottom: "16px" }}>
                   <div style={{ 
                     fontSize: "13px", 
@@ -609,10 +955,10 @@ function DettagliIssue() {
                     Creato da
                   </div>
                   <div style={{ fontSize: "14px", color: "#1f2937" }}>
-                    {issueCorrente.creatore.nome} {issueCorrente.creatore.cognome}
+                    {issue.creatore.nome} {issue.creatore.cognome}
                   </div>
                   <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                    {issueCorrente.creatore.email}
+                    {issue.creatore.email}
                   </div>
                 </div>
               )}
@@ -628,15 +974,15 @@ function DettagliIssue() {
                   Data Creazione
                 </div>
                 <div style={{ fontSize: "14px", color: "#1f2937" }}>
-                  {formattaData(issueCorrente.dataCreazione)}
+                  {formatDate(issue.dataCreazione)}
                 </div>
               </div>
 
               {/* Dati Archiviazione */}
-              {issueArchiviata && (
+              {isArchived && (
                 <>
                   <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
-                  {issueCorrente.dataArchiviazione && (
+                  {issue.dataArchiviazione && (
                     <div style={{ marginBottom: "16px" }}>
                       <div style={{ 
                         fontSize: "13px", 
@@ -647,11 +993,11 @@ function DettagliIssue() {
                         Data Archiviazione
                       </div>
                       <div style={{ fontSize: "14px", color: "#92400e" }}>
-                        {formattaData(issueCorrente.dataArchiviazione)}
+                        {formatDate(issue.dataArchiviazione)}
                       </div>
                     </div>
                   )}
-                  {issueCorrente.archiviatore && (
+                  {issue.archiviatore && (
                     <div style={{ marginBottom: "16px" }}>
                       <div style={{ 
                         fontSize: "13px", 
@@ -662,10 +1008,10 @@ function DettagliIssue() {
                         Archiviato da
                       </div>
                       <div style={{ fontSize: "14px", color: "#92400e" }}>
-                        {issueCorrente.archiviatore.nome} {issueCorrente.archiviatore.cognome}
+                        {issue.archiviatore.nome} {issue.archiviatore.cognome}
                       </div>
                       <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                        {issueCorrente.archiviatore.email}
+                        {issue.archiviatore.email}
                       </div>
                     </div>
                   )}
@@ -676,13 +1022,13 @@ function DettagliIssue() {
 
           {/* Sezione Allegati */}
           <div style={{ marginTop: "20px" }}>
-            <VisualizzatoreAllegati idIssue={Number(idParametro)} puoModificare={puoModificare} />
+            <AttachmentsViewer idIssue={Number(id)} canEdit={canEdit} />
           </div>
         </div>
       </div>
 
       {/* Modal di Conferma */}
-      {mostraConferma.aperto && (
+      {showConfirm.open && (
         <div style={{ 
           position: "fixed", 
           top: 0, 
@@ -704,14 +1050,14 @@ function DettagliIssue() {
             textAlign: "center" 
           }}>
             <h3 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", marginTop: 0 }}>
-              {mostraConferma.titolo}
+              {showConfirm.title}
             </h3>
             <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px", marginTop: "12px" }}>
-              {mostraConferma.messaggio}
+              {showConfirm.message}
             </p>
             <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
               <button 
-                onClick={gestisciConfermaAzione} 
+                onClick={handleConfirmAction} 
                 style={{ 
                   padding: "10px 24px", 
                   backgroundColor: "#10b981", 
@@ -727,7 +1073,13 @@ function DettagliIssue() {
               </button>
               <button 
                 onClick={() => {
-                  setMostraConferma({ aperto: false, titolo: "", messaggio: "", azione: async () => {} });
+                  if (issue) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      stato: issue.stato,
+                    }));
+                  }
+                  setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
                 }} 
                 style={{ 
                   padding: "10px 24px", 
