@@ -16,8 +16,6 @@ function RecuperaPassword() {
 
     try {
       await authService.recuperaPassword(email);
-      setMessage('Email di recupero inviata con successo! Controlla la tua casella di posta.');
-      setIsError(false);
       setEmailInviata(true);
     } catch (error: unknown) {
       console.error('Errore recupero password:', error);
@@ -182,8 +180,45 @@ function RecuperaPassword() {
               <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
               <p style={{ margin: '0 0 8px 0', fontWeight: '600' }}>Email inviata con successo!</p>
               <p style={{ margin: 0, fontSize: '13px' }}>
-                Controlla la tua casella di posta per la nuova password temporanea.
+                Controlla la tua casella di posta per la password temporanea.
               </p>
+            </div>
+
+            <div style={{
+              padding: '16px',
+              borderRadius: '8px',
+              fontSize: '14px',
+              backgroundColor: '#fef3c7',
+              color: '#92400e',
+              border: '1px solid #fde68a',
+              marginBottom: '24px'
+            }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px', textAlign: 'center' }}>🧪</div>
+              <strong style={{ display: 'block', marginBottom: '8px', textAlign: 'center' }}>
+                Ambiente di Test
+              </strong>
+              <p style={{ margin: '0 0 12px 0', fontSize: '13px', textAlign: 'center' }}>
+                Questa applicazione utilizza Mailtrap per l'invio delle email in modalità test.
+              </p>
+              <a
+                href="https://mailtrap.io/inboxes/3225695"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  padding: '10px 20px',
+                  backgroundColor: '#0d9488',
+                  color: 'white',
+                  textDecoration: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                📧 Visualizza email su Mailtrap →
+              </a>
             </div>
 
             <div style={{
@@ -197,21 +232,6 @@ function RecuperaPassword() {
             }}>
               <strong>💡 Suggerimento:</strong> Ti consigliamo di cambiare la password temporanea dopo il primo accesso.
             </div>
-
-            {process.env.NODE_ENV === 'development' && (
-              <div style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                backgroundColor: '#fef3c7',
-                color: '#92400e',
-                border: '1px solid #fde68a',
-                marginBottom: '24px'
-              }}>
-                <strong>🧪 Modalità Test:</strong> Le email sono catturate da MailHog.<br />
-                Visualizza l'email su: <a href="http://localhost:8025" target="_blank" rel="noopener noreferrer" style={{ color: '#92400e', textDecoration: 'underline' }}>http://localhost:8025</a>
-              </div>
-            )}
 
             <button
               type="button"
