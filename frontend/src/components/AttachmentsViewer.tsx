@@ -59,19 +59,6 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
     }
   };
 
-  const handleDelete = async (idAllegato: number) => {
-    if (!window.confirm('Sei sicuro di voler eliminare questo allegato?')) {
-      return;
-    }
-
-    try {
-      await allegatoService.deleteAllegato(idAllegato);
-      await loadAllegati();
-    } catch (err: any) {
-      console.error('Errore eliminazione:', err);
-      alert('Errore durante l\'eliminazione del file');
-    }
-  };
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -258,31 +245,6 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
               >
                 ⬇️ Scarica
               </button>
-
-              {canEdit && (
-                <button
-                  onClick={() => handleDelete(allegato.idAllegato)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#fee2e2',
-                    color: '#dc2626',
-                    border: '1px solid #fca5a5',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#fecaca';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#fee2e2';
-                  }}
-                >
-                  🗑️
-                </button>
-              )}
             </div>
           </div>
         ))}
