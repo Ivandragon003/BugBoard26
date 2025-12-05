@@ -25,7 +25,7 @@
     <jwt.version>0.12.5</jwt.version>
     
     <!-- SonarCloud Configuration -->
-    <sonar.organization>ivandragon003</sonar.organization>
+    <sonar.organization>Ivandragon003</sonar.organization>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <sonar.projectKey>Ivandragon003_BugBoard26</sonar.projectKey>
 </properties>
@@ -111,12 +111,6 @@
       <artifactId>jjwt-jackson</artifactId>
       <version>${jwt.version}</version>
       <scope>runtime</scope>
-    </dependency>
-
-    <!-- Spring Boot Mail -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-mail</artifactId>
     </dependency>
 
     <!-- Jackson JSON -->
