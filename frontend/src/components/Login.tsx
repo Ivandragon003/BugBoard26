@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { authService } from '../services/authService';
-import { Link } from 'react-router-dom';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -160,27 +159,6 @@ function Login() {
             </div>
           )}
         </form>
-
-        <div style={{
-          marginTop: '24px',
-          paddingTop: '24px',
-          borderTop: '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
-            Password dimenticata?{' '}
-            <Link 
-              to="/recupera-password" 
-              style={{ 
-                color: '#0d9488', 
-                textDecoration: 'none', 
-                fontWeight: '500'
-              }}
-            >
-              Recuperala
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );

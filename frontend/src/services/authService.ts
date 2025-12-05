@@ -20,18 +20,6 @@ export const authService = {
     }
   },
   
-  recuperaPassword: async (email: string) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/utenza/recupera-password`, {
-        email
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Errore recupero password:', error);
-      throw error;
-    }
-  },
-  
   logout: () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
