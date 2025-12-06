@@ -81,11 +81,7 @@ public class UtenzaController {
 		Utenza nuovaUtenza = new Utenza(nome, cognome, email, hashedPassword, ruolo, creatore);
 		Utenza utenzaSalvata = utenzaDAO.save(nuovaUtenza);
 
-		System.out.println("=== NUOVA UTENZA CREATA ===");
-		System.out.println("Email: " + email);
-		System.out.println("Password: " + password);
-		System.out.println("===========================");
-
+	
 		return Map.of("message", "Utenza creata con successo", "utenza",
 				Map.of("id", utenzaSalvata.getIdUtente(), "nome", utenzaSalvata.getNome(), "cognome",
 						utenzaSalvata.getCognome(), "email", utenzaSalvata.getEmail(), "ruolo",
