@@ -51,11 +51,7 @@ public class Issue {
 	@JoinColumn(name = "idarchiviatore")
 	private Utenza archiviatore;
 
-	@ManyToMany
-	@JoinTable(name = "assegnazione", joinColumns = @JoinColumn(name = "idissue"), inverseJoinColumns = @JoinColumn(name = "idutente"))
-	@JsonIgnore
-	private List<Utenza> utentiAssegnati = new ArrayList<>();
-
+	
 	@OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonIgnore
 	private List<Allegato> allegati = new ArrayList<>();
@@ -179,14 +175,7 @@ public class Issue {
 		this.archiviatore = archiviatore;
 	}
 
-	public List<Utenza> getUtentiAssegnati() {
-		return utentiAssegnati;
-	}
-
-	public void setUtentiAssegnati(List<Utenza> utentiAssegnati) {
-		this.utentiAssegnati = utentiAssegnati;
-	}
-
+	
 	public List<Allegato> getAllegati() {
 		return allegati;
 	}

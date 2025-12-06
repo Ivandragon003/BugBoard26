@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/issue")
+@Transactional(readOnly = true)
 public class IssueController {
 
 	@Autowired
@@ -23,6 +24,7 @@ public class IssueController {
 	private UtenzaDAO utenzaDAO;
 
 	@PostMapping("/crea")
+	@Transactional
 	public Issue creaIssue(@RequestBody Map<String, Object> payload) {
 		String titolo = (String) payload.get("titolo");
 		String descrizione = (String) payload.get("descrizione");
@@ -51,10 +53,12 @@ public class IssueController {
 	}
 
 	@GetMapping("/filtra-avanzato")
-	public List<Issue> filtraAvanzato(@RequestParam(required = false) String stato,
-			@RequestParam(required = false) String priorita, @RequestParam(required = false) String tipo,
-			@RequestParam(required = false) String ricerca, @RequestParam(required = false) String ordinamento,
-			@RequestParam(required = false, defaultValue = "false") Boolean archiviata) {
+	public List<Issue> filtraAvanzato(@RequestParam(value = "stato", required = false) String stato,
+			@RequestParam(value = "priorita", required = false) String priorita,
+			@RequestParam(value = "tipo", required = false) String tipo,
+			@RequestParam(value = "ricerca", required = false) String ricerca,
+			@RequestParam(value = "ordinamento", required = false) String ordinamento,
+			@RequestParam(value = "archiviata", required = false, defaultValue = "false") Boolean archiviata) {
 
 		List<Issue> issues = archiviata ? issueDAO.findByArchiviata(true) : issueDAO.findByArchiviataFalse();
 
@@ -122,8 +126,9 @@ public class IssueController {
 	}
 
 	@GetMapping("/filtra")
-	public List<Issue> filtraIssue(@RequestParam(required = false) String stato,
-			@RequestParam(required = false) String priorita, @RequestParam(required = false) String tipo) {
+	public List<Issue> filtraIssue(@RequestParam(value = "stato", required = false) String stato,
+			@RequestParam(value = "priorita", required = false) String priorita,
+			@RequestParam(value = "tipo", required = false) String tipo) {
 
 		if (stato != null && priorita != null)
 			return issueDAO.findByStatoAndPriorita(parseStato(stato), parsePriorita(priorita));
@@ -141,7 +146,9 @@ public class IssueController {
 	}
 
 	@DeleteMapping("/archivia/{id}")
-	public Map<String, String> archiviaIssue(@PathVariable Integer id, @RequestParam Integer idArchiviatore) {
+	@Transactional
+	public Map<String, String> archiviaIssue(@PathVariable(value = "id") Integer id, 
+			@RequestParam(value = "idArchiviatore") Integer idArchiviatore) {
 		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		if (issue.getArchiviata())
@@ -160,7 +167,8 @@ public class IssueController {
 	}
 
 	@PutMapping("/disarchivia/{id}")
-	public Map<String, String> disarchiviaIssue(@PathVariable Integer id) {
+	@Transactional
+	public Map<String, String> disarchiviaIssue(@PathVariable(value = "id") Integer id) {
 		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		if (!issue.getArchiviata())
@@ -175,13 +183,13 @@ public class IssueController {
 	}
 
 	@GetMapping("/visualizza/{id}")
-	public Issue visualizzaIssue(@PathVariable Integer id) {
+	public Issue visualizzaIssue(@PathVariable(value = "id") Integer id) {
 		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 	}
 
 	@DeleteMapping("/elimina/{id}")
 	@Transactional
-	public Map<String, String> eliminaIssue(@PathVariable Integer id) {
+	public Map<String, String> eliminaIssue(@PathVariable(value = "id") Integer id) {
 		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		issueDAO.delete(issue);
@@ -190,7 +198,7 @@ public class IssueController {
 	}
 
 	@GetMapping("/visualizza-lista")
-	public List<Issue> visualizzaListaIssue(@RequestParam(required = false) Boolean archiviata) {
+	public List<Issue> visualizzaListaIssue(@RequestParam(value = "archiviata", required = false) Boolean archiviata) {
 		return archiviata != null ? issueDAO.findByArchiviata(archiviata) : issueDAO.findAll();
 	}
 
@@ -200,7 +208,7 @@ public class IssueController {
 	}
 
 	@GetMapping("/cerca")
-	public List<Issue> cercaIssue(@RequestParam String titolo) {
+	public List<Issue> cercaIssue(@RequestParam(value = "titolo") String titolo) {
 		return issueDAO.findByTitoloContainingIgnoreCase(titolo);
 	}
 

@@ -46,17 +46,10 @@ public interface UtenzaDAO extends JpaRepository<Utenza, Integer> {
 
 	boolean existsByIdUtente(Integer idUtente);
 
-	@Query("SELECT DISTINCT u FROM Utenza u JOIN Issue i ON u MEMBER OF i.utentiAssegnati")
-	List<Utenza> findUtentiConIssueAssegnate();
-
-	@Query("SELECT u FROM Utenza u JOIN Issue i ON u MEMBER OF i.utentiAssegnati WHERE i.idIssue = :idIssue")
-	List<Utenza> findUtentiAssegnatiAIssue(@Param("idIssue") Integer idIssue);
+	// 🔥 RIMOSSE query che usavano utentiAssegnati
 
 	@Query("SELECT COUNT(i) FROM Issue i WHERE i.creatore.idUtente = :idUtente")
 	Long countIssueCreatedByUtente(@Param("idUtente") Integer idUtente);
-
-	@Query("SELECT COUNT(i) FROM Issue i JOIN i.utentiAssegnati u WHERE u.idUtente = :idUtente")
-	Long countIssueAssegnateAUtente(@Param("idUtente") Integer idUtente);
 
 	@Query("SELECT u FROM Utenza u WHERE u.ruolo = :ruolo AND u.idUtente != :idUtente")
 	List<Utenza> findByRuoloExcludingUtente(@Param("ruolo") Ruolo ruolo, @Param("idUtente") Integer idUtente);

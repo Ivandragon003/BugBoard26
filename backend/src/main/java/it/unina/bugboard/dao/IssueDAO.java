@@ -13,7 +13,6 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-
 @Repository
 public interface IssueDAO extends JpaRepository<Issue, Integer> {
 
@@ -41,11 +40,7 @@ public interface IssueDAO extends JpaRepository<Issue, Integer> {
 
 	List<Issue> findByDataCreazioneBetween(LocalDateTime dataInizio, LocalDateTime dataFine);
 
-	@Query("SELECT i FROM Issue i JOIN i.utentiAssegnati u WHERE u.idUtente = :idUtente")
-	List<Issue> findByUtentiAssegnatiContaining(@Param("idUtente") Integer idUtente);
-
-	@Query("SELECT i FROM Issue i JOIN i.utentiAssegnati u WHERE u.idUtente = :idUtente AND i.stato = :stato")
-	List<Issue> findByUtentiAssegnatiAndStato(@Param("idUtente") Integer idUtente, @Param("stato") Stato stato);
+	// 🔥 RIMOSSE query con utentiAssegnati
 
 	List<Issue> findByPrioritaAndArchiviataFalseOrderByDataCreazioneDesc(Priorita priorita);
 
@@ -59,8 +54,6 @@ public interface IssueDAO extends JpaRepository<Issue, Integer> {
 
 	@Query("SELECT i FROM Issue i WHERE i.priorita IN :priorita AND i.archiviata = false")
 	List<Issue> findIssueUrgenti(@Param("priorita") List<Priorita> priorita);
-
-
 
 	List<Issue> findByStatoAndTipo(Stato stato, Tipo tipo);
 

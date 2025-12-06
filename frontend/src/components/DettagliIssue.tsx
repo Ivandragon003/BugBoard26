@@ -67,7 +67,8 @@ function DettagliIssue() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [files, setFiles] = useState<File[]>([]);
-const [uploadResults] = useState<Array<{fileName: string, success: boolean, error?: string}>>([]);  const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
+  const [uploadResults] = useState<Array<{fileName: string, success: boolean, error?: string}>>([]);
+  const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
     open: false,
     title: "",
     message: "",
@@ -92,21 +93,17 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
   };
 
   useEffect(() => {
-    console.log("=== VERIFICA AUTENTICAZIONE ===");
     try {
       const token = authService.getToken();
       const currentUser = authService.getUser();
-      console.log("Token presente:", !!token);
-      console.log("User presente:", !!currentUser);
+      
       if (!token || !currentUser) {
-        console.error("❌ Non autenticato");
         navigate("/login");
         return;
       }
 
       const userId = currentUser.id || currentUser.idUtente;
       if (!userId) {
-        console.error("❌ User senza ID");
         navigate("/login");
         return;
       }
@@ -115,11 +112,11 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
         ...currentUser,
         id: userId,
       };
-      console.log("✅ Autenticazione OK - User ID:", userId);
+      
       setUser(normalizedUser);
       setIsCheckingAuth(false);
     } catch (err) {
-      console.error("❌ Errore autenticazione:", err);
+      console.error("Errore autenticazione:", err);
       navigate("/login");
     }
   }, [navigate]);
@@ -127,9 +124,7 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
   const loadIssue = useCallback(async () => {
     try {
       setLoading(true);
-      console.log("📥 Caricamento issue:", id);
       const data = await issueService.getIssueById(Number(id));
-      console.log("✅ Issue caricata:", data);
       setIssue(data);
       setFormData({
         titolo: data.titolo,
@@ -140,7 +135,7 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
       });
       setError("");
     } catch (err: any) {
-      console.error("❌ Errore caricamento:", err);
+      console.error("Errore caricamento:", err);
       let errorMessage = "Errore nel caricamento dell'issue";
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
@@ -182,15 +177,13 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
       action: async () => {
         if (!user) return;
         try {
-          console.log("📦 Archiviazione:", id);
           await issueService.archiveIssue(Number(id), user.id || user.idUtente || 0);
-          console.log("✅ Issue archiviata");
           setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
           setSuccess("Issue archiviata con successo!");
           await loadIssue();
           setTimeout(() => setSuccess(""), 3000);
         } catch (err: any) {
-          console.error("❌ Errore archiviazione:", err);
+          console.error("Errore archiviazione:", err);
           let errorMessage = "Errore nell'archiviazione dell'issue";
           if (err.response?.data?.message) {
             errorMessage = err.response.data.message;
@@ -212,15 +205,13 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
       message: "Sei sicuro di voler disarchiviare questa issue?",
       action: async () => {
         try {
-          console.log("📤 Disarchiviazione:", id);
           await issueService.unarchiveIssue(Number(id));
-          console.log("✅ Issue disarchiviata");
           setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
           setSuccess("Issue disarchiviata con successo!");
           await loadIssue();
           setTimeout(() => setSuccess(""), 3000);
         } catch (err: any) {
-          console.error("❌ Errore disarchiviazione:", err);
+          console.error("Errore disarchiviazione:", err);
           let errorMessage = "Errore nella disarchiviazione";
           if (err.response?.data?.message) {
             errorMessage = err.response.data.message;
@@ -239,13 +230,11 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
       message: "Sei sicuro di voler eliminare questa issue? Questa azione non può essere annullata.",
       action: async () => {
         try {
-          console.log("🗑️ Eliminazione:", id);
           await issueService.deleteIssue(Number(id));
-          console.log("✅ Issue eliminata");
           const backPath = getBackPath();
           navigate(backPath);
         } catch (err: any) {
-          console.error("❌ Errore eliminazione:", err);
+          console.error("Errore eliminazione:", err);
           let errorMessage = "Errore nell'eliminazione";
           if (err.response?.data?.message) {
             errorMessage = err.response.data.message;
@@ -330,12 +319,10 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
   const backPath = getBackPath();
   const backLabel = backPath === "/issues/archiviate" ? "← Torna alle Archiviate" : "← Torna alla lista";
 
-
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
         <header style={{ 
           backgroundColor: "white", 
           borderBottom: "1px solid #e5e7eb", 
@@ -422,7 +409,6 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
           </div>
         </header>
 
-        {/* Main Content */}
         <div style={{ padding: "24px 16px", maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
           {error && (
             <div style={{ 
@@ -505,14 +491,12 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
             gridTemplateColumns: window.innerWidth > 1024 ? "minmax(0, 2fr) minmax(280px, 1fr)" : "1fr",
             gap: "20px" 
           }}>
-            {/* Colonna Sinistra */}
             <div style={{ 
               backgroundColor: "white", 
               borderRadius: "12px", 
               padding: "24px", 
               boxShadow: "0 1px 3px rgba(0,0,0,0.1)" 
             }}>
-              {/* Titolo */}
               <div style={{ marginBottom: "24px" }}>
                 <label style={{ 
                   display: "block", 
@@ -559,7 +543,6 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
                 )}
               </div>
 
-              {/* Descrizione */}
               <div style={{ marginBottom: "24px" }}>
                 <label style={{ 
                   display: "block", 
@@ -613,7 +596,6 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
                 )}
               </div>
 
-              {/* Allegati File - SOLO IN EDIT MODE */}
               {editMode && (
                 <div style={{ marginBottom: "24px" }}>
                   <label style={{ 
@@ -731,10 +713,8 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
                   )}
                 </div>
               )}
-
             </div>
 
-            {/* Colonna Destra */}
             <div style={{ 
               backgroundColor: "white", 
               borderRadius: "12px", 
@@ -751,7 +731,6 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
                 Informazioni
               </h3>
 
-              {/* Stato */}
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ 
                   display: "block", 
@@ -824,7 +803,6 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
                 )}
               </div>
 
-              {/* Tipo */}
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ 
                   display: "block", 
@@ -869,7 +847,6 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
                 )}
               </div>
 
-              {/* Priorità */}
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ 
                   display: "block", 
@@ -893,48 +870,81 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
                       fontSize: "14px", 
                       boxSizing: "border-box" 
                     }}
-                  >
-                    <option value="none">None</option>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
-                  </select>
-                ) : (
-                  <span style={{ 
-                    padding: "6px 12px", 
-                    backgroundColor: formData.priorita === "critical" ? "#fecaca" : formData.priorita === "high" ? "#fed7aa" : formData.priorita === "medium" ? "#fef3c7" : "#f3f4f6",
-                    color: formData.priorita === "critical" ? "#7f1d1d" : formData.priorita === "high" ? "#9a3412" : formData.priorita === "medium" ? "#92400e" : "#374151",
-                    borderRadius: "6px", 
-                    fontSize: "14px", 
-                    fontWeight: 600, 
-                    display: "inline-block", 
-                    textTransform: "capitalize" 
-                  }}>
-                    {formData.priorita}
-                  </span>
-                )}
-              </div>
+                  ><option value="none">None</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            ) : (
+              <span style={{ 
+                padding: "6px 12px", 
+                backgroundColor: formData.priorita === "critical" ? "#fecaca" : formData.priorita === "high" ? "#fed7aa" : formData.priorita === "medium" ? "#fef3c7" : "#f3f4f6",
+                color: formData.priorita === "critical" ? "#7f1d1d" : formData.priorita === "high" ? "#9a3412" : formData.priorita === "medium" ? "#92400e" : "#374151",
+                borderRadius: "6px", 
+                fontSize: "14px", 
+                fontWeight: 600, 
+                display: "inline-block", 
+                textTransform: "capitalize" 
+              }}>
+                {formData.priorita}
+              </span>
+            )}
+          </div>
 
+          <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
+
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ 
+              fontSize: "13px", 
+              fontWeight: 600, 
+              color: "#6b7280", 
+              marginBottom: "4px" 
+            }}>
+              ID Issue
+            </div>
+            <div style={{ fontSize: "14px", color: "#1f2937", fontFamily: "monospace" }}>
+              #{issue.idIssue}
+            </div>
+          </div>
+
+          {issue.creatore && (
+            <div style={{ marginBottom: "16px" }}>
+              <div style={{ 
+                fontSize: "13px", 
+                fontWeight: 600, 
+                color: "#6b7280", 
+                marginBottom: "4px" 
+              }}>
+                Creato da
+              </div>
+              <div style={{ fontSize: "14px", color: "#1f2937" }}>
+                {issue.creatore.nome} {issue.creatore.cognome}
+              </div>
+              <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                {issue.creatore.email}
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ 
+              fontSize: "13px", 
+              fontWeight: 600, 
+              color: "#6b7280", 
+              marginBottom: "4px" 
+            }}>
+              Data Creazione
+            </div>
+            <div style={{ fontSize: "14px", color: "#1f2937" }}>
+              {formatDate(issue.dataCreazione)}
+            </div>
+          </div>
+
+          {isArchived && (
+            <>
               <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
-
-              {/* ID Issue */}
-              <div style={{ marginBottom: "16px" }}>
-                <div style={{ 
-                  fontSize: "13px", 
-                  fontWeight: 600, 
-                  color: "#6b7280", 
-                  marginBottom: "4px" 
-                }}>
-                  ID Issue
-                </div>
-                <div style={{ fontSize: "14px", color: "#1f2937", fontFamily: "monospace" }}>
-                  #{issue.idIssue}
-                </div>
-              </div>
-
-              {/* Creatore */}
-              {issue.creatore && (
+              {issue.dataArchiviazione && (
                 <div style={{ marginBottom: "16px" }}>
                   <div style={{ 
                     fontSize: "13px", 
@@ -942,154 +952,113 @@ const [uploadResults] = useState<Array<{fileName: string, success: boolean, erro
                     color: "#6b7280", 
                     marginBottom: "4px" 
                   }}>
-                    Creato da
+                    Data Archiviazione
                   </div>
-                  <div style={{ fontSize: "14px", color: "#1f2937" }}>
-                    {issue.creatore.nome} {issue.creatore.cognome}
+                  <div style={{ fontSize: "14px", color: "#92400e" }}>
+                    {formatDate(issue.dataArchiviazione)}
+                  </div>
+                </div>
+              )}
+              {issue.archiviatore && (
+                <div style={{ marginBottom: "16px" }}>
+                  <div style={{ 
+                    fontSize: "13px", 
+                    fontWeight: 600, 
+                    color: "#6b7280", 
+                    marginBottom: "4px" 
+                  }}>
+                    Archiviato da
+                  </div>
+                  <div style={{ fontSize: "14px", color: "#92400e" }}>
+                    {issue.archiviatore.nome} {issue.archiviatore.cognome}
                   </div>
                   <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                    {issue.creatore.email}
+                    {issue.archiviatore.email}
                   </div>
                 </div>
               )}
-
-              {/* Data Creazione */}
-              <div style={{ marginBottom: "16px" }}>
-                <div style={{ 
-                  fontSize: "13px", 
-                  fontWeight: 600, 
-                  color: "#6b7280", 
-                  marginBottom: "4px" 
-                }}>
-                  Data Creazione
-                </div>
-                <div style={{ fontSize: "14px", color: "#1f2937" }}>
-                  {formatDate(issue.dataCreazione)}
-                </div>
-              </div>
-
-              {/* Dati Archiviazione */}
-              {isArchived && (
-                <>
-                  <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
-                  {issue.dataArchiviazione && (
-                    <div style={{ marginBottom: "16px" }}>
-                      <div style={{ 
-                        fontSize: "13px", 
-                        fontWeight: 600, 
-                        color: "#6b7280", 
-                        marginBottom: "4px" 
-                      }}>
-                        Data Archiviazione
-                      </div>
-                      <div style={{ fontSize: "14px", color: "#92400e" }}>
-                        {formatDate(issue.dataArchiviazione)}
-                      </div>
-                    </div>
-                  )}
-                  {issue.archiviatore && (
-                    <div style={{ marginBottom: "16px" }}>
-                      <div style={{ 
-                        fontSize: "13px", 
-                        fontWeight: 600, 
-                        color: "#6b7280", 
-                        marginBottom: "4px" 
-                      }}>
-                        Archiviato da
-                      </div>
-                      <div style={{ fontSize: "14px", color: "#92400e" }}>
-                        {issue.archiviatore.nome} {issue.archiviatore.cognome}
-                      </div>
-                      <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                        {issue.archiviatore.email}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Sezione Allegati */}
-          <div style={{ marginTop: "20px" }}>
-            <AttachmentsViewer idIssue={Number(id)} canEdit={canEdit} />
-          </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Modal di Conferma */}
-      {showConfirm.open && (
-        <div style={{ 
-          position: "fixed", 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          backgroundColor: "rgba(0, 0, 0, 0.5)", 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center", 
-          zIndex: 1000 
-        }}>
-          <div style={{ 
-            backgroundColor: "white", 
-            borderRadius: "12px", 
-            padding: "32px", 
-            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)", 
-            maxWidth: "400px", 
-            textAlign: "center" 
-          }}>
-            <h3 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", marginTop: 0 }}>
-              {showConfirm.title}
-            </h3>
-            <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px", marginTop: "12px" }}>
-              {showConfirm.message}
-            </p>
-            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-              <button 
-                onClick={handleConfirmAction} 
-                style={{ 
-                  padding: "10px 24px", 
-                  backgroundColor: "#10b981", 
-                  color: "white", 
-                  border: "none", 
-                  borderRadius: "8px", 
-                  fontSize: "14px", 
-                  fontWeight: 600, 
-                  cursor: "pointer" 
-                }}
-              >
-                Conferma
-              </button>
-              <button 
-                onClick={() => {
-                  if (issue) {
-                    setFormData((prev) => ({
-                      ...prev,
-                      stato: issue.stato,
-                    }));
-                  }
-                  setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
-                }} 
-                style={{ 
-                  padding: "10px 24px", 
-                  backgroundColor: "#dc2626", 
-                  color: "white", 
-                  border: "none", 
-                  borderRadius: "8px", 
-                  fontSize: "14px", 
-                  fontWeight: 600, 
-                  cursor: "pointer" 
-                }}
-              >
-                Annulla
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <div style={{ marginTop: "20px" }}>
+        <AttachmentsViewer idIssue={Number(id)} canEdit={canEdit} />
+      </div>
     </div>
-  );
-}
+  </div>
 
+  {showConfirm.open && (
+    <div style={{ 
+      position: "fixed", 
+      top: 0, 
+      left: 0, 
+      right: 0, 
+      bottom: 0, 
+      backgroundColor: "rgba(0, 0, 0, 0.5)", 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center", 
+      zIndex: 1000 
+    }}>
+      <div style={{ 
+        backgroundColor: "white", 
+        borderRadius: "12px", 
+        padding: "32px", 
+        boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)", 
+        maxWidth: "400px", 
+        textAlign: "center" 
+      }}>
+        <h3 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", marginTop: 0 }}>
+          {showConfirm.title}
+        </h3>
+        <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px", marginTop: "12px" }}>
+          {showConfirm.message}
+        </p>
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+          <button 
+            onClick={handleConfirmAction} 
+            style={{ 
+              padding: "10px 24px", 
+              backgroundColor: "#10b981", 
+              color: "white", 
+              border: "none", 
+              borderRadius: "8px", 
+              fontSize: "14px", 
+              fontWeight: 600, 
+              cursor: "pointer" 
+            }}
+          >
+            Conferma
+          </button>
+          <button 
+            onClick={() => {
+              if (issue) {
+                setFormData((prev) => ({
+                  ...prev,
+                  stato: issue.stato,
+                }));
+              }
+              setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+            }} 
+            style={{ 
+              padding: "10px 24px", 
+              backgroundColor: "#dc2626", 
+              color: "white", 
+              border: "none", 
+              borderRadius: "8px", 
+              fontSize: "14px", 
+              fontWeight: 600, 
+              cursor: "pointer" 
+            }}
+          >
+            Annulla
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+</div> 
+);
+}
 export default DettagliIssue;

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; 
 import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import { allegatoService } from "../services/allegatoService";
+import { authService } from "../services/authService"; 
 import Sidebar from "./Sidebar";
 
 
@@ -18,41 +19,55 @@ function CreaIssue() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const token = authService.getToken();
+    const user = authService.getUser();
+    
+    if (!token || !user) {
+      navigate("/login");
+      return;
+    }
+  }, [navigate]);
 
 
 
-
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
     setLoading(true);
 
     try {
-    const dataToSend = {
-      titolo,
-      descrizione,
-      stato,
-      tipo,
-      priorita,
-      idCreatore: 1  
-    };
-
-      console.log("📤 Creazione issue:", dataToSend);
-      const nuovaIssue = await issueService.createIssue(dataToSend);
-      console.log("✅ Issue creata:", nuovaIssue);
-
-      if (files.length > 0) {
-        console.log(`📎 Upload di ${files.length} allegati...`);
-        for (const file of files) {
-          try {
-            await allegatoService.uploadAllegato(file, nuovaIssue.idIssue);
-            console.log(`✅ Allegato caricato: ${file.name}`);
-          } catch (uploadErr) {
-            console.error(`❌ Errore upload ${file.name}:`, uploadErr);
-          }
-        }
+      // ✅ PRENDI L'ID DALL'UTENTE LOGGATO
+      const currentUser = authService.getUser();
+      if (!currentUser) {
+        setError("Devi essere autenticato per creare un'issue");
+        setLoading(false);
+        return;
       }
+
+      const userId = currentUser.id || currentUser.idUtente;
+      
+      const dataToSend = {
+        titolo,
+        descrizione,
+        stato,
+        tipo,
+        priorita,
+        idCreatore: userId  
+      };
+
+const nuovaIssue = await issueService.createIssue(dataToSend);
+
+if (files.length > 0) {
+  for (const file of files) {
+    try {
+      await allegatoService.uploadAllegato(file, nuovaIssue.idIssue);
+    } catch (uploadErr) {
+      console.error(`Errore upload ${file.name}:`, uploadErr);
+    }
+  }
+}
 
       setSuccess("Issue creata con successo!");
       setTimeout(() => {

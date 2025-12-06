@@ -17,106 +17,99 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/allegato")
+@Transactional(readOnly = true)
 public class AllegatoController {
 
-    @Autowired
-    private AllegatoDAO allegatoDAO;
+	@Autowired
+	private AllegatoDAO allegatoDAO;
 
-    @Autowired
-    private IssueDAO issueDAO;
+	@Autowired
+	private IssueDAO issueDAO;
 
-    @Autowired
-    private ImmagineUtil immagineUtil;
+	@Autowired
+	private ImmagineUtil immagineUtil;
 
-    @PostMapping("/upload")
-    @Transactional
-    public Allegato uploadAllegato(@RequestParam("file") MultipartFile file, @RequestParam("idIssue") Integer idIssue) {
-        Issue issue = issueDAO.findById(idIssue)
-            .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
+	@PostMapping("/upload")
+	@Transactional
+	public Allegato uploadAllegato(@RequestParam(value = "file") MultipartFile file,
+			@RequestParam(value = "idIssue") Integer idIssue) {
+		Issue issue = issueDAO.findById(idIssue)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
 
-        if (file == null || file.isEmpty()) {
-            throw new InvalidInputException("File mancante o vuoto");
-        }
+		if (file == null || file.isEmpty()) {
+			throw new InvalidInputException("File mancante o vuoto");
+		}
 
-        String percorso = immagineUtil.uploadImmagine(file);
+		String percorso = immagineUtil.uploadImmagine(file);
 
-        Allegato allegato = new Allegato(
-            percorso, 
-            file.getOriginalFilename(), 
-            file.getContentType(),
-            (int) file.getSize(), 
-            issue
-        );
+		Allegato allegato = new Allegato(percorso, file.getOriginalFilename(), file.getContentType(),
+				(int) file.getSize(), issue);
 
-        return allegatoDAO.save(allegato);
-    }
+		return allegatoDAO.save(allegato);
+	}
 
-    @GetMapping("/download/{id}")
-    public ResponseEntity<ByteArrayResource> downloadAllegato(@PathVariable Integer id) {
-        Allegato allegato = allegatoDAO.findById(id)
-            .orElseThrow(() -> new NotFoundException("Allegato non trovato con id: " + id));
+	@GetMapping("/download/{id}")
+	public ResponseEntity<ByteArrayResource> downloadAllegato(@PathVariable(value = "id") Integer id) {
+		Allegato allegato = allegatoDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Allegato non trovato con id: " + id));
 
-        byte[] data = immagineUtil.getImageBytes(allegato.getPercorso());
-        ByteArrayResource resource = new ByteArrayResource(data);
+		byte[] data = immagineUtil.getImageBytes(allegato.getPercorso());
+		ByteArrayResource resource = new ByteArrayResource(data);
 
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + allegato.getNomeFile() + "\"")
-            .contentType(MediaType.parseMediaType(immagineUtil.getContentType(allegato.getPercorso())))
-            .contentLength(data.length)
-            .body(resource);
-    }
+		return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + allegato.getNomeFile() + "\"")
+				.contentType(MediaType.parseMediaType(immagineUtil.getContentType(allegato.getPercorso())))
+				.contentLength(data.length).body(resource);
+	}
 
-    @GetMapping("/issue/{idIssue}")
-    public List<Allegato> getAllegatiByIssue(@PathVariable Integer idIssue) {
-        if (!issueDAO.existsById(idIssue)) {
-            throw new NotFoundException("Issue non trovata con id: " + idIssue);
-        }
+	@GetMapping("/issue/{idIssue}")
+	public List<Allegato> getAllegatiByIssue(@PathVariable(value = "idIssue") Integer idIssue) {
+		if (!issueDAO.existsById(idIssue)) {
+			throw new NotFoundException("Issue non trovata con id: " + idIssue);
+		}
 
-        return allegatoDAO.findByIssueIdIssue(idIssue);
-    }
+		return allegatoDAO.findByIssueIdIssue(idIssue);
+	}
 
-    @GetMapping("/issue/{idIssue}/ordinati-dimensione")
-    public List<Allegato> getAllegatiOrderByDimensione(@PathVariable Integer idIssue) {
-        if (!issueDAO.existsById(idIssue)) {
-            throw new NotFoundException("Issue non trovata con id: " + idIssue);
-        }
-        return allegatoDAO.findAllegatiByIssueOrderByDimensioneDesc(idIssue);
-    }
+	@GetMapping("/issue/{idIssue}/ordinati-dimensione")
+	public List<Allegato> getAllegatiOrderByDimensione(@PathVariable(value = "idIssue") Integer idIssue) {
+		if (!issueDAO.existsById(idIssue)) {
+			throw new NotFoundException("Issue non trovata con id: " + idIssue);
+		}
+		return allegatoDAO.findAllegatiByIssueOrderByDimensioneDesc(idIssue);
+	}
 
-    @GetMapping("/issue/{idIssue}/dimensione-totale")
-    public Map<String, Object> getDimensioneTotale(@PathVariable Integer idIssue) {
-        if (!issueDAO.existsById(idIssue)) {
-            throw new NotFoundException("Issue non trovata con id: " + idIssue);
-        }
-        Long totale = Optional.ofNullable(allegatoDAO.sumDimensioniByIssue(idIssue)).orElse(0L);
+	@GetMapping("/issue/{idIssue}/dimensione-totale")
+	public Map<String, Object> getDimensioneTotale(@PathVariable(value = "idIssue") Integer idIssue) {
+		if (!issueDAO.existsById(idIssue)) {
+			throw new NotFoundException("Issue non trovata con id: " + idIssue);
+		}
+		Long totale = Optional.ofNullable(allegatoDAO.sumDimensioniByIssue(idIssue)).orElse(0L);
 
-        return Map.of(
-            "idIssue", idIssue, 
-            "dimensioneTotaleBytes", totale, 
-            "dimensioneTotaleMB", totale / (1024.0 * 1024.0)
-        );
-    }
+		return Map.of("idIssue", idIssue, "dimensioneTotaleBytes", totale, "dimensioneTotaleMB",
+				totale / (1024.0 * 1024.0));
+	}
 
-    @GetMapping("/issue/{idIssue}/count")
-    public Map<String, Object> countAllegati(@PathVariable Integer idIssue) {
-        if (!issueDAO.existsById(idIssue)) {
-            throw new NotFoundException("Issue non trovata con id: " + idIssue);
-        }
+	@GetMapping("/issue/{idIssue}/count")
+	public Map<String, Object> countAllegati(@PathVariable(value = "idIssue") Integer idIssue) {
+		if (!issueDAO.existsById(idIssue)) {
+			throw new NotFoundException("Issue non trovata con id: " + idIssue);
+		}
 
-        long count = allegatoDAO.countByIssueIdIssue(idIssue);
+		long count = allegatoDAO.countByIssueIdIssue(idIssue);
 
-        return Map.of("idIssue", idIssue, "numeroAllegati", count);
-    }
+		return Map.of("idIssue", idIssue, "numeroAllegati", count);
+	}
 
-    @DeleteMapping("/{id}")
-    @Transactional
-    public Map<String, String> eliminaAllegato(@PathVariable Integer id) {
-        Allegato allegato = allegatoDAO.findById(id)
-            .orElseThrow(() -> new NotFoundException("Allegato non trovato con id: " + id));
+	@DeleteMapping("/{id}")
+	@Transactional
+	public Map<String, String> eliminaAllegato(@PathVariable(value = "id") Integer id) {
+		Allegato allegato = allegatoDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Allegato non trovato con id: " + id));
 
-        immagineUtil.deleteImmagine(allegato.getPercorso());
-        allegatoDAO.delete(allegato);
+		immagineUtil.deleteImmagine(allegato.getPercorso());
+		allegatoDAO.delete(allegato);
 
-        return Map.of("message", "Allegato eliminato con successo");
-    }
+		return Map.of("message", "Allegato eliminato con successo");
+	}
 }
