@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 
 @RestController
@@ -32,7 +33,7 @@ public class AllegatoController {
 	@PostMapping("/upload")
 	@Transactional
 	public Allegato uploadAllegato(@RequestParam(value = "file") MultipartFile file,
-			@RequestParam(value = "idIssue") Integer idIssue) {
+			@RequestParam(value = "idIssue") Integer idIssue) throws IOException {
 		Issue issue = issueDAO.findById(idIssue)
 				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
 
@@ -49,7 +50,8 @@ public class AllegatoController {
 	}
 
 	@GetMapping("/download/{id}")
-	public ResponseEntity<ByteArrayResource> downloadAllegato(@PathVariable(value = "id") Integer id) {
+	public ResponseEntity<ByteArrayResource> downloadAllegato(@PathVariable(value = "id") Integer id)
+			throws IOException {
 		Allegato allegato = allegatoDAO.findById(id)
 				.orElseThrow(() -> new NotFoundException("Allegato non trovato con id: " + id));
 
@@ -103,7 +105,7 @@ public class AllegatoController {
 
 	@DeleteMapping("/{id}")
 	@Transactional
-	public Map<String, String> eliminaAllegato(@PathVariable(value = "id") Integer id) {
+	public Map<String, String> eliminaAllegato(@PathVariable(value = "id") Integer id) throws IOException {
 		Allegato allegato = allegatoDAO.findById(id)
 				.orElseThrow(() -> new NotFoundException("Allegato non trovato con id: " + id));
 

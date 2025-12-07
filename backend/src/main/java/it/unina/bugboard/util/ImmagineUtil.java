@@ -13,177 +13,121 @@ import java.util.UUID;
 @Component
 public class ImmagineUtil {
 
-    private static final Logger logger = LoggerFactory.getLogger(ImmagineUtil.class);
-    
-    private static final String UPLOAD_BASE_DIR = "uploads/images/";
-    private static final long MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-    private static final String[] ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".doc", ".docx"};
+	private static final Logger logger = LoggerFactory.getLogger(ImmagineUtil.class);
 
-    public String uploadImmagine(MultipartFile file) {
-        logger.info("🔵 uploadImmagine() chiamato");
-        
-        if (file == null || file.isEmpty()) {
-            logger.error("❌ File null o vuoto");
-            throw new InvalidInputException("File mancante o vuoto");
-        }
+	private static final String UPLOAD_BASE_DIR = "uploads/images/";
+	private static final long MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+	private static final String[] ALLOWED_EXTENSIONS = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".doc",
+			".docx" };
 
-        logger.info("📊 File ricevuto: {} - Size: {} bytes", 
-            file.getOriginalFilename(), file.getSize());
+	public String uploadImmagine(MultipartFile file) throws IOException {
+		if (file == null || file.isEmpty()) {
+			throw new InvalidInputException("File mancante o vuoto");
+		}
 
-        if (file.getSize() > MAX_SIZE_BYTES) {
-            logger.error("❌ File troppo grande: {} bytes (max: {})", 
-                file.getSize(), MAX_SIZE_BYTES);
-            throw new InvalidInputException("File troppo grande. Massimo 10MB");
-        }
-        
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || originalFilename.isBlank()) {
-            logger.error("❌ Nome file non valido");
-            throw new InvalidInputException("Nome file non valido");
-        }
+		if (file.getSize() > MAX_SIZE_BYTES) {
+			throw new InvalidInputException("File troppo grande. Massimo 5MB");
+		}
 
-        String extension = getFileExtension(originalFilename);
-        logger.info("📝 Estensione rilevata: {}", extension);
-        
-        if (!isAllowedExtension(extension)) {
-            logger.error("❌ Estensione non supportata: {}", extension);
-            throw new InvalidInputException("Estensione file non supportata: " + extension);
-        }
+		String originalFilename = file.getOriginalFilename();
+		if (originalFilename == null || originalFilename.isBlank()) {
+			throw new InvalidInputException("Nome file non valido");
+		}
 
-        try {
-            Path uploadDir = Paths.get(UPLOAD_BASE_DIR);
-            logger.info("📁 Directory upload: {}", uploadDir.toAbsolutePath());
-            
-            if (!Files.exists(uploadDir)) {
-                logger.info("📂 Creazione directory: {}", uploadDir.toAbsolutePath());
-                Files.createDirectories(uploadDir);
-                logger.info("✅ Directory creata con successo");
-            } else {
-                logger.info("✅ Directory già esistente");
-            }
+		String extension = getFileExtension(originalFilename);
 
-            String uniqueFilename = UUID.randomUUID().toString() + extension;
-            Path filePath = uploadDir.resolve(uniqueFilename);
-            
-            logger.info("💾 Salvataggio file in: {}", filePath.toAbsolutePath());
+		if (!isAllowedExtension(extension)) {
+			throw new InvalidInputException("Estensione file non supportata: " + extension);
+		}
 
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+		Path uploadDir = Paths.get(UPLOAD_BASE_DIR);
 
-            logger.info("✅ File salvato con successo");
-            logger.info("📍 Percorso completo: {}", filePath.toAbsolutePath().toString());
-            
-            // Verifica che il file esista effettivamente
-            if (Files.exists(filePath)) {
-                logger.info("✅ VERIFICA: File esiste sul filesystem");
-                logger.info("📏 Dimensione file salvato: {} bytes", Files.size(filePath));
-            } else {
-                logger.error("❌ ERRORE: File NON esiste dopo il salvataggio!");
-            }
+		if (!Files.exists(uploadDir)) {
+			Files.createDirectories(uploadDir);
+		}
 
-            return filePath.toAbsolutePath().toString();
-            
-        } catch (IOException e) {
-            logger.error("❌ Errore I/O durante il salvataggio", e);
-            throw new RuntimeException("Errore durante il salvataggio del file: " + e.getMessage());
-        }
-    }
+		String uniqueFilename = UUID.randomUUID().toString() + extension;
+		Path filePath = uploadDir.resolve(uniqueFilename);
 
-    public void deleteImmagine(String percorso) {
-        logger.info("🗑️ deleteImmagine() chiamato per: {}", percorso);
-        
-        if (percorso == null || percorso.isBlank()) {
-            logger.error("❌ Percorso non valido");
-            throw new InvalidInputException("Percorso non valido");
-        }
+		Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-        try {
-            Path path = Paths.get(percorso);
-            if (Files.exists(path)) {
-                Files.delete(path);
-                logger.info("✅ File eliminato: {}", percorso);
-            } else {
-                logger.warn("⚠️ File non trovato (già eliminato?): {}", percorso);
-            }
-        } catch (IOException e) {
-            logger.error("❌ Errore durante eliminazione", e);
-            throw new RuntimeException("Errore durante l'eliminazione del file: " + e.getMessage());
-        }
-    }
+		logger.info("File caricato: {} ({} bytes)", uniqueFilename, file.getSize());
 
-    public boolean fileExists(String percorso) {
-        if (percorso == null || percorso.isBlank()) {
-            return false;
-        }
-        boolean exists = Files.exists(Paths.get(percorso));
-        logger.debug("🔍 fileExists({}): {}", percorso, exists);
-        return exists;
-    }
+		return filePath.toAbsolutePath().toString();
+	}
 
-    public byte[] getImageBytes(String percorso) {
-        logger.info("📥 getImageBytes() chiamato per: {}", percorso);
-        
-        if (percorso == null || percorso.isBlank()) {
-            logger.error("❌ Percorso non valido");
-            throw new InvalidInputException("Percorso non valido");
-        }
+	public void deleteImmagine(String percorso) throws IOException {
+		if (percorso == null || percorso.isBlank()) {
+			throw new InvalidInputException("Percorso non valido");
+		}
 
-        try {
-            Path path = Paths.get(percorso);
-            if (!Files.exists(path)) {
-                logger.error("❌ File non trovato: {}", percorso);
-                throw new InvalidInputException("File non trovato: " + percorso);
-            }
-            
-            byte[] bytes = Files.readAllBytes(path);
-            logger.info("✅ File letto: {} bytes", bytes.length);
-            return bytes;
-            
-        } catch (IOException e) {
-            logger.error("❌ Errore durante lettura", e);
-            throw new RuntimeException("Errore durante la lettura del file: " + e.getMessage());
-        }
-    }
+		Path path = Paths.get(percorso);
+		if (Files.exists(path)) {
+			Files.delete(path);
+			logger.info("File eliminato: {}", path.getFileName());
+		}
+	}
 
-    public String getContentType(String percorso) {
-        if (percorso == null || percorso.isBlank()) {
-            return "application/octet-stream";
-        }
+	public boolean fileExists(String percorso) {
+		if (percorso == null || percorso.isBlank()) {
+			return false;
+		}
+		return Files.exists(Paths.get(percorso));
+	}
 
-        String lower = percorso.toLowerCase();
-        
-        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
-            return "image/jpeg";
-        } else if (lower.endsWith(".png")) {
-            return "image/png";
-        } else if (lower.endsWith(".gif")) {
-            return "image/gif";
-        } else if (lower.endsWith(".webp")) {
-            return "image/webp";
-        } else if (lower.endsWith(".pdf")) {
-            return "application/pdf";
-        } else if (lower.endsWith(".doc")) {
-            return "application/msword";
-        } else if (lower.endsWith(".docx")) {
-            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-        }
-        
-        return "application/octet-stream";
-    }
+	public byte[] getImageBytes(String percorso) throws IOException {
+		if (percorso == null || percorso.isBlank()) {
+			throw new InvalidInputException("Percorso non valido");
+		}
 
-    private String getFileExtension(String filename) {
-        int lastDotIndex = filename.lastIndexOf('.');
-        if (lastDotIndex == -1) {
-            return "";
-        }
-        return filename.substring(lastDotIndex).toLowerCase();
-    }
+		Path path = Paths.get(percorso);
+		if (!Files.exists(path)) {
+			throw new InvalidInputException("File non trovato: " + percorso);
+		}
 
-    private boolean isAllowedExtension(String extension) {
-        for (String allowed : ALLOWED_EXTENSIONS) {
-            if (allowed.equalsIgnoreCase(extension)) {
-                return true;
-            }
-        }
-        return false;
-    }
+		return Files.readAllBytes(path);
+	}
+
+	public String getContentType(String percorso) {
+		if (percorso == null || percorso.isBlank()) {
+			return "application/octet-stream";
+		}
+
+		String lower = percorso.toLowerCase();
+
+		if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+			return "image/jpeg";
+		} else if (lower.endsWith(".png")) {
+			return "image/png";
+		} else if (lower.endsWith(".gif")) {
+			return "image/gif";
+		} else if (lower.endsWith(".webp")) {
+			return "image/webp";
+		} else if (lower.endsWith(".pdf")) {
+			return "application/pdf";
+		} else if (lower.endsWith(".doc")) {
+			return "application/msword";
+		} else if (lower.endsWith(".docx")) {
+			return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+		}
+
+		return "application/octet-stream";
+	}
+
+	private String getFileExtension(String filename) {
+		int lastDotIndex = filename.lastIndexOf('.');
+		if (lastDotIndex == -1) {
+			return "";
+		}
+		return filename.substring(lastDotIndex).toLowerCase();
+	}
+
+	private boolean isAllowedExtension(String extension) {
+		for (String allowed : ALLOWED_EXTENSIONS) {
+			if (allowed.equalsIgnoreCase(extension)) {
+				return true;
+			}
+		}
+		return false;
+	}
 }
