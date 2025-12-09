@@ -5,12 +5,14 @@ services:
     working_dir: /app
     command: mvn spring-boot:run
     environment:
-      # DATABASE RENDER
-      SPRING_DATASOURCE_URL: jdbc:postgresql://dpg-d4g9bhe3jp1c73dgg2t0-a.frankfurt-postgres.render.com:5432/bugboard26
-      SPRING_DATASOURCE_USERNAME: bugboard26_user
-      SPRING_DATASOURCE_PASSWORD: RKOQcH7jpcIr01Clz7nGZFCvQE45Z2xC
+		environment:
+		      # DATABASE NEON
+		      SPRING_DATASOURCE_URL: jdbc:postgresql://ep-orange-bush-a92bic4l-pooler.gwc.azure.neon.tech:5432/neondb?sslmode=require
+		      SPRING_DATASOURCE_USERNAME: neondb_owner
+		      SPRING_DATASOURCE_PASSWORD: npg_iQ4zg6KuqZTc
 
-      SPRING_PROFILES_ACTIVE: dev
+		      SPRING_PROFILES_ACTIVE: dev
+      
 
     ports:
       - "8080:8080"
