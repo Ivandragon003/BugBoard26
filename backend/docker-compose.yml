@@ -5,15 +5,10 @@ services:
     working_dir: /app
     command: mvn spring-boot:run
     environment:
-		environment:
-		      # DATABASE NEON
-		      SPRING_DATASOURCE_URL: jdbc:postgresql://ep-orange-bush-a92bic4l-pooler.gwc.azure.neon.tech:5432/neondb?sslmode=require
-		      SPRING_DATASOURCE_USERNAME: neondb_owner
-		      SPRING_DATASOURCE_PASSWORD: npg_iQ4zg6KuqZTc
-
-		      SPRING_PROFILES_ACTIVE: dev
-      
-
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ep-orange-bush-a92bic4l-pooler.gwc.azure.neon.tech:5432/neondb?sslmode=require
+      SPRING_DATASOURCE_USERNAME: neondb_owner
+      SPRING_DATASOURCE_PASSWORD: npg_iQ4zg6KuqZTc
+      SPRING_PROFILES_ACTIVE: dev
     ports:
       - "8080:8080"
     volumes:

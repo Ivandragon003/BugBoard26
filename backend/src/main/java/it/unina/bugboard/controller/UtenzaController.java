@@ -18,7 +18,7 @@ import java.util.ArrayList;
 @RequestMapping("/api/utenza")
 public class UtenzaController {
 
-	// Costanti per le chiavi delle mappe
+
 	private static final String EMAIL_KEY = "email";
 	private static final String PASSWORD_KEY = "password";
 	private static final String NOME_KEY = "nome";

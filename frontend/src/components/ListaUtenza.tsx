@@ -12,7 +12,6 @@ interface Utente {
   cognome: string;
   email: string;
   ruolo: string;
-  stato: boolean;
 }
 
 const getAuthHeader = () => ({
@@ -30,7 +29,6 @@ export default function ListaUtenza() {
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({ nome: '', cognome: '', ruolo: '' });
-  const [utenteCorrente, setUtenteCorrente] = useState<Utente | null>(null);
 
   useEffect(() => {
     if (!authService.isAuthenticated()) {
@@ -43,20 +41,8 @@ export default function ListaUtenza() {
       return;
     }
     
-    caricaUtenteCorrente();
     caricaUtenti();
   }, [navigate]);
-
-  const caricaUtenteCorrente = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/utenza/me`, {
-        headers: getAuthHeader()
-      });
-      setUtenteCorrente(response.data);
-    } catch (err) {
-      console.error('Errore nel caricamento utente corrente:', err);
-    }
-  };
 
   const caricaUtenti = async () => {
     try {
@@ -114,38 +100,6 @@ export default function ListaUtenza() {
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Errore durante la modifica');
-    }
-  };
-
-  const cambiaStatoUtente = async (utente: Utente) => {
-    if (utenteCorrente && utente.idUtente === utenteCorrente.idUtente) {
-      setError('Non puoi cambiare lo stato del tuo stesso account');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-
-    const nuovoStato = !utente.stato;
-    const conferma = window.confirm(
-      `Sei sicuro di voler ${nuovoStato ? 'attivare' : 'disattivare'} l'utente ${utente.nome} ${utente.cognome}?`
-    );
-
-    if (!conferma) return;
-
-    try {
-      await axios.patch(
-        `${API_BASE_URL}/utenza/${utente.idUtente}/stato`,
-        { stato: nuovoStato },
-        { headers: getAuthHeader() }
-      );
-      
-      setSuccessMessage(`Utente ${nuovoStato ? 'attivato' : 'disattivato'} con successo`);
-      setError('');
-      caricaUtenti();
-      
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Errore durante il cambio stato');
-      setTimeout(() => setError(''), 3000);
     }
   };
 
@@ -328,17 +282,6 @@ export default function ListaUtenza() {
                     </th>
                     <th style={{
                       padding: '14px 24px',
-                      textAlign: 'left',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      color: '#6b7280',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      Stato
-                    </th>
-                    <th style={{
-                      padding: '14px 24px',
                       textAlign: 'right',
                       fontSize: '11px',
                       fontWeight: 600,
@@ -356,8 +299,7 @@ export default function ListaUtenza() {
                       key={utente.idUtente}
                       style={{
                         borderBottom: '1px solid #e5e7eb',
-                        transition: 'background-color 0.2s',
-                        opacity: utente.stato ? 1 : 0.6
+                        transition: 'background-color 0.2s'
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -384,33 +326,6 @@ export default function ListaUtenza() {
                         }}>
                           {utente.ruolo}
                         </span>
-                      </td>
-                      <td style={{ padding: '14px 24px' }}>
-                        <button
-                          onClick={() => cambiaStatoUtente(utente)}
-                          disabled={utenteCorrente?.idUtente === utente.idUtente}
-                          style={{
-                            padding: '4px 12px',
-                            borderRadius: '12px',
-                            fontWeight: 500,
-                            fontSize: '13px',
-                            border: 'none',
-                            cursor: utenteCorrente?.idUtente === utente.idUtente ? 'not-allowed' : 'pointer',
-                            backgroundColor: utente.stato ? '#dcfce7' : '#fee2e2',
-                            color: utente.stato ? '#166534' : '#991b1b',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (utenteCorrente?.idUtente !== utente.idUtente) {
-                              e.currentTarget.style.opacity = '0.8';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                          }}
-                        >
-                          {utente.stato ? 'Attivo' : 'Disattivato'}
-                        </button>
                       </td>
                       <td style={{
                         padding: '14px 24px',
@@ -439,7 +354,7 @@ export default function ListaUtenza() {
                             e.currentTarget.style.color = '#0d9488';
                           }}
                         >
-                          Visualizza
+                          Visualizza Profilo
                         </button>
                         <button
                           onClick={() => apriModalModifica(utente)}
@@ -484,7 +399,7 @@ export default function ListaUtenza() {
             backgroundColor: 'white',
             borderRadius: '12px',
             width: '90%',
-            maxWidth: '500px',
+            maxWidth: '900px',
             maxHeight: '90vh',
             overflow: 'auto',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
@@ -497,7 +412,7 @@ export default function ListaUtenza() {
               alignItems: 'center'
             }}>
               <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#1f2937', margin: 0 }}>
-                Profilo Utente
+                Profilo: {utenteSelezionato.nome} {utenteSelezionato.cognome}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -515,51 +430,26 @@ export default function ListaUtenza() {
             </div>
 
             <div style={{ padding: '24px' }}>
+              {/* Info Utente */}
               <div style={{
                 backgroundColor: '#f9fafb',
                 padding: '16px',
                 borderRadius: '8px',
-                marginBottom: '16px'
+                marginBottom: '24px'
               }}>
-                <div style={{ marginBottom: '16px' }}>
-                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Nome Completo</p>
-                  <p style={{ fontSize: '16px', fontWeight: 600, color: '#1f2937', margin: 0 }}>
-                    {utenteSelezionato.nome} {utenteSelezionato.cognome}
-                  </p>
-                </div>
-                <div style={{ marginBottom: '16px' }}>
-                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Email</p>
-                  <p style={{ fontSize: '14px', fontWeight: 500, color: '#1f2937', margin: 0 }}>
-                    {utenteSelezionato.email}
-                  </p>
-                </div>
-                <div style={{ marginBottom: '16px' }}>
-                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Ruolo</p>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '4px 12px',
-                    borderRadius: '12px',
-                    fontWeight: 500,
-                    fontSize: '13px',
-                    backgroundColor: utenteSelezionato.ruolo === 'Amministratore' ? '#e9d5ff' : '#dbeafe',
-                    color: utenteSelezionato.ruolo === 'Amministratore' ? '#6b21a8' : '#1e40af'
-                  }}>
-                    {utenteSelezionato.ruolo}
-                  </span>
-                </div>
-                <div>
-                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Stato</p>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '4px 12px',
-                    borderRadius: '12px',
-                    fontWeight: 500,
-                    fontSize: '13px',
-                    backgroundColor: utenteSelezionato.stato ? '#dcfce7' : '#fee2e2',
-                    color: utenteSelezionato.stato ? '#166534' : '#991b1b'
-                  }}>
-                    {utenteSelezionato.stato ? 'Attivo' : 'Disattivato'}
-                  </span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Email</p>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#1f2937', margin: 0 }}>
+                      {utenteSelezionato.email}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Ruolo</p>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#1f2937', margin: 0 }}>
+                      {utenteSelezionato.ruolo}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -697,7 +587,6 @@ export default function ListaUtenza() {
                   <select
                     value={editForm.ruolo}
                     onChange={(e) => setEditForm({ ...editForm, ruolo: e.target.value })}
-                    disabled={utenteCorrente?.idUtente === utenteSelezionato.idUtente}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -706,18 +595,13 @@ export default function ListaUtenza() {
                       fontSize: '14px',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      backgroundColor: utenteCorrente?.idUtente === utenteSelezionato.idUtente ? '#f3f4f6' : 'white',
-                      cursor: utenteCorrente?.idUtente === utenteSelezionato.idUtente ? 'not-allowed' : 'pointer'
+                      backgroundColor: 'white',
+                      cursor: 'pointer'
                     }}
                   >
                     <option value="Utente">Utente</option>
                     <option value="Amministratore">Amministratore</option>
                   </select>
-                  {utenteCorrente?.idUtente === utenteSelezionato.idUtente && (
-                    <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 0 0' }}>
-                      Non puoi cambiare il tuo stesso ruolo
-                    </p>
-                  )}
                 </div>
 
                 <div style={{
