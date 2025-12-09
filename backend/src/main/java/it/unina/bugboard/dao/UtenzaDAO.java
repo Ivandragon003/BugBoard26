@@ -2,7 +2,6 @@ package it.unina.bugboard.dao;
 
 import it.unina.bugboard.model.Utenza;
 import org.springframework.data.jpa.repository.JpaRepository;
-
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
