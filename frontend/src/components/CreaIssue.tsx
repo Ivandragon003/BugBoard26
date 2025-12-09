@@ -312,8 +312,8 @@ if (files.length > 0) {
                       Trascina file qui o clicca
                     </div>
                     <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                      Formati supportati: JPEG, PNG, GIF, WebP - Max 5MB
-                    </div>
+                      Formati supportati: JPEG, PNG, GIF, WebP, PDF, DOC, DOCX - Max 5MB
+                  </div>
                   </label>
                 </div>
                 {files.length > 0 && (

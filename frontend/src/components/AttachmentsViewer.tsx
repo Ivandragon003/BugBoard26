@@ -80,11 +80,12 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
   };
 
   const getFileIcon = (tipoFile: string): string => {
-    if (tipoFile.startsWith('image/')) return '🖼️';
-    if (tipoFile === 'application/pdf') return '📄';
-    if (tipoFile.includes('word')) return '📝';
-    return '📎';
-  };
+  if (tipoFile.startsWith('image/')) return '🖼️';
+  if (tipoFile === 'application/pdf') return '📄';
+  if (tipoFile.includes('word') || tipoFile.includes('msword')) return '📝';
+  return '📎';
+};
+
 
   if (loading) {
     return (

@@ -7,17 +7,26 @@ const getAuthHeader = () => ({
 });
 
 export const allegatoService = {
+
   uploadAllegato: async (file: File, idIssue: number) => {
-    // Validazione dimensione (max 5MB)
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
     if (file.size > MAX_SIZE) {
       throw new Error('Il file supera il limite di 5MB');
     }
 
-    // Validazione formato
-    const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedFormats = [
+      'image/jpeg', 
+      'image/jpg', 
+      'image/png', 
+      'image/gif', 
+      'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    
     if (!allowedFormats.includes(file.type)) {
-      throw new Error('Formato file non supportato. Usa JPEG, PNG, GIF o WebP');
+      throw new Error('Formato file non supportato. Usa JPEG, PNG, GIF, WebP, PDF, DOC o DOCX');
     }
 
     const formData = new FormData();
@@ -37,6 +46,7 @@ export const allegatoService = {
     return response.data;
   },
 
+
   getAllegatiByIssue: async (idIssue: number) => {
     const response = await axios.get(
       `${API_BASE_URL}/allegato/issue/${idIssue}`,
@@ -47,6 +57,7 @@ export const allegatoService = {
     return response.data;
   },
 
+  
   downloadAllegato: async (id: number) => {
     const response = await axios.get(
       `${API_BASE_URL}/allegato/download/${id}`,
@@ -58,6 +69,7 @@ export const allegatoService = {
     return response;
   },
 
+  
   deleteAllegato: async (id: number) => {
     const response = await axios.delete(
       `${API_BASE_URL}/allegato/${id}`,
@@ -68,15 +80,6 @@ export const allegatoService = {
     return response.data;
   },
 
-  countAllegati: async (idIssue: number) => {
-    const response = await axios.get(
-      `${API_BASE_URL}/allegato/issue/${idIssue}/count`,
-      {
-        headers: getAuthHeader()
-      }
-    );
-    return response.data;
-  },
 
   getDimensioneTotale: async (idIssue: number) => {
     const response = await axios.get(
