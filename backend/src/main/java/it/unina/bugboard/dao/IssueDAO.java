@@ -4,15 +4,16 @@ import it.unina.bugboard.model.Issue;
 import it.unina.bugboard.model.Stato;
 import it.unina.bugboard.model.Priorita;
 import it.unina.bugboard.model.Tipo;
-import it.unina.bugboard.model.Utenza;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+
 import java.util.List;
 import java.util.Optional;
+
 @Repository
 public interface IssueDAO extends JpaRepository<Issue, Integer> {
 
@@ -28,38 +29,15 @@ public interface IssueDAO extends JpaRepository<Issue, Integer> {
 
 	List<Issue> findByArchiviataFalse();
 
-	List<Issue> findByCreatore(Utenza creatore);
-
-	List<Issue> findByCreatoreIdUtente(Integer idUtente);
-
-	List<Issue> findByArchiviatore(Utenza archiviatore);
-
 	List<Issue> findByStatoAndPriorita(Stato stato, Priorita priorita);
-
-	List<Issue> findByStatoAndArchiviataFalse(Stato stato);
-
-	List<Issue> findByDataCreazioneBetween(LocalDateTime dataInizio, LocalDateTime dataFine);
-
-	// 🔥 RIMOSSE query con utentiAssegnati
-
-	List<Issue> findByPrioritaAndArchiviataFalseOrderByDataCreazioneDesc(Priorita priorita);
 
 	Long countByStato(Stato stato);
 
 	Long countByArchiviataFalse();
-
-	Long countByCreatoreIdUtente(Integer idUtente);
 
 	List<Issue> findByTitoloContainingIgnoreCase(String titolo);
 
 	@Query("SELECT i FROM Issue i WHERE i.priorita IN :priorita AND i.archiviata = false")
 	List<Issue> findIssueUrgenti(@Param("priorita") List<Priorita> priorita);
 
-	List<Issue> findByStatoAndTipo(Stato stato, Tipo tipo);
-
-	List<Issue> findByPrioritaAndTipo(Priorita priorita, Tipo tipo);
-
-	List<Issue> findByStatoAndPrioritaAndTipo(Stato stato, Priorita priorita, Tipo tipo);
-
-	void deleteByArchiviataAndCreatore(Boolean archiviata, Utenza creatore);
 }
