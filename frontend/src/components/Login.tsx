@@ -9,27 +9,41 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setMessage('');
-    setIsError(false);
-    setIsLoading(true);
+  e.preventDefault();
+  setMessage('');
+  setIsError(false);
+  setIsLoading(true);
 
-    try {
-      await authService.login(email, password);
-      setMessage('Login riuscito!');
-      setIsError(false);
-      setTimeout(() => {
-        window.location.href = '/home';
-      }, 500);
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      const errorMsg = err.response?.data?.message || 'Credenziali non valide o errore di rete';
-      setMessage(errorMsg);
-      setIsError(true);
-    } finally {
-      setIsLoading(false);
+  try {
+    await authService.login(email, password);
+    setMessage('Login riuscito!');
+    setIsError(false);
+    setTimeout(() => {
+      window.location.href = '/home';
+    }, 500);
+  } catch (error: any) {
+    console.error('Errore login:', error); // ✅ DEBUG
+    
+    // ✅ Gestisci il messaggio di errore dal backend
+    const backendMessage = error.response?.data?.message;
+    
+    let errorMsg = 'Errore di connessione al server';
+    
+    if (backendMessage) {
+      if (backendMessage === 'Account disattivato') {
+        errorMsg = '⚠️ Il tuo account è stato disattivato. Contatta un amministratore per la riattivazione.';
+      } else {
+        errorMsg = backendMessage;
+      }
     }
-  };
+    
+    setMessage(errorMsg);
+    setIsError(true);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <div style={{

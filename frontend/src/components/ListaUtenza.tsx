@@ -5,6 +5,7 @@ import { authService } from '../services/authService';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 
+
 interface Utente {
   idUtente: number;
   id?: number;
@@ -12,11 +13,14 @@ interface Utente {
   cognome: string;
   email: string;
   ruolo: string;
+  stato: boolean;
 }
+
 
 const getAuthHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem('authToken')}`
 });
+
 
 export default function ListaUtenza() {
   const navigate = useNavigate();
@@ -28,7 +32,10 @@ export default function ListaUtenza() {
   const [successMessage, setSuccessMessage] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [utentePerCambioStato, setUtentePerCambioStato] = useState<Utente | null>(null);
   const [editForm, setEditForm] = useState({ nome: '', cognome: '', ruolo: '' });
+
 
   useEffect(() => {
     if (!authService.isAuthenticated()) {
@@ -43,6 +50,7 @@ export default function ListaUtenza() {
     
     caricaUtenti();
   }, [navigate]);
+
 
   const caricaUtenti = async () => {
     try {
@@ -60,10 +68,12 @@ export default function ListaUtenza() {
     }
   };
 
+
   const visualizzaProfiloUtente = (utente: Utente) => {
     setUtenteSelezionato(utente);
     setShowModal(true);
   };
+
 
   const apriModalModifica = (utente: Utente) => {
     setUtenteSelezionato(utente);
@@ -74,6 +84,13 @@ export default function ListaUtenza() {
     });
     setShowEditModal(true);
   };
+
+
+  const apriModalConferma = (utente: Utente) => {
+    setUtentePerCambioStato(utente);
+    setShowConfirmModal(true);
+  };
+
 
   const handleModificaUtente = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,12 +120,40 @@ export default function ListaUtenza() {
     }
   };
 
+
+  const confermaToggleStato = async () => {
+    if (!utentePerCambioStato) return;
+    
+    const nuovoStato = !utentePerCambioStato.stato;
+
+    try {
+      await axios.patch(
+        `${API_BASE_URL}/utenza/${utentePerCambioStato.idUtente}/stato`,
+        { stato: nuovoStato },
+        { headers: getAuthHeader() }
+      );
+      
+      setSuccessMessage(`Utente ${nuovoStato ? 'attivato' : 'disattivato'} con successo`);
+      setError('');
+      setShowConfirmModal(false);
+      setUtentePerCambioStato(null);
+      caricaUtenti();
+      
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Errore durante il cambio di stato');
+      setShowConfirmModal(false);
+    }
+  };
+
+
   const UserIcon = () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="8" r="4" stroke="#0d9488" strokeWidth="2"/>
       <path d="M6 21C6 17.686 8.686 15 12 15C15.314 15 18 17.686 18 21" stroke="#0d9488" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   );
+
 
   if (loading) {
     return (
@@ -132,6 +177,7 @@ export default function ListaUtenza() {
     );
   }
 
+
   return (
     <div style={{ 
       display: 'flex', 
@@ -140,6 +186,7 @@ export default function ListaUtenza() {
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
@@ -192,6 +239,7 @@ export default function ListaUtenza() {
           </div>
         </header>
 
+
         {/* Content */}
         <div style={{ padding: '32px' }}>
           {/* Messages */}
@@ -209,6 +257,7 @@ export default function ListaUtenza() {
             </div>
           )}
 
+
           {successMessage && (
             <div style={{
               color: '#065f46',
@@ -222,6 +271,7 @@ export default function ListaUtenza() {
               {successMessage}
             </div>
           )}
+
 
           {/* Lista Utenti */}
           <div style={{
@@ -242,6 +292,7 @@ export default function ListaUtenza() {
                 Utenti Registrati ({utenti.length})
               </h2>
             </div>
+
 
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -282,6 +333,17 @@ export default function ListaUtenza() {
                     </th>
                     <th style={{
                       padding: '14px 24px',
+                      textAlign: 'center',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Stato
+                    </th>
+                    <th style={{
+                      padding: '14px 24px',
                       textAlign: 'right',
                       fontSize: '11px',
                       fontWeight: 600,
@@ -299,7 +361,8 @@ export default function ListaUtenza() {
                       key={utente.idUtente}
                       style={{
                         borderBottom: '1px solid #e5e7eb',
-                        transition: 'background-color 0.2s'
+                        transition: 'background-color 0.2s',
+                        opacity: utente.stato ? 1 : 0.6
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -327,10 +390,46 @@ export default function ListaUtenza() {
                           {utente.ruolo}
                         </span>
                       </td>
+                      <td style={{ padding: '14px 24px', textAlign: 'center' }}>
+                        <span style={{
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontWeight: 500,
+                          fontSize: '13px',
+                          backgroundColor: utente.stato ? '#d1fae5' : '#fee2e2',
+                          color: utente.stato ? '#065f46' : '#dc2626'
+                        }}>
+                          {utente.stato ? '✓ Attivo' : '✗ Disattivato'}
+                        </span>
+                      </td>
                       <td style={{
                         padding: '14px 24px',
                         textAlign: 'right'
                       }}>
+                        <button
+                          onClick={() => apriModalConferma(utente)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: utente.stato ? '#fee2e2' : '#d1fae5',
+                            color: utente.stato ? '#dc2626' : '#065f46',
+                            border: `1px solid ${utente.stato ? '#fca5a5' : '#86efac'}`,
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            marginRight: '8px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = '0.8';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                          }}
+                        >
+                          {utente.stato ? '🔴 Disattiva' : '🟢 Attiva'}
+                        </button>
+                        
                         <button
                           onClick={() => visualizzaProfiloUtente(utente)}
                           style={{
@@ -354,8 +453,9 @@ export default function ListaUtenza() {
                             e.currentTarget.style.color = '#0d9488';
                           }}
                         >
-                          Visualizza Profilo
+                          Visualizza
                         </button>
+                        
                         <button
                           onClick={() => apriModalModifica(utente)}
                           style={{
@@ -383,6 +483,7 @@ export default function ListaUtenza() {
           </div>
         </div>
       </div>
+
 
       {/* Modal Visualizza Profilo */}
       {showModal && utenteSelezionato && (
@@ -429,8 +530,8 @@ export default function ListaUtenza() {
               </button>
             </div>
 
+
             <div style={{ padding: '24px' }}>
-              {/* Info Utente */}
               <div style={{
                 backgroundColor: '#f9fafb',
                 padding: '16px',
@@ -450,8 +551,15 @@ export default function ListaUtenza() {
                       {utenteSelezionato.ruolo}
                     </p>
                   </div>
+                  <div>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Stato</p>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#1f2937', margin: 0 }}>
+                      {utenteSelezionato.stato ? '✓ Attivo' : '✗ Disattivato'}
+                    </p>
+                  </div>
                 </div>
               </div>
+
 
               <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
                 <button
@@ -474,6 +582,7 @@ export default function ListaUtenza() {
           </div>
         </div>
       )}
+
 
       {/* Modal Modifica Utente */}
       {showEditModal && utenteSelezionato && (
@@ -518,6 +627,7 @@ export default function ListaUtenza() {
               </button>
             </div>
 
+
             <form onSubmit={handleModificaUtente}>
               <div style={{ padding: '24px' }}>
                 <div style={{ marginBottom: '20px' }}>
@@ -547,6 +657,7 @@ export default function ListaUtenza() {
                   />
                 </div>
 
+
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{
                     display: 'block',
@@ -573,6 +684,7 @@ export default function ListaUtenza() {
                     required
                   />
                 </div>
+
 
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{
@@ -604,6 +716,7 @@ export default function ListaUtenza() {
                   </select>
                 </div>
 
+
                 <div style={{
                   padding: '12px',
                   backgroundColor: '#fef3c7',
@@ -615,6 +728,7 @@ export default function ListaUtenza() {
                     <strong>Nota:</strong> Email e password non possono essere modificate da qui
                   </p>
                 </div>
+
 
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                   <button
@@ -654,6 +768,189 @@ export default function ListaUtenza() {
           </div>
         </div>
       )}
+
+
+      {/* Modal Conferma Cambio Stato */}
+      {showConfirmModal && utentePerCambioStato && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '480px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '24px',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '8px'
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: utentePerCambioStato.stato ? '#fee2e2' : '#d1fae5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px'
+                }}>
+                  {utentePerCambioStato.stato ? '⚠️' : '✓'}
+                </div>
+                <div>
+                  <h3 style={{ 
+                    fontSize: '18px', 
+                    fontWeight: 600, 
+                    color: '#1f2937', 
+                    margin: 0 
+                  }}>
+                    {utentePerCambioStato.stato ? 'Disattiva Utente' : 'Attiva Utente'}
+                  </h3>
+                  <p style={{ 
+                    fontSize: '14px', 
+                    color: '#6b7280', 
+                    margin: '4px 0 0 0' 
+                  }}>
+                    Conferma l'operazione
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              <div style={{
+                backgroundColor: '#f9fafb',
+                padding: '16px',
+                borderRadius: '8px',
+                marginBottom: '20px'
+              }}>
+                <p style={{ 
+                  fontSize: '14px', 
+                  color: '#374151', 
+                  margin: '0 0 12px 0',
+                  lineHeight: 1.6
+                }}>
+                  {utentePerCambioStato.stato ? (
+                    <>
+                      Stai per <strong style={{ color: '#dc2626' }}>disattivare</strong> l'utente:
+                    </>
+                  ) : (
+                    <>
+                      Stai per <strong style={{ color: '#065f46' }}>attivare</strong> l'utente:
+                    </>
+                  )}
+                </p>
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: 'white',
+                  borderRadius: '6px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <p style={{ 
+                    fontSize: '15px', 
+                    fontWeight: 600, 
+                    color: '#1f2937', 
+                    margin: '0 0 4px 0' 
+                  }}>
+                    {utentePerCambioStato.nome} {utentePerCambioStato.cognome}
+                  </p>
+                  <p style={{ 
+                    fontSize: '13px', 
+                    color: '#6b7280', 
+                    margin: 0 
+                  }}>
+                    {utentePerCambioStato.email}
+                  </p>
+                </div>
+              </div>
+
+              {utentePerCambioStato.stato && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#fef3c7',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  marginBottom: '20px'
+                }}>
+                  <p style={{ 
+                    fontSize: '13px', 
+                    color: '#92400e', 
+                    margin: 0,
+                    lineHeight: 1.5
+                  }}>
+                    <strong>Attenzione:</strong> L'utente non potrà più accedere al sistema fino alla riattivazione.
+                  </p>
+                </div>
+              )}
+
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                justifyContent: 'flex-end' 
+              }}>
+                <button
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setUtentePerCambioStato(null);
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={confermaToggleStato}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: utentePerCambioStato.stato ? '#dc2626' : '#059669',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = utentePerCambioStato.stato ? '#b91c1c' : '#047857';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = utentePerCambioStato.stato ? '#dc2626' : '#059669';
+                  }}
+                >
+                  {utentePerCambioStato.stato ? 'Disattiva Utente' : 'Attiva Utente'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       <style>{`
         @keyframes spin {

@@ -18,7 +18,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/allegato")
-@Transactional(readOnly = true)
 public class AllegatoController {
 
 	@Autowired
@@ -50,6 +49,7 @@ public class AllegatoController {
 	}
 
 	@GetMapping("/download/{id}")
+	@Transactional(readOnly = true)
 	public ResponseEntity<ByteArrayResource> downloadAllegato(@PathVariable(value = "id") Integer id)
 			throws IOException {
 		Allegato allegato = allegatoDAO.findById(id)
@@ -65,6 +65,7 @@ public class AllegatoController {
 	}
 
 	@GetMapping("/issue/{idIssue}")
+	@Transactional(readOnly = true)
 	public List<Allegato> getAllegatiByIssue(@PathVariable(value = "idIssue") Integer idIssue) {
 		if (!issueDAO.existsById(idIssue)) {
 			throw new NotFoundException("Issue non trovata con id: " + idIssue);
@@ -74,6 +75,7 @@ public class AllegatoController {
 	}
 
 	@GetMapping("/issue/{idIssue}/ordinati-dimensione")
+	@Transactional(readOnly = true)
 	public List<Allegato> getAllegatiOrderByDimensione(@PathVariable(value = "idIssue") Integer idIssue) {
 		if (!issueDAO.existsById(idIssue)) {
 			throw new NotFoundException("Issue non trovata con id: " + idIssue);
@@ -82,6 +84,7 @@ public class AllegatoController {
 	}
 
 	@GetMapping("/issue/{idIssue}/dimensione-totale")
+	@Transactional(readOnly = true)
 	public Map<String, Object> getDimensioneTotale(@PathVariable(value = "idIssue") Integer idIssue) {
 		if (!issueDAO.existsById(idIssue)) {
 			throw new NotFoundException("Issue non trovata con id: " + idIssue);
@@ -93,6 +96,7 @@ public class AllegatoController {
 	}
 
 	@GetMapping("/issue/{idIssue}/count")
+	@Transactional(readOnly = true)
 	public Map<String, Object> countAllegati(@PathVariable(value = "idIssue") Integer idIssue) {
 		if (!issueDAO.existsById(idIssue)) {
 			throw new NotFoundException("Issue non trovata con id: " + idIssue);

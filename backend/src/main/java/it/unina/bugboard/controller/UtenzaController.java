@@ -18,7 +18,6 @@ import java.util.ArrayList;
 @RequestMapping("/api/utenza")
 public class UtenzaController {
 
-
 	private static final String EMAIL_KEY = "email";
 	private static final String PASSWORD_KEY = "password";
 	private static final String NOME_KEY = "nome";
@@ -46,7 +45,6 @@ public class UtenzaController {
 	public Map<String, Object> login(@RequestBody Map<String, String> credentials) {
 		String email = credentials.get(EMAIL_KEY);
 		String password = credentials.get(PASSWORD_KEY);
-
 		validationUtil.validaEmailFormat(email);
 		Utenza utenza = utenzaDAO.findByEmail(email)
 				.orElseThrow(() -> new InvalidFieldException("Credenziali non valide"));
@@ -69,7 +67,6 @@ public class UtenzaController {
 	public Map<String, Object> creaUtenza(@RequestBody Map<String, String> utenzaData,
 			@RequestHeader("Authorization") String token) {
 		Utenza creatore = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
 		if (Boolean.FALSE.equals(creatore.getStato())) {
 			throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
 		}
@@ -85,7 +82,6 @@ public class UtenzaController {
 		String ruoloStr = utenzaData.get(RUOLO_KEY);
 		ruoloStr = ruoloStr.substring(0, 1).toUpperCase() + ruoloStr.substring(1).toLowerCase();
 		Ruolo ruolo = Ruolo.valueOf(ruoloStr);
-
 		validationUtil.validaUniqueEmail(email);
 		if (utenzaDAO.existsByEmail(email)) {
 			throw new InvalidFieldException("Email già registrata");
@@ -94,7 +90,6 @@ public class UtenzaController {
 		String hashedPassword = passwordUtil.hashPassword(password);
 		Utenza nuovaUtenza = new Utenza(nome, cognome, email, hashedPassword, ruolo, creatore);
 		Utenza utenzaSalvata = utenzaDAO.save(nuovaUtenza);
-
 		return Map.of(MESSAGE_KEY, "Utenza creata con successo", UTENZA_KEY,
 				Map.of(ID_KEY, utenzaSalvata.getIdUtente(), NOME_KEY, utenzaSalvata.getNome(), COGNOME_KEY,
 						utenzaSalvata.getCognome(), EMAIL_KEY, utenzaSalvata.getEmail(), RUOLO_KEY,
@@ -104,7 +99,6 @@ public class UtenzaController {
 	@GetMapping("/me")
 	public Utenza getUtenteCorrente(@RequestHeader("Authorization") String token) {
 		Utenza utente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
 		if (Boolean.FALSE.equals(utente.getStato())) {
 			throw new InvalidFieldException("Account disattivato");
 		}
@@ -116,7 +110,6 @@ public class UtenzaController {
 	public Map<String, Object> modificaProfilo(@RequestBody Map<String, String> datiModifica,
 			@RequestHeader("Authorization") String token) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
 		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
 			throw new InvalidFieldException("Account disattivato. Non puoi modificare il profilo");
 		}
@@ -128,7 +121,6 @@ public class UtenzaController {
 
 		utenteCorrente.setPassword(passwordUtil.hashPassword(nuovaPassword));
 		utenzaDAO.save(utenteCorrente);
-
 		return Map.of(MESSAGE_KEY, "Password aggiornata con successo", UTENTE_KEY,
 				Map.of(ID_KEY, utenteCorrente.getIdUtente(), EMAIL_KEY, utenteCorrente.getEmail(), RUOLO_KEY,
 						utenteCorrente.getRuolo().toString()));
@@ -138,7 +130,6 @@ public class UtenzaController {
 	public Map<String, Object> aggiornaUtenza(@PathVariable Integer id, @RequestBody Map<String, String> utenzaData,
 			@RequestHeader("Authorization") String token) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
 		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
 			throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
 		}
@@ -149,7 +140,6 @@ public class UtenzaController {
 
 		Utenza utenzaDaModificare = utenzaDAO.findById(id)
 				.orElseThrow(() -> new InvalidFieldException("Utente non trovato"));
-
 		if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore)
 				&& !utenzaDaModificare.getIdUtente().equals(utenteCorrente.getIdUtente())) {
 			throw new InvalidFieldException("Non puoi modificare altri amministratori");
@@ -159,15 +149,14 @@ public class UtenzaController {
 			utenzaDaModificare.setNome(utenzaData.get(NOME_KEY));
 		if (utenzaData.containsKey(COGNOME_KEY))
 			utenzaDaModificare.setCognome(utenzaData.get(COGNOME_KEY));
-
 		if (utenzaData.containsKey(RUOLO_KEY)) {
 			if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore)) {
 				throw new InvalidFieldException("Non puoi cambiare il ruolo di un amministratore");
 			}
+
 			String nuovoRuoloStr = utenzaData.get(RUOLO_KEY);
 			nuovoRuoloStr = nuovoRuoloStr.substring(0, 1).toUpperCase() + nuovoRuoloStr.substring(1).toLowerCase();
 			Ruolo nuovoRuolo = Ruolo.valueOf(nuovoRuoloStr);
-
 			if (nuovoRuolo.equals(Ruolo.Amministratore)) {
 				throw new InvalidFieldException(
 						"Non puoi promuovere un utente ad amministratore tramite questa funzione");
@@ -186,7 +175,6 @@ public class UtenzaController {
 	@DeleteMapping("/{id}")
 	public Map<String, String> disattivaUtenza(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
 		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
 			throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
 		}
@@ -202,14 +190,12 @@ public class UtenzaController {
 		Utenza utenza = utenzaDAO.findById(id).orElseThrow(() -> new InvalidFieldException("Utente non trovato"));
 		utenza.setStato(false);
 		utenzaDAO.save(utenza);
-
 		return Map.of(MESSAGE_KEY, "Utenza disattivata con successo");
 	}
 
 	@PatchMapping("/{id}/riattiva")
 	public Map<String, String> riattivaUtenza(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
 		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
 			throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
 		}
@@ -221,15 +207,14 @@ public class UtenzaController {
 		Utenza utenza = utenzaDAO.findById(id).orElseThrow(() -> new InvalidFieldException("Utente non trovato"));
 		utenza.setStato(true);
 		utenzaDAO.save(utenza);
-
 		return Map.of(MESSAGE_KEY, "Utenza riattivata con successo");
 	}
 
 	@PatchMapping("/{id}/stato")
-	public Map<String, Object> cambiaStatoUtenza(@PathVariable Integer id, @RequestBody Map<String, Boolean> data,
-			@RequestHeader("Authorization") String token) {
-		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+	public Map<String, Object> cambiaStatoUtenza(@PathVariable(value = "id") Integer id, 
+			@RequestBody Map<String, Boolean> data, @RequestHeader("Authorization") String token) {
 
+		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
 		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
 			throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
 		}
@@ -243,7 +228,6 @@ public class UtenzaController {
 		}
 
 		Utenza utenza = utenzaDAO.findById(id).orElseThrow(() -> new InvalidFieldException("Utente non trovato"));
-
 		Boolean nuovoStato = data.get(STATO_KEY);
 		if (nuovoStato == null) {
 			throw new InvalidFieldException("Stato non specificato");
@@ -251,17 +235,16 @@ public class UtenzaController {
 
 		utenza.setStato(nuovoStato);
 		utenzaDAO.save(utenza);
-
 		return Map.of(MESSAGE_KEY,
 				Boolean.TRUE.equals(nuovoStato) ? "Utenza attivata con successo" : "Utenza disattivata con successo",
 				UTENTE_KEY, Map.of(ID_KEY, utenza.getIdUtente(), STATO_KEY, utenza.getStato()));
 	}
 
+	
 	@GetMapping("/lista")
 	public List<Map<String, Object>> getListaUtenti(@RequestHeader("Authorization") String token,
-			@RequestParam(required = false) Boolean attivi) {
+			@RequestParam(value = "attivi", required = false) Boolean attivi) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
 		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
 			throw new InvalidFieldException("Account disattivato. Non puoi visualizzare la lista utenti");
 		}
@@ -287,7 +270,6 @@ public class UtenzaController {
 	@GetMapping("/lista-attivi")
 	public List<Map<String, Object>> getListaUtentiAttivi(@RequestHeader("Authorization") String token) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
 		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
 			throw new InvalidFieldException("Account disattivato. Non puoi visualizzare la lista utenti");
 		}

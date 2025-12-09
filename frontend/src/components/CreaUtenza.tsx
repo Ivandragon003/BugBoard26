@@ -59,20 +59,35 @@ export default function CreaUtenza() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+  const { name, value } = e.target;
+  setForm({ ...form, [name]: value });
 
-    if (name === "nome" || name === "cognome") {
-      const nome = name === "nome" ? value : form.nome;
-      const cognome = name === "cognome" ? value : form.cognome;
-      if (nome && cognome) {
-        const email = `${nome.toLowerCase()}.${cognome.toLowerCase()}@bugboard.it`;
-        setGeneratedEmail(email);
-      } else {
-        setGeneratedEmail("");
-      }
+  if (name === "nome" || name === "cognome") {
+    const nome = name === "nome" ? value : form.nome;
+    const cognome = name === "cognome" ? value : form.cognome;
+    
+    if (nome && cognome) {
+      
+      const nomeClean = nome
+        .toLowerCase()
+        .replace(/\s+/g, '')  
+        .normalize('NFD')    
+        .replace(/[\u0300-\u036f]/g, '');
+      
+      const cognomeClean = cognome
+        .toLowerCase()
+        .replace(/\s+/g, '')  
+        .normalize('NFD')    
+        .replace(/[\u0300-\u036f]/g, '');
+      
+      const email = `${nomeClean}.${cognomeClean}@bugboard.it`;
+      setGeneratedEmail(email);
+    } else {
+      setGeneratedEmail("");
     }
-  };
+  }
+};
+
 
   const handleRegeneratePassword = () => {
     const newPassword = generatePassword();

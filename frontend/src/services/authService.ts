@@ -1,23 +1,21 @@
 import axios from 'axios';
 import API_BASE_URL from '../config';
 
+
 export const authService = {
   login: async (email: string, password: string) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/utenza/login`, {
-        email,
-        password
-      });
-      
-      if (response.data.token && response.data.utente) {
-        localStorage.setItem('authToken', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.utente));
-      }
-      
-      return response.data;
-    } catch (error) {
-      throw error;
+    const response = await axios.post(`${API_BASE_URL}/utenza/login`, {
+      email,
+      password
+    });
+    
+    if (response.data.token && response.data.utente) {
+      localStorage.setItem('authToken', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.utente));
     }
+    
+    return response.data;
+    
   },
   
   logout: () => {
