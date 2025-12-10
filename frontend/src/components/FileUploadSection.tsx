@@ -1,5 +1,5 @@
-
-import React from 'react';
+import React, { useState } from 'react';
+import styles from './FileUploadSection.module.css';
 
 interface FileUploadSectionProps {
   files: File[];
@@ -12,148 +12,175 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
   setFiles, 
   disabled = false 
 }) => {
-  
+  // ✅ MIGLIORAMENTO: Stato per errori di validazione
+  const [error, setError] = useState<string>('');
+
+  // ✅ MIGLIORAMENTO: Costanti di configurazione
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  const MAX_FILES = 10; // Limite opzionale
+
+  // ✅ MIGLIORAMENTO: Funzione di validazione
+  const validateFiles = (newFiles: File[]): string | null => {
+    // Controlla numero massimo di file
+    if (files.length + newFiles.length > MAX_FILES) {
+      return `Massimo ${MAX_FILES} file consentiti`;
+    }
+
+    // Valida ogni file
+    for (const file of newFiles) {
+      // Controlla dimensione
+      if (file.size > MAX_FILE_SIZE) {
+        return `File "${file.name}" troppo grande (max 5MB)`;
+      }
+
+      // Controlla tipo
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        return `File "${file.name}" non supportato. Usa JPEG, PNG, GIF o WebP`;
+      }
+
+      // Controlla duplicati
+      if (files.some(f => f.name === file.name && f.size === file.size)) {
+        return `File "${file.name}" già caricato`;
+      }
+    }
+
+    return null;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
+      
+      // ✅ MIGLIORAMENTO: Validazione prima di aggiungere
+      const validationError = validateFiles(newFiles);
+      if (validationError) {
+        setError(validationError);
+        setTimeout(() => setError(''), 5000);
+        e.target.value = ''; // Reset input
+        return;
+      }
+
       setFiles(prev => [...prev, ...newFiles]);
+      setError('');
+      e.target.value = ''; // Reset input
     }
   };
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+    setError(''); // Clear error when removing files
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    e.preventDefault();
+    e.currentTarget.classList.add(styles.dragActive);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.currentTarget.classList.remove(styles.dragActive);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (disabled) return;
     e.preventDefault();
-    e.currentTarget.style.borderColor = "#d1d5db";
-    e.currentTarget.style.backgroundColor = "#f9fafb";
+    e.currentTarget.classList.remove(styles.dragActive);
+    
     if (e.dataTransfer.files) {
       const newFiles = Array.from(e.dataTransfer.files);
+      
+      // ✅ MIGLIORAMENTO: Validazione anche per drag & drop
+      const validationError = validateFiles(newFiles);
+      if (validationError) {
+        setError(validationError);
+        setTimeout(() => setError(''), 5000);
+        return;
+      }
+
       setFiles(prev => [...prev, ...newFiles]);
+      setError('');
     }
   };
 
+  // ✅ MIGLIORAMENTO: Formattazione dimensione file
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
   return (
-    <div style={{ marginBottom: "24px" }}>
-      <label style={{
-        display: "block",
-        fontSize: "13px",
-        fontWeight: 600,
-        color: "#374151",
-        marginBottom: "8px"
-      }}>
+    <div className={styles.uploadContainer}>
+      <label className={styles.label}>
         Allegato File (facoltativo)
       </label>
+      
       <div 
-        style={{
-          border: "2px dashed #d1d5db",
-          borderRadius: "8px",
-          padding: "24px",
-          textAlign: "center",
-          backgroundColor: disabled ? "#f3f4f6" : "#f9fafb",
-          cursor: disabled ? "not-allowed" : "pointer",
-          transition: "all 0.2s",
-          opacity: disabled ? 0.6 : 1
-        }}
-        onDragOver={(e) => {
-          if (disabled) return;
-          e.preventDefault();
-          e.currentTarget.style.borderColor = "#0d9488";
-          e.currentTarget.style.backgroundColor = "#f0fdfa";
-        }}
-        onDragLeave={(e) => {
-          e.currentTarget.style.borderColor = "#d1d5db";
-          e.currentTarget.style.backgroundColor = "#f9fafb";
-        }}
+        className={`${styles.dropzone} ${disabled ? styles.dropzoneDisabled : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         <input
           type="file"
           multiple
-          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+          accept={ALLOWED_TYPES.join(',')}
           onChange={handleFileChange}
-          style={{ display: "none" }}
+          className={styles.fileInput}
           id="file-upload"
           disabled={disabled}
         />
         <label 
           htmlFor="file-upload" 
-          style={{ 
-            cursor: disabled ? "not-allowed" : "pointer",
-            display: "block"
-          }}
+          className={`${styles.dropzoneLabel} ${disabled ? styles.dropzoneLabelDisabled : ''}`}
         >
-          <div style={{
-            width: "48px",
-            height: "48px",
-            margin: "0 auto 12px",
-            backgroundColor: "#e0f2f1",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "24px"
-          }}>
+          <div className={styles.uploadIconContainer}>
             ⬆️
           </div>
-          <p style={{
-            fontSize: "14px",
-            fontWeight: 600,
-            color: "#0d9488",
-            margin: "0 0 4px 0"
-          }}>
+          <p className={styles.uploadTitle}>
             Carica File
           </p>
-          <p style={{
-            fontSize: "12px",
-            color: "#6b7280",
-            margin: 0
-          }}>
+          <p className={styles.uploadHint}>
             Formati supportati: JPEG, PNG, GIF, WebP - Max 5MB
           </p>
+          {/* ✅ MIGLIORAMENTO: Mostra conteggio file */}
+          {files.length > 0 && (
+            <p className={styles.uploadHint} style={{ marginTop: '0.5rem', color: '#0d9488' }}>
+              {files.length} / {MAX_FILES} file caricati
+            </p>
+          )}
         </label>
       </div>
 
+      {/* ✅ MIGLIORAMENTO: Messaggio di errore */}
+      {error && (
+        <div className={styles.errorMessage} style={{ 
+          marginTop: '0.5rem', 
+          padding: '0.75rem', 
+          backgroundColor: '#fee2e2', 
+          color: '#991b1b', 
+          borderRadius: '0.375rem',
+          fontSize: '0.875rem'
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
+
       {files.length > 0 && (
-        <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div className={styles.fileList}>
           {files.map((file, index) => (
-            <div key={index} style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "10px 14px",
-              backgroundColor: "#f9fafb",
-              borderRadius: "6px",
-              border: "1px solid #e5e7eb"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
-                <div style={{
-                  width: "36px",
-                  height: "36px",
-                  backgroundColor: "#e0f2f1",
-                  borderRadius: "6px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "18px"
-                }}>
+            <div key={index} className={styles.fileItem}>
+              <div className={styles.fileContent}>
+                <div className={styles.fileIconContainer}>
                   📄
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{
-                    fontWeight: 500,
-                    color: "#1f2937",
-                    fontSize: "13px"
-                  }}>
+                <div className={styles.fileInfo}>
+                  <div className={styles.fileName}>
                     {file.name}
                   </div>
-                  <div style={{
-                    fontSize: "12px",
-                    color: "#6b7280",
-                    marginTop: "2px"
-                  }}>
-                    {(file.size / 1024).toFixed(2)} KB
+                  <div className={styles.fileSize}>
+                    {formatFileSize(file.size)}
                   </div>
                 </div>
               </div>
@@ -161,17 +188,8 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                 type="button"
                 onClick={() => removeFile(index)}
                 disabled={disabled}
-                style={{
-                  padding: "6px 10px",
-                  backgroundColor: "#fee2e2",
-                  border: "1px solid #fca5a5",
-                  borderRadius: "4px",
-                  cursor: disabled ? "not-allowed" : "pointer",
-                  color: "#dc2626",
-                  fontSize: "16px",
-                  lineHeight: 1,
-                  opacity: disabled ? 0.5 : 1
-                }}
+                className={`${styles.removeButton} ${disabled ? styles.removeButtonDisabled : ''}`}
+                aria-label={`Rimuovi ${file.name}`}
               >
                 ✕
               </button>

@@ -3,6 +3,7 @@ import { authService } from "../services/authService";
 import API_BASE_URL from "../config";
 import axios from "axios";
 import Sidebar from "./Sidebar";
+import styles from "./VisualizzaProfilo.module.css";
 
 export default function VisualizzaProfilo() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -66,140 +67,59 @@ export default function VisualizzaProfilo() {
   };
 
   return (
-    <div style={{ 
-      display: "flex", 
-      minHeight: "100vh", 
-      backgroundColor: "#f5f7fa",
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' 
-    }}>
+    <div className={styles.container}>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <header style={{
-          backgroundColor: "white",
-          borderBottom: "1px solid #e5e7eb",
-          padding: "16px 32px",
-          display: "flex",
-          alignItems: "center",
-          gap: "16px"
-        }}>
+      <div className={styles.mainContent}>
+        <header className={styles.header}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            style={{
-              padding: "8px 12px",
-              backgroundColor: "transparent",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "20px",
-              color: "#374151"
-            }}
+            className={styles.menuButton}
           >
             ☰
           </button>
-          <div>
-            <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
-              Profilo Utente
-            </h2>
-            <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "2px" }}>
+          <div className={styles.headerContent}>
+            <h2 className={styles.title}>Profilo Utente</h2>
+            <div className={styles.subtitle}>
               Visualizza e gestisci le informazioni del tuo account
             </div>
           </div>
         </header>
 
-        <div style={{ padding: "32px", maxWidth: 600, margin: "0 auto", width: "100%" }}>
-          <div style={{ 
-            background: "#fff", 
-            borderRadius: 12, 
-            padding: 32, 
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            border: "1px solid #e5e7eb"
-          }}>
+        <div className={styles.contentWrapper}>
+          <div className={styles.card}>
             {!edit && (
               <>
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ 
-                    display: "flex", 
-                    alignItems: "center", 
-                    gap: "16px",
-                    marginBottom: "24px",
-                    paddingBottom: "24px",
-                    borderBottom: "1px solid #e5e7eb"
-                  }}>
-                    <div style={{
-                      width: "64px",
-                      height: "64px",
-                      backgroundColor: "#e0f2f1",
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "28px"
-                    }}>
-                      👤
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "18px", fontWeight: 600, color: "#1f2937" }}>
-                        {user.email}
-                      </div>
-                      <div style={{ fontSize: "14px", color: "#6b7280", marginTop: "4px" }}>
-                        Ruolo: <span style={{ 
-                          fontWeight: 600, 
-                          color: isAdmin ? "#0d9488" : "#6b7280" 
-                        }}>
+                <div className={styles.viewContent}>
+                  <div className={styles.profileHeader}>
+                    <div className={styles.avatar}>👤</div>
+                    <div className={styles.profileInfo}>
+                      <div className={styles.profileEmail}>{user.email}</div>
+                      <div className={styles.profileRole}>
+                        Ruolo:{" "}
+                        <span className={`${styles.roleValue} ${isAdmin ? styles.roleAdmin : ''}`}>
                           {user.ruolo}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    <div style={{ 
-                      padding: "12px 16px",
-                      backgroundColor: "#f9fafb",
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb"
-                    }}>
-                      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>
-                        Email
-                      </div>
-                      <div style={{ fontSize: "14px", fontWeight: 500, color: "#1f2937" }}>
-                        {user.email}
-                      </div>
+                  <div className={styles.infoList}>
+                    <div className={styles.infoItem}>
+                      <div className={styles.infoLabel}>Email</div>
+                      <div className={styles.infoValue}>{user.email}</div>
                     </div>
 
-                    <div style={{ 
-                      padding: "12px 16px",
-                      backgroundColor: "#f9fafb",
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb"
-                    }}>
-                      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>
-                        Ruolo
-                      </div>
-                      <div style={{ fontSize: "14px", fontWeight: 500, color: "#1f2937" }}>
-                        {user.ruolo}
-                      </div>
+                    <div className={styles.infoItem}>
+                      <div className={styles.infoLabel}>Ruolo</div>
+                      <div className={styles.infoValue}>{user.ruolo}</div>
                     </div>
                   </div>
                 </div>
 
                 <button 
                   onClick={() => setEdit(true)} 
-                  style={{ 
-                    width: "100%",
-                    background: "#0d9488", 
-                    color: "#fff", 
-                    border: "none",
-                    fontWeight: 600, 
-                    borderRadius: 8, 
-                    padding: "12px 16px",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    transition: "background-color 0.2s"
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0f766e"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#0d9488"}
+                  className={styles.editButton}
                 >
                   🔑 Modifica Password
                 </button>
@@ -208,143 +128,90 @@ export default function VisualizzaProfilo() {
 
             {edit && (
               <form onSubmit={handleSubmit}>
-                <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#1f2937", marginBottom: "20px" }}>
-                  Modifica Profilo
-                </h3>
+                <h3 className={styles.formTitle}>Modifica Profilo</h3>
 
                 {/* EMAIL NON MODIFICABILE */}
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ 
-                    display: "block", 
-                    fontSize: "13px", 
-                    fontWeight: 500, 
-                    color: "#374151",
-                    marginBottom: "6px"
-                  }}>
+                <div className={styles.formGroup}>
+                  <label htmlFor="email" className={styles.label}>
                     Email (non modificabile)
                   </label>
                   <input
+                    id="email"
                     type="email"
                     name="email"
                     value={user.email}
                     readOnly
                     disabled
-                    style={{ 
-                      width: "100%", 
-                      padding: "10px 14px", 
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "6px",
-                      fontSize: "14px",
-                      boxSizing: "border-box",
-                      backgroundColor: "#f9fafb",
-                      color: "#6b7280",
-                      cursor: "not-allowed"
-                    }}
+                    className={`${styles.input} ${styles.inputDisabled}`}
                   />
-                  <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: "4px" }}>
+                  <div className={`${styles.helperText} ${styles.helperInfo}`}>
                     ℹ️ L'email non può essere modificata
                   </div>
                 </div>
 
                 {/* NUOVA PASSWORD */}
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ 
-                    display: "block", 
-                    fontSize: "13px", 
-                    fontWeight: 500, 
-                    color: "#374151",
-                    marginBottom: "6px"
-                  }}>
-                    Nuova password <span style={{ color: "#ef4444" }}>*</span>
+                <div className={styles.formGroup}>
+                  <label htmlFor="password" className={styles.label}>
+                    Nuova password <span className={styles.required}>*</span>
                   </label>
                   <input
+                    id="password"
                     type="password"
                     name="password"
                     value={form.password}
                     onChange={handleChange}
                     required
                     placeholder="Inserisci la nuova password (min. 6 caratteri)"
-                    style={{ 
-                      width: "100%", 
-                      padding: "10px 14px", 
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      fontSize: "14px",
-                      boxSizing: "border-box"
-                    }}
+                    className={styles.input}
                   />
                 </div>
 
                 {/* CONFERMA PASSWORD */}
-                <div style={{ marginBottom: 20 }}>
-                  <label style={{ 
-                    display: "block", 
-                    fontSize: "13px", 
-                    fontWeight: 500, 
-                    color: "#374151",
-                    marginBottom: "6px"
-                  }}>
-                    Conferma password <span style={{ color: "#ef4444" }}>*</span>
+                <div className={styles.formGroupLast}>
+                  <label htmlFor="confirmPassword" className={styles.label}>
+                    Conferma password <span className={styles.required}>*</span>
                   </label>
                   <input
+                    id="confirmPassword"
                     type="password"
                     name="confirmPassword"
                     value={form.confirmPassword}
                     onChange={handleChange}
                     required
                     placeholder="Reinserisci la password"
-                    style={{ 
-                      width: "100%", 
-                      padding: "10px 14px", 
-                      border: `1px solid ${form.password && form.confirmPassword && form.password !== form.confirmPassword ? "#ef4444" : "#d1d5db"}`,
-                      borderRadius: "6px",
-                      fontSize: "14px",
-                      boxSizing: "border-box"
-                    }}
+                    className={`${styles.input} ${
+                      form.password && 
+                      form.confirmPassword && 
+                      form.password !== form.confirmPassword 
+                        ? styles.inputError 
+                        : ''
+                    }`}
                   />
                   {form.password && form.confirmPassword && form.password !== form.confirmPassword && (
-                    <div style={{ fontSize: "12px", color: "#ef4444", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <div className={`${styles.helperText} ${styles.helperError}`}>
                       ❌ Le password non coincidono
                     </div>
                   )}
                   {form.password && form.confirmPassword && form.password === form.confirmPassword && (
-                    <div style={{ fontSize: "12px", color: "#16a34a", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <div className={`${styles.helperText} ${styles.helperSuccess}`}>
                       ✅ Le password coincidono
                     </div>
                   )}
                 </div>
 
                 {message.text && (
-                  <div style={{ 
-                    padding: "12px 16px",
-                    borderRadius: "8px",
-                    marginBottom: 16,
-                    color: message.type === "success" ? "#16a34a" : "#e11d48",
-                    backgroundColor: message.type === "success" ? "#f0fdf4" : "#fef2f2",
-                    border: `1px solid ${message.type === "success" ? "#bbf7d0" : "#fecaca"}`,
-                    fontWeight: 600,
-                    fontSize: "14px"
-                  }}>
+                  <div className={`${styles.message} ${
+                    message.type === "success" ? styles.messageSuccess : styles.messageError
+                  }`}>
                     {message.text}
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: "12px" }}>
+                <div className={styles.formActions}>
                   <button 
                     type="submit" 
                     disabled={!form.password || !form.confirmPassword || form.password !== form.confirmPassword}
-                    style={{ 
-                      flex: 1,
-                      background: (!form.password || !form.confirmPassword || form.password !== form.confirmPassword) ? "#9ca3af" : "#0d9488", 
-                      color: "#fff", 
-                      border: "none",
-                      fontWeight: 600, 
-                      borderRadius: 8, 
-                      padding: "10px 24px",
-                      fontSize: "14px",
-                      cursor: (!form.password || !form.confirmPassword || form.password !== form.confirmPassword) ? "not-allowed" : "pointer",
-                      opacity: (!form.password || !form.confirmPassword || form.password !== form.confirmPassword) ? 0.6 : 1
-                    }}
+                    className={styles.submitButton}
                   >
                     💾 Salva
                   </button>
@@ -355,17 +222,7 @@ export default function VisualizzaProfilo() {
                       setMessage({ type: "", text: "" });
                       setForm({ email: user.email, password: "", confirmPassword: "" });
                     }} 
-                    style={{ 
-                      flex: 1,
-                      borderRadius: 8, 
-                      background: "#f3f4f6", 
-                      color: "#374151",
-                      border: "1px solid #d1d5db",
-                      fontWeight: 600, 
-                      padding: "10px 24px",
-                      fontSize: "14px",
-                      cursor: "pointer"
-                    }}
+                    className={styles.cancelButton}
                   >
                     ❌ Annulla
                   </button>

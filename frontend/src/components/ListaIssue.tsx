@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react"; 
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
+import styles from "./ListaIssue.module.css";
 
 interface Issue {
   idIssue: number;
@@ -30,35 +31,36 @@ function ListaIssue() {
     const token = authService.getToken();
     if (!token) {
       navigate("/login");
-      return;
     }
   }, [navigate]);
 
-  
+  const loadFilteredIssues = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      const params: any = {
+        archiviata: false,
+        ordinamento: sortOrder
+      };
 
- const loadFilteredIssues = useCallback(async () => {
-  try {
-    setLoading(true);
-    
-    const params: any = {
-      archiviata: false,
-      ordinamento: sortOrder
-    };
+      if (statoFilter) params.stato = statoFilter;
+      if (tipoFilter) params.tipo = tipoFilter;
+      if (prioritaFilter) params.priorita = prioritaFilter;
+      if (searchTerm) params.ricerca = searchTerm;
 
-    if (statoFilter) params.stato = statoFilter;
-    if (tipoFilter) params.tipo = tipoFilter;
-    if (prioritaFilter) params.priorita = prioritaFilter;
-    if (searchTerm) params.ricerca = searchTerm;
+      const data = await issueService.filterIssuesAdvanced(params);
+      setIssues(data);
+    } catch (error) {
+      console.error("Errore caricamento issue:", error);
+      setIssues([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder]);
 
-    const data = await issueService.filterIssuesAdvanced(params);
-    setIssues(data);
-  } catch (error) {
-    console.error("Errore caricamento issue:", error);
-    setIssues([]);
-  } finally {
-    setLoading(false);
-  }
-}, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder]);
+  useEffect(() => {
+    loadFilteredIssues();
+  }, [loadFilteredIssues]);
 
   const handleReset = () => {
     setSearchTerm("");
@@ -73,10 +75,6 @@ function ListaIssue() {
     return date.toLocaleDateString("it-IT");
   };
 
- useEffect(() => {
-  loadFilteredIssues();
-}, [loadFilteredIssues]);
-
   const hasActiveFilters = () => {
     return searchTerm !== "" || 
            statoFilter !== "" || 
@@ -84,49 +82,48 @@ function ListaIssue() {
            prioritaFilter !== "";
   };
 
-  // Stili come Home.tsx
-  const getStatoStyle = (stato: string) => {
+  const getStatoBadgeClass = (stato: string): string => {
     switch (stato.toLowerCase()) {
       case "todo":
-        return { backgroundColor: "#e5e7eb", color: "#374151" };
+        return styles.badgeStatusTodo;
       case "inprogress":
       case "in_progress":
-        return { backgroundColor: "#fed7aa", color: "#9a3412" };
+        return styles.badgeStatusInProgress;
       case "done":
-        return { backgroundColor: "#86efac", color: "#166534" };
+        return styles.badgeStatusDone;
       default:
-        return { backgroundColor: "#e5e7eb", color: "#374151" };
+        return styles.badgeStatusTodo;
     }
   };
 
-  const getTipoStyle = (tipo: string) => {
+  const getTipoBadgeClass = (tipo: string): string => {
     switch (tipo.toLowerCase()) {
-      case "documentation":
-        return { backgroundColor: "#d1fae5", color: "#065f46" };
+      case "bug":
+        return styles.badgeTypeBug;
       case "feature":
       case "features":
-        return { backgroundColor: "#dbeafe", color: "#1e40af" };
-      case "bug":
-        return { backgroundColor: "#fee2e2", color: "#991b1b" };
+        return styles.badgeTypeFeature;
       case "question":
-        return { backgroundColor: "#e9d5ff", color: "#6b21a8" };
+        return styles.badgeTypeQuestion;
+      case "documentation":
+        return styles.badgeTypeDocumentation;
       default:
-        return { backgroundColor: "#e5e7eb", color: "#374151" };
+        return styles.badgeTypeFeature;
     }
   };
 
-  const getPrioritaStyle = (priorita: string) => {
+  const getPrioritaBadgeClass = (priorita: string): string => {
     switch (priorita.toLowerCase()) {
       case "critical":
-        return { backgroundColor: "#fecaca", color: "#7f1d1d" };
+        return styles.badgePriorityCritical;
       case "high":
-        return { backgroundColor: "#fee2e2", color: "#991b1b" };
+        return styles.badgePriorityHigh;
       case "medium":
-        return { backgroundColor: "#fef3c7", color: "#92400e" };
+        return styles.badgePriorityMedium;
       case "low":
-        return { backgroundColor: "#f3f4f6", color: "#374151" };
+        return styles.badgePriorityLow;
       default:
-        return { backgroundColor: "#f3f4f6", color: "#374151" };
+        return styles.badgePriorityNone;
     }
   };
 
@@ -137,87 +134,48 @@ function ListaIssue() {
 
   if (loading && issues.length === 0) {
     return (
-      <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
+      <div className={styles.loadingContainer}>
         <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        <div style={{ flex: 1, padding: "32px" }}>
-          <div style={{ fontSize: "18px", color: "#6b7280" }}>Caricamento issue...</div>
+        <div className={styles.loadingContent}>
+          <div className={styles.loadingText}>Caricamento issue...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
+    <div className={styles.container}>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <header
-          style={{
-            backgroundColor: "white",
-            borderBottom: "1px solid #e5e7eb",
-            padding: "20px 32px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div>
-            <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#1f2937", margin: 0 }}>
-              Issue
-            </h1>
-            <p style={{ fontSize: "14px", color: "#6b7280", marginTop: "4px" }}>
+      <div className={styles.mainContent}>
+        <header className={styles.header}>
+          <div className={styles.headerContent}>
+            <h1 className={styles.title}>Issue</h1>
+            <p className={styles.subtitle}>
               Visualizza e gestisci tutte le tue issue
             </p>
           </div>
           <button
             onClick={() => navigate("/issues/nuova")}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: "#0d9488",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className={styles.createButton}
           >
-            ➕ Nuova Issue
+            <span style={{ fontSize: "18px" }}>➕</span> Nuova Issue
           </button>
         </header>
 
-        <div style={{ flex: 1, padding: "32px" }}>
+        <div className={styles.content}>
           {hasActiveFilters() && (
-            <div style={{
-              backgroundColor: "#d1fae5",
-              border: "1px solid #6ee7b7",
-              borderRadius: "8px",
-              padding: "12px 16px",
-              marginBottom: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontSize: "13px",
-              color: "#065f46"
-            }}>
+            <div className={styles.activeFiltersNotice}>
               <span style={{ fontSize: "16px" }}>🔍</span>
               <strong>Filtri attivi:</strong>
               <span>Mostrando {issues.length} issue{loading && " (aggiornamento...)"}</span>
             </div>
           )}
 
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "24px",
-              marginBottom: "24px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            }}
-          >
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1.5fr 1.5fr 1fr auto", gap: "16px", alignItems: "end" }}>
-              <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>
+          <div className={styles.filterBar}>
+            <div className={styles.filterGrid}>
+              <div className={styles.filterField}>
+                <label className={styles.filterLabel}>
                   🔍 Cerca issue
                 </label>
                 <input
@@ -225,43 +183,16 @@ function ListaIssue() {
                   placeholder="Scrivi il titolo..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: searchTerm ? "2px solid #0d9488" : "1px solid #d1d5db",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                    backgroundColor: searchTerm ? "#f0fdfa" : "#f9fafb",
-                    transition: "all 0.2s",
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = "#0d9488"}
-                  onBlur={(e) => e.target.style.borderColor = searchTerm ? "#0d9488" : "#d1d5db"}
+                  className={`${styles.searchInput} ${searchTerm ? styles.searchInputActive : ''}`}
                 />
               </div>
 
-              <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>
-                  Stato
-                </label>
+              <div className={styles.filterField}>
+                <label className={styles.filterLabel}>Stato</label>
                 <select
                   value={statoFilter}
                   onChange={(e) => setStatoFilter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: statoFilter ? "2px solid #0d9488" : "1px solid #d1d5db",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                    backgroundColor: statoFilter ? "#f0fdfa" : "#f9fafb",
-                    cursor: "pointer",
-                    appearance: "none",
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 10px center",
-                    paddingRight: "36px",
-                  }}
+                  className={`${styles.filterSelect} ${statoFilter ? styles.filterSelectActive : ''}`}
                 >
                   <option value="">Tutti gli stati</option>
                   <option value="Todo">Todo</option>
@@ -270,28 +201,12 @@ function ListaIssue() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>
-                  Tipo
-                </label>
+              <div className={styles.filterField}>
+                <label className={styles.filterLabel}>Tipo</label>
                 <select
                   value={tipoFilter}
                   onChange={(e) => setTipoFilter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: tipoFilter ? "2px solid #0d9488" : "1px solid #d1d5db",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                    backgroundColor: tipoFilter ? "#f0fdfa" : "#f9fafb",
-                    cursor: "pointer",
-                    appearance: "none",
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 10px center",
-                    paddingRight: "36px",
-                  }}
+                  className={`${styles.filterSelect} ${tipoFilter ? styles.filterSelectActive : ''}`}
                 >
                   <option value="">Tutti i tipi</option>
                   <option value="bug">Bug</option>
@@ -301,28 +216,12 @@ function ListaIssue() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>
-                  Priorità
-                </label>
+              <div className={styles.filterField}>
+                <label className={styles.filterLabel}>Priorità</label>
                 <select
                   value={prioritaFilter}
                   onChange={(e) => setPrioritaFilter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: prioritaFilter ? "2px solid #0d9488" : "1px solid #d1d5db",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                    backgroundColor: prioritaFilter ? "#f0fdfa" : "#f9fafb",
-                    cursor: "pointer",
-                    appearance: "none",
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 10px center",
-                    paddingRight: "36px",
-                  }}
+                  className={`${styles.filterSelect} ${prioritaFilter ? styles.filterSelectActive : ''}`}
                 >
                   <option value="">Tutte le priorità</option>
                   <option value="none">None</option>
@@ -333,28 +232,12 @@ function ListaIssue() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>
-                  Ordina
-                </label>
+              <div className={styles.filterField}>
+                <label className={styles.filterLabel}>Ordina</label>
                 <select
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                    backgroundColor: "#f9fafb",
-                    cursor: "pointer",
-                    appearance: "none",
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 10px center",
-                    paddingRight: "36px",
-                  }}
+                  className={styles.filterSelect}
                 >
                   <option value="data_recente">Data (più recente)</option>
                   <option value="data_vecchio">Data (più vecchio)</option>
@@ -367,115 +250,28 @@ function ListaIssue() {
 
               <button
                 onClick={handleReset}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#e5e7eb";
-                  e.currentTarget.style.borderColor = "#9ca3af";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#f3f4f6";
-                  e.currentTarget.style.borderColor = "#d1d5db";
-                }}
+                className={styles.resetButton}
               >
                 Reset
               </button>
             </div>
           </div>
 
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              overflow: "hidden",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            }}
-          >
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-              }}
-            >
-              <thead>
-                <tr
-                  style={{
-                    backgroundColor: "#f9fafb",
-                    borderBottom: "2px solid #d1d5db",
-                  }}
-                >
-                  <th
-                    style={{
-                      padding: "16px",
-                      textAlign: "left",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#374151",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    Titolo
-                  </th>
-                  <th
-                    style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#374151",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
+          <div className={styles.tableContainer}>
+            <table className={styles.table}>
+              <thead className={styles.tableHead}>
+                <tr>
+                  <th className={styles.tableHeaderCell}>Titolo</th>
+                  <th className={`${styles.tableHeaderCell} ${styles.tableHeaderCellCenter}`}>
                     Stato
                   </th>
-                  <th
-                    style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#374151",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
+                  <th className={`${styles.tableHeaderCell} ${styles.tableHeaderCellCenter}`}>
                     Tipo
                   </th>
-                  <th
-                    style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#374151",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
+                  <th className={`${styles.tableHeaderCell} ${styles.tableHeaderCellCenter}`}>
                     Priorità
                   </th>
-                  <th
-                    style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#374151",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
+                  <th className={`${styles.tableHeaderCell} ${styles.tableHeaderCellCenter}`}>
                     Data Creazione
                   </th>
                 </tr>
@@ -483,29 +279,13 @@ function ListaIssue() {
               <tbody>
                 {loading && issues.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      style={{
-                        padding: "48px 16px",
-                        textAlign: "center",
-                        color: "#6b7280",
-                        fontSize: "15px",
-                      }}
-                    >
+                    <td colSpan={5} className={styles.loadingState}>
                       Caricamento...
                     </td>
                   </tr>
                 ) : issues.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      style={{
-                        padding: "48px 16px",
-                        textAlign: "center",
-                        color: "#9ca3af",
-                        fontSize: "15px",
-                      }}
-                    >
+                    <td colSpan={5} className={styles.emptyState}>
                       Nessuna issue trovata
                     </td>
                   </tr>
@@ -513,77 +293,28 @@ function ListaIssue() {
                   issues.map((issue) => (
                     <tr
                       key={issue.idIssue}
-                      style={{
-                        borderBottom: "1px solid #e5e7eb",
-                        transition: "background-color 0.15s",
-                        cursor: "pointer",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f9fafb")}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                      className={styles.tableRow}
                       onClick={() => navigate(`/issues/${issue.idIssue}`, { state: { from: "/issues" } })}
                     >
-                      <td
-                        style={{
-                          padding: "14px 16px",
-                          fontSize: "14px",
-                          fontWeight: 500,
-                          color: "#0d9488",
-                          cursor: "pointer",
-                        }}
-                      >
+                      <td className={`${styles.tableCell} ${styles.tableCellTitle}`}>
                         {issue.titolo}
                       </td>
-                      <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                        <span
-                          style={{
-                            padding: "4px 12px",
-                            borderRadius: "12px",
-                            fontSize: "13px",
-                            fontWeight: 500,
-                            display: "inline-block",
-                            ...getStatoStyle(issue.stato)
-                          }}
-                        >
+                      <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
+                        <span className={`${styles.badge} ${getStatoBadgeClass(issue.stato)}`}>
                           {formatStato(issue.stato)}
                         </span>
                       </td>
-                      <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                        <span
-                          style={{
-                            padding: "4px 12px",
-                            borderRadius: "12px",
-                            fontSize: "13px",
-                            fontWeight: 500,
-                            display: "inline-block",
-                            ...getTipoStyle(issue.tipo)
-                          }}
-                        >
+                      <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
+                        <span className={`${styles.badge} ${getTipoBadgeClass(issue.tipo)}`}>
                           {issue.tipo}
                         </span>
                       </td>
-                      <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                        <span
-                          style={{
-                            padding: "4px 12px",
-                            borderRadius: "12px",
-                            fontSize: "13px",
-                            fontWeight: 500,
-                            textTransform: "lowercase",
-                            display: "inline-block",
-                            ...getPrioritaStyle(issue.priorita)
-                          }}
-                        >
+                      <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
+                        <span className={`${styles.badge} ${getPrioritaBadgeClass(issue.priorita)}`}>
                           {issue.priorita}
                         </span>
                       </td>
-                      <td
-                        style={{
-                          padding: "14px 16px",
-                          fontSize: "14px",
-                          color: "#6b7280",
-                          textAlign: "center",
-                        }}
-                      >
+                      <td className={`${styles.tableCell} ${styles.tableCellDate}`}>
                         {formatDate(issue.dataCreazione)}
                       </td>
                     </tr>

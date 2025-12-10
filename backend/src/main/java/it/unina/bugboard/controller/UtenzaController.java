@@ -80,9 +80,16 @@ public class UtenzaController {
 		String email = utenzaData.get(EMAIL_KEY);
 		String password = utenzaData.get(PASSWORD_KEY);
 		String ruoloStr = utenzaData.get(RUOLO_KEY);
+		
+		// Validazioni
+		validationUtil.validaNomeCognome(nome, "nome");
+		validationUtil.validaNomeCognome(cognome, "cognome");
+		validationUtil.validaPassword(password);
+		validationUtil.validaUniqueEmail(email);
+		
 		ruoloStr = ruoloStr.substring(0, 1).toUpperCase() + ruoloStr.substring(1).toLowerCase();
 		Ruolo ruolo = Ruolo.valueOf(ruoloStr);
-		validationUtil.validaUniqueEmail(email);
+		
 		if (utenzaDAO.existsByEmail(email)) {
 			throw new InvalidFieldException("Email già registrata");
 		}
@@ -140,33 +147,42 @@ public class UtenzaController {
 
 		Utenza utenzaDaModificare = utenzaDAO.findById(id)
 				.orElseThrow(() -> new InvalidFieldException("Utente non trovato"));
+
 		if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore)
 				&& !utenzaDaModificare.getIdUtente().equals(utenteCorrente.getIdUtente())) {
 			throw new InvalidFieldException("Non puoi modificare altri amministratori");
 		}
 
-		if (utenzaData.containsKey(NOME_KEY))
-			utenzaDaModificare.setNome(utenzaData.get(NOME_KEY));
-		if (utenzaData.containsKey(COGNOME_KEY))
-			utenzaDaModificare.setCognome(utenzaData.get(COGNOME_KEY));
-		if (utenzaData.containsKey(RUOLO_KEY)) {
-			if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore)) {
-				throw new InvalidFieldException("Non puoi cambiare il ruolo di un amministratore");
-			}
+		if (!utenzaData.containsKey(RUOLO_KEY)) {
+			throw new InvalidFieldException("Il campo ruolo è obbligatorio");
+		}
 
-			String nuovoRuoloStr = utenzaData.get(RUOLO_KEY);
-			nuovoRuoloStr = nuovoRuoloStr.substring(0, 1).toUpperCase() + nuovoRuoloStr.substring(1).toLowerCase();
+		if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore)) {
+			throw new InvalidFieldException("Non puoi cambiare il ruolo di un amministratore");
+		}
+
+		String nuovoRuoloStr = utenzaData.get(RUOLO_KEY);
+		if (nuovoRuoloStr == null || nuovoRuoloStr.trim().isEmpty()) {
+			throw new InvalidFieldException("Il ruolo non può essere vuoto");
+		}
+
+		nuovoRuoloStr = nuovoRuoloStr.substring(0, 1).toUpperCase() + nuovoRuoloStr.substring(1).toLowerCase();
+
+		try {
 			Ruolo nuovoRuolo = Ruolo.valueOf(nuovoRuoloStr);
+
 			if (nuovoRuolo.equals(Ruolo.Amministratore)) {
 				throw new InvalidFieldException(
 						"Non puoi promuovere un utente ad amministratore tramite questa funzione");
 			}
 
 			utenzaDaModificare.setRuolo(nuovoRuolo);
+		} catch (IllegalArgumentException e) {
+			throw new InvalidFieldException("Ruolo non valido. Valori consentiti: Utente, Amministratore");
 		}
 
 		Utenza utenzaAggiornata = utenzaDAO.save(utenzaDaModificare);
-		return Map.of(MESSAGE_KEY, "Utenza aggiornata con successo", UTENZA_KEY,
+		return Map.of(MESSAGE_KEY, "Ruolo utente aggiornato con successo", UTENZA_KEY,
 				Map.of(ID_KEY, utenzaAggiornata.getIdUtente(), NOME_KEY, utenzaAggiornata.getNome(), COGNOME_KEY,
 						utenzaAggiornata.getCognome(), EMAIL_KEY, utenzaAggiornata.getEmail(), RUOLO_KEY,
 						utenzaAggiornata.getRuolo().toString(), STATO_KEY, utenzaAggiornata.getStato()));
@@ -211,7 +227,7 @@ public class UtenzaController {
 	}
 
 	@PatchMapping("/{id}/stato")
-	public Map<String, Object> cambiaStatoUtenza(@PathVariable(value = "id") Integer id, 
+	public Map<String, Object> cambiaStatoUtenza(@PathVariable(value = "id") Integer id,
 			@RequestBody Map<String, Boolean> data, @RequestHeader("Authorization") String token) {
 
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
@@ -240,7 +256,6 @@ public class UtenzaController {
 				UTENTE_KEY, Map.of(ID_KEY, utenza.getIdUtente(), STATO_KEY, utenza.getStato()));
 	}
 
-	
 	@GetMapping("/lista")
 	public List<Map<String, Object>> getListaUtenti(@RequestHeader("Authorization") String token,
 			@RequestParam(value = "attivi", required = false) Boolean attivi) {

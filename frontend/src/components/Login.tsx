@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { authService } from '../services/authService';
+import styles from './Login.module.css';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -8,167 +9,128 @@ function Login() {
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  setMessage('');
-  setIsError(false);
-  setIsLoading(true);
-
-  try {
-    await authService.login(email, password);
-    setMessage('Login riuscito!');
-    setIsError(false);
-    setTimeout(() => {
-      window.location.href = '/home';
-    }, 500);
-  } catch (error: any) {
-    console.error('Errore login:', error); // ✅ DEBUG
-    
-    // ✅ Gestisci il messaggio di errore dal backend
-    const backendMessage = error.response?.data?.message;
-    
-    let errorMsg = 'Errore di connessione al server';
-    
-    if (backendMessage) {
-      if (backendMessage === 'Account disattivato') {
-        errorMsg = '⚠️ Il tuo account è stato disattivato. Contatta un amministratore per la riattivazione.';
-      } else {
-        errorMsg = backendMessage;
-      }
+  // ✅ MIGLIORAMENTO: Validazione frontend prima di chiamare il backend
+  const validateForm = (): string | null => {
+    if (!email.trim()) return 'Email richiesta';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return 'Formato email non valido';
     }
-    
-    setMessage(errorMsg);
-    setIsError(true);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    if (!password) return 'Password richiesta';
+    if (password.length < 6) return 'Password troppo corta (min 6 caratteri)';
+    return null;
+  };
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setMessage('');
+    setIsError(false);
+
+    // ✅ MIGLIORAMENTO: Validazione frontend
+    const validationError = validateForm();
+    if (validationError) {
+      setMessage(validationError);
+      setIsError(true);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await authService.login(email, password);
+      setMessage('Login riuscito!');
+      setIsError(false);
+      setTimeout(() => {
+        window.location.href = '/home';
+      }, 500);
+    } catch (error: any) {
+      console.error('Errore login:', error);
+      
+      // ✅ MIGLIORAMENTO: Gestione errori più robusta
+      let errorMsg = 'Errore imprevisto';
+      
+      if (error.response) {
+        // Errori dal backend (4xx, 5xx)
+        const backendMessage = error.response.data?.message;
+        const statusCode = error.response.status;
+        
+        if (backendMessage === 'Account disattivato') {
+          errorMsg = '⚠️ Account disattivato. Contatta un amministratore.';
+        } else if (backendMessage) {
+          errorMsg = backendMessage;
+        } else if (statusCode === 401) {
+          errorMsg = 'Credenziali non valide';
+        } else if (statusCode === 500) {
+          errorMsg = 'Errore del server. Riprova più tardi.';
+        } else if (statusCode >= 400 && statusCode < 500) {
+          errorMsg = 'Richiesta non valida';
+        }
+      } else if (error.request) {
+        // Nessuna risposta dal server (problemi di rete)
+        errorMsg = '🔌 Errore di connessione. Verifica la rete.';
+      }
+      
+      setMessage(errorMsg);
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#f5f7fa',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif"
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '48px',
-        borderRadius: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        width: '100%',
-        maxWidth: '420px'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            backgroundColor: '#0d9488',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px',
-            fontSize: '24px',
-            fontWeight: 'bold',
-            color: 'white'
-          }}>
-            BB
-          </div>
-          <h1 style={{ fontSize: '28px', fontWeight: '600', color: '#1f2937', margin: '0 0 8px 0' }}>
-            BugBoard
-          </h1>
-          <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
-            Issue Management System
-          </p>
+    <div className={styles.container}>
+      <div className={styles.card}>
+        <div className={styles.header}>
+          <div className={styles.logo}>BB</div>
+          <h1 className={styles.title}>BugBoard</h1>
+          <p className={styles.subtitle}>Issue Management System</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#374151',
-              marginBottom: '8px'
-            }}>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.formGroup}>
+            <label htmlFor="email" className={styles.label}>
               Email
             </label>
             <input
+              id="email"
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Inserisci email"
               required
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                fontSize: '14px',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                boxSizing: 'border-box'
-              }}
+              className={styles.input}
+              autoComplete="email"
             />
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#374151',
-              marginBottom: '8px'
-            }}>
+          <div className={styles.formGroupLast}>
+            <label htmlFor="password" className={styles.label}>
               Password
             </label>
             <input
+              id="password"
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Inserisci password"
               required
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                fontSize: '14px',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                boxSizing: 'border-box'
-              }}
+              className={styles.input}
+              autoComplete="current-password"
             />
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            style={{
-              width: '100%',
-              padding: '12px 24px',
-              backgroundColor: isLoading ? '#9ca3af' : '#0d9488',
-              color: 'white',
-              fontSize: '14px',
-              fontWeight: '600',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              marginBottom: '16px'
-            }}
+            className={`${styles.submitButton} ${isLoading ? styles.submitButtonLoading : ''}`}
           >
             {isLoading ? 'Accesso in corso...' : 'Accedi'}
           </button>
 
           {message && (
-            <div style={{
-              padding: '12px 16px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              backgroundColor: isError ? '#fef2f2' : '#f0fdf4',
-              color: isError ? '#991b1b' : '#166534',
-              border: `1px solid ${isError ? '#fecaca' : '#bbf7d0'}`
-            }}>
+            <div
+              className={`${styles.message} ${isError ? styles.messageError : styles.messageSuccess}`}
+              role={isError ? 'alert' : 'status'}
+            >
               {message}
             </div>
           )}

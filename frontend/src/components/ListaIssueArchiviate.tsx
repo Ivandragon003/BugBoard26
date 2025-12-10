@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { issueService } from "../services/issueService";
 import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
-
+import styles from "./ListaIssueArchiviate.module.css";
 
 interface Issue {
   idIssue: number;
@@ -15,7 +15,6 @@ interface Issue {
   dataArchiviazione: string;
   archiviata: boolean;
 }
-
 
 function ListaIssueArchiviate() {
   const navigate = useNavigate();
@@ -29,7 +28,6 @@ function ListaIssueArchiviate() {
   const [prioritaFilter, setPrioritaFilter] = useState("Tutte le priorità");
   const [sortOrder, setSortOrder] = useState("Data (più recente)");
 
-
   useEffect(() => {
     const token = authService.getToken();
     if (!token) {
@@ -38,7 +36,6 @@ function ListaIssueArchiviate() {
     }
     loadIssues();
   }, [navigate]);
-
 
   const loadIssues = async () => {
     try {
@@ -53,7 +50,6 @@ function ListaIssueArchiviate() {
       setLoading(false);
     }
   };
-
 
   useEffect(() => {
     let filtered = issues;
@@ -85,7 +81,6 @@ function ListaIssueArchiviate() {
     setFilteredIssues(filtered);
   }, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder, issues]);
 
-
   const handleReset = () => {
     setSearchTerm("");
     setStatoFilter("Tutti gli stati");
@@ -94,13 +89,11 @@ function ListaIssueArchiviate() {
     setSortOrder("Data (più recente)");
   };
 
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("it-IT");
   };
 
-  // FIX 2: Controlla se ci sono filtri attivi
   const hasActiveFilters = () => {
     return searchTerm !== "" || 
            statoFilter !== "Tutti gli stati" || 
@@ -108,92 +101,69 @@ function ListaIssueArchiviate() {
            prioritaFilter !== "Tutte le priorità";
   };
 
+  const getStatoBadgeClass = (stato: string): string => {
+    if (stato === "Done") return styles.badgeStatusDone;
+    if (stato === "inProgress") return styles.badgeStatusInProgress;
+    return styles.badgeStatusTodo;
+  };
+
+  const getPrioritaBadgeClass = (priorita: string): string => {
+    if (priorita === "critical") return styles.badgePriorityCritical;
+    if (priorita === "high") return styles.badgePriorityHigh;
+    if (priorita === "medium") return styles.badgePriorityMedium;
+    if (priorita === "low") return styles.badgePriorityLow;
+    return styles.badgePriorityNone;
+  };
+
+  const formatStato = (stato: string) => {
+    if (stato === "inProgress") return "In corso";
+    return stato;
+  };
 
   if (loading) {
     return (
-      <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
+      <div className={styles.loadingContainer}>
         <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        <div style={{ flex: 1, padding: "32px" }}>
-          <div style={{ fontSize: "18px", color: "#6b7280" }}>Caricamento issue archiviate...</div>
+        <div className={styles.loadingContent}>
+          <div className={styles.loadingText}>Caricamento issue archiviate...</div>
         </div>
       </div>
     );
   }
 
-
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
+    <div className={styles.container}>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <header
-          style={{
-            backgroundColor: "white",
-            borderBottom: "1px solid #e5e7eb",
-            padding: "20px 32px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div>
-            <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#1f2937", margin: 0 }}>
-              Issue Archiviate
-            </h1>
-            <p style={{ fontSize: "14px", color: "#6b7280", marginTop: "4px" }}>
+      <div className={styles.mainContent}>
+        <header className={styles.header}>
+          <div className={styles.headerContent}>
+            <h1 className={styles.title}>Issue Archiviate</h1>
+            <p className={styles.subtitle}>
               Visualizza e gestisci tutte le issue archiviate
             </p>
           </div>
           <button
             onClick={() => navigate("/issues")}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: "#0d9488",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className={styles.backButton}
           >
             ← Torna alla lista
           </button>
         </header>
 
-        <div style={{ flex: 1, padding: "32px" }}>
-          {/* FIX 2: Indicatore filtri attivi */}
+        <div className={styles.content}>
           {hasActiveFilters() && (
-            <div style={{
-              backgroundColor: "#d1fae5",
-              border: "1px solid #6ee7b7",
-              borderRadius: "8px",
-              padding: "12px 16px",
-              marginBottom: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontSize: "13px",
-              color: "#065f46"
-            }}>
+            <div className={styles.activeFiltersNotice}>
               <span style={{ fontSize: "16px" }}>🔍</span>
               <strong>Filtri attivi:</strong>
               <span>Mostrando {filteredIssues.length} di {issues.length} issue archiviate</span>
             </div>
           )}
 
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "24px",
-              marginBottom: "24px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            }}
-          >
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1.5fr 1.5fr 1fr auto", gap: "16px", alignItems: "end" }}>
-              <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>
+          <div className={styles.filterBar}>
+            <div className={styles.filterGrid}>
+              <div className={styles.filterField}>
+                <label className={styles.filterLabel}>
                   🔍 Cerca issue
                 </label>
                 <input
@@ -201,43 +171,16 @@ function ListaIssueArchiviate() {
                   placeholder="Scrivi il titolo..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: searchTerm ? "2px solid #0d9488" : "1px solid #d1d5db",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                    backgroundColor: searchTerm ? "#f0fdfa" : "#f9fafb",
-                    transition: "all 0.2s",
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = "#0d9488")}
-                  onBlur={(e) => (e.target.style.borderColor = searchTerm ? "#0d9488" : "#d1d5db")}
+                  className={`${styles.searchInput} ${searchTerm ? styles.searchInputActive : ''}`}
                 />
               </div>
 
-              <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>
-                  Stato
-                </label>
+              <div className={styles.filterField}>
+                <label className={styles.filterLabel}>Stato</label>
                 <select
                   value={statoFilter}
                   onChange={(e) => setStatoFilter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: statoFilter !== "Tutti gli stati" ? "2px solid #0d9488" : "1px solid #d1d5db",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                    backgroundColor: statoFilter !== "Tutti gli stati" ? "#f0fdfa" : "#f9fafb",
-                    cursor: "pointer",
-                    appearance: "none",
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 10px center",
-                    paddingRight: "36px",
-                  }}
+                  className={`${styles.filterSelect} ${statoFilter !== "Tutti gli stati" ? styles.filterSelectActive : ''}`}
                 >
                   <option>Tutti gli stati</option>
                   <option>Todo</option>
@@ -246,28 +189,12 @@ function ListaIssueArchiviate() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>
-                  Tipo
-                </label>
+              <div className={styles.filterField}>
+                <label className={styles.filterLabel}>Tipo</label>
                 <select
                   value={tipoFilter}
                   onChange={(e) => setTipoFilter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: tipoFilter !== "Tutti i tipi" ? "2px solid #0d9488" : "1px solid #d1d5db",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                    backgroundColor: tipoFilter !== "Tutti i tipi" ? "#f0fdfa" : "#f9fafb",
-                    cursor: "pointer",
-                    appearance: "none",
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 10px center",
-                    paddingRight: "36px",
-                  }}
+                  className={`${styles.filterSelect} ${tipoFilter !== "Tutti i tipi" ? styles.filterSelectActive : ''}`}
                 >
                   <option>Tutti i tipi</option>
                   <option>bug</option>
@@ -277,28 +204,12 @@ function ListaIssueArchiviate() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>
-                  Priorità
-                </label>
+              <div className={styles.filterField}>
+                <label className={styles.filterLabel}>Priorità</label>
                 <select
                   value={prioritaFilter}
                   onChange={(e) => setPrioritaFilter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: prioritaFilter !== "Tutte le priorità" ? "2px solid #0d9488" : "1px solid #d1d5db",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                    backgroundColor: prioritaFilter !== "Tutte le priorità" ? "#f0fdfa" : "#f9fafb",
-                    cursor: "pointer",
-                    appearance: "none",
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 10px center",
-                    paddingRight: "36px",
-                  }}
+                  className={`${styles.filterSelect} ${prioritaFilter !== "Tutte le priorità" ? styles.filterSelectActive : ''}`}
                 >
                   <option>Tutte le priorità</option>
                   <option>none</option>
@@ -309,28 +220,12 @@ function ListaIssueArchiviate() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>
-                  Ordina
-                </label>
+              <div className={styles.filterField}>
+                <label className={styles.filterLabel}>Ordina</label>
                 <select
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                    backgroundColor: "#f9fafb",
-                    cursor: "pointer",
-                    appearance: "none",
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 10px center",
-                    paddingRight: "36px",
-                  }}
+                  className={styles.filterSelect}
                 >
                   <option>Data (più recente)</option>
                   <option>Data (meno recente)</option>
@@ -339,116 +234,28 @@ function ListaIssueArchiviate() {
 
               <button
                 onClick={handleReset}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#f3f4f6",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#e5e7eb";
-                  e.currentTarget.style.borderColor = "#9ca3af";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#f3f4f6";
-                  e.currentTarget.style.borderColor = "#d1d5db";
-                }}
+                className={styles.resetButton}
               >
                 Reset
               </button>
             </div>
           </div>
 
-          {/* FIX 4: Rimossi emoji dalle tabelle */}
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              overflow: "hidden",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            }}
-          >
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-              }}
-            >
-              <thead>
-                <tr
-                  style={{
-                    backgroundColor: "#f9fafb",
-                    borderBottom: "2px solid #d1d5db",
-                  }}
-                >
-                  <th
-                    style={{
-                      padding: "16px",
-                      textAlign: "left",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#374151",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    Titolo
-                  </th>
-                  <th
-                    style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#374151",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
+          <div className={styles.tableContainer}>
+            <table className={styles.table}>
+              <thead className={styles.tableHead}>
+                <tr>
+                  <th className={styles.tableHeaderCell}>Titolo</th>
+                  <th className={`${styles.tableHeaderCell} ${styles.tableHeaderCellCenter}`}>
                     Stato
                   </th>
-                  <th
-                    style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#374151",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
+                  <th className={`${styles.tableHeaderCell} ${styles.tableHeaderCellCenter}`}>
                     Tipo
                   </th>
-                  <th
-                    style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#374151",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
+                  <th className={`${styles.tableHeaderCell} ${styles.tableHeaderCellCenter}`}>
                     Priorità
                   </th>
-                  <th
-                    style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#374151",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
+                  <th className={`${styles.tableHeaderCell} ${styles.tableHeaderCellCenter}`}>
                     Data Arch.
                   </th>
                 </tr>
@@ -456,15 +263,7 @@ function ListaIssueArchiviate() {
               <tbody>
                 {filteredIssues.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      style={{
-                        padding: "48px 16px",
-                        textAlign: "center",
-                        color: "#9ca3af",
-                        fontSize: "15px",
-                      }}
-                    >
+                    <td colSpan={5} className={styles.emptyState}>
                       Nessuna issue archiviata
                     </td>
                   </tr>
@@ -472,104 +271,28 @@ function ListaIssueArchiviate() {
                   filteredIssues.map((issue) => (
                     <tr
                       key={issue.idIssue}
-                      style={{
-                        borderBottom: "1px solid #e5e7eb",
-                        transition: "background-color 0.15s",
-                        cursor: "pointer",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f9fafb")}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                      className={styles.tableRow}
                       onClick={() => navigate(`/issues/${issue.idIssue}`, { state: { from: "/issues/archiviate" } })}
                     >
-                      <td
-                        style={{
-                          padding: "14px 16px",
-                          fontSize: "14px",
-                          fontWeight: 500,
-                          color: "#0d9488",
-                          cursor: "pointer",
-                        }}
-                      >
+                      <td className={`${styles.tableCell} ${styles.tableCellTitle}`}>
                         {issue.titolo}
                       </td>
-                      <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                        <span
-                          style={{
-                            padding: "5px 10px",
-                            backgroundColor:
-                              issue.stato === "Done"
-                                ? "#dcfce7"
-                                : issue.stato === "inProgress"
-                                ? "#fef08a"
-                                : "#f3f4f6",
-                            color:
-                              issue.stato === "Done"
-                                ? "#15803d"
-                                : issue.stato === "inProgress"
-                                ? "#854d0e"
-                                : "#6b7280",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            display: "inline-block",
-                          }}
-                        >
-                          {issue.stato === "inProgress" ? "In corso" : issue.stato}
+                      <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
+                        <span className={`${styles.badge} ${getStatoBadgeClass(issue.stato)}`}>
+                          {formatStato(issue.stato)}
                         </span>
                       </td>
-                      <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                        <span
-                          style={{
-                            padding: "5px 10px",
-                            backgroundColor: "#dbeafe",
-                            color: "#1e40af",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            display: "inline-block",
-                          }}
-                        >
+                      <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
+                        <span className={`${styles.badge} ${styles.badgeType}`}>
                           {issue.tipo}
                         </span>
                       </td>
-                      <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                        <span
-                          style={{
-                            padding: "5px 10px",
-                            backgroundColor:
-                              issue.priorita === "critical"
-                                ? "#fee2e2"
-                                : issue.priorita === "high"
-                                ? "#fef3c7"
-                                : issue.priorita === "medium"
-                                ? "#fef3c7"
-                                : "#f3f4f6",
-                            color:
-                              issue.priorita === "critical"
-                                ? "#991b1b"
-                                : issue.priorita === "high"
-                                ? "#b45309"
-                                : issue.priorita === "medium"
-                                ? "#b45309"
-                                : "#6b7280",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            display: "inline-block",
-                            textTransform: "capitalize",
-                          }}
-                        >
+                      <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
+                        <span className={`${styles.badge} ${getPrioritaBadgeClass(issue.priorita)}`}>
                           {issue.priorita}
                         </span>
                       </td>
-                      <td
-                        style={{
-                          padding: "14px 16px",
-                          fontSize: "13px",
-                          color: "#6b7280",
-                          textAlign: "center",
-                        }}
-                      >
+                      <td className={`${styles.tableCell} ${styles.tableCellDate}`}>
                         {formatDate(issue.dataArchiviazione)}
                       </td>
                     </tr>
@@ -583,6 +306,5 @@ function ListaIssueArchiviate() {
     </div>
   );
 }
-
 
 export default ListaIssueArchiviate;

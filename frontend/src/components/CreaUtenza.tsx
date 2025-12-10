@@ -1,112 +1,137 @@
-import React, { useState } from "react";
-import { authService } from "../services/authService";
-import axios from "axios";
-import API_BASE_URL from "../config";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { AxiosError } from "axios";
+import axios from "axios";
+import { authService } from "../services/authService";
+import API_BASE_URL from "../config";
 import Sidebar from "./Sidebar";
+import styles from "./CreaUtenza.module.css";
+
+// ✅ Tipizzazione
+type Ruolo = "Utente" | "Amministratore";
+
+interface FormData {
+  nome: string;
+  cognome: string;
+  password: string;
+  ruolo: Ruolo;
+}
+
+interface MessageState {
+  type: "success" | "error" | "";
+  text: string;
+}
+
+interface ApiErrorResponse {
+  message?: string;
+  error?: string;
+}
+
+// ✅ Utility per generare password sicure
+const generatePassword = (length: number = 12): string => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*";
+  return Array.from(
+    { length }, 
+    () => chars.charAt(Math.floor(Math.random() * chars.length))
+  ).join("");
+};
+
+// ✅ Utility per normalizzare stringhe (rimuove accenti, spazi e apostrofi)
+const normalizeString = (str: string): string => {
+  return str
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/'/g, "")  // Rimuove apostrofi
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+};
+
+// ✅ Componente di accesso negato separato
+const AccessDenied: React.FC = () => (
+  <div className={styles.accessDeniedContainer}>
+    <div className={styles.accessDeniedCard}>
+      <div className={styles.accessDeniedIcon}>🚫</div>
+      <div className={styles.accessDeniedTitle}>Accesso Negato</div>
+      <div className={styles.accessDeniedText}>
+        Solo gli amministratori possono creare nuovi utenti!
+      </div>
+    </div>
+  </div>
+);
 
 export default function CreaUtenza() {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   
-  const generatePassword = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*";
-    let password = "";
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
-  };
-
-  const [form, setForm] = useState({
+  // ✅ 1️⃣ PRIMA: TUTTI GLI HOOKS IN CIMA
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [form, setForm] = useState<FormData>({
     nome: "",
     cognome: "",
     password: generatePassword(),
     ruolo: "Utente"
   });
-  
-  const [generatedEmail, setGeneratedEmail] = useState("");
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const [message, setMessage] = useState<MessageState>({ type: "", text: "" });
 
-  if (!authService.isAdmin()) {
-    return (
-      <div style={{ 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center", 
-        minHeight: "100vh",
-        padding: 32, 
-        textAlign: "center", 
-        backgroundColor: "#f5f7fa"
-      }}>
-        <div style={{
-          backgroundColor: "white",
-          padding: "40px",
-          borderRadius: "12px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          maxWidth: "500px"
-        }}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🚫</div>
-          <div style={{ color: "#e11d48", fontWeight: 600, fontSize: "18px", marginBottom: "8px" }}>
-            Accesso Negato
-          </div>
-          <div style={{ color: "#6b7280", fontSize: "14px" }}>
-            Solo gli amministratori possono creare un nuovo utente!
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-  const { name, value } = e.target;
-  setForm({ ...form, [name]: value });
-
-  if (name === "nome" || name === "cognome") {
-    const nome = name === "nome" ? value : form.nome;
-    const cognome = name === "cognome" ? value : form.cognome;
+  // ✅ Email autogenerata con useMemo
+  const generatedEmail = useMemo(() => {
+    if (!form.nome || !form.cognome) return "";
     
-    if (nome && cognome) {
-      
-      const nomeClean = nome
-        .toLowerCase()
-        .replace(/\s+/g, '')  
-        .normalize('NFD')    
-        .replace(/[\u0300-\u036f]/g, '');
-      
-      const cognomeClean = cognome
-        .toLowerCase()
-        .replace(/\s+/g, '')  
-        .normalize('NFD')    
-        .replace(/[\u0300-\u036f]/g, '');
-      
-      const email = `${nomeClean}.${cognomeClean}@bugboard.it`;
-      setGeneratedEmail(email);
-    } else {
-      setGeneratedEmail("");
-    }
-  }
-};
+    const nomeClean = normalizeString(form.nome);
+    const cognomeClean = normalizeString(form.cognome);
+    
+    return `${nomeClean}.${cognomeClean}@bugboard.it`;
+  }, [form.nome, form.cognome]);
 
-
-  const handleRegeneratePassword = () => {
-    const newPassword = generatePassword();
-    setForm(prev => ({ ...prev, password: newPassword }));
+  // ✅ Validazione nome/cognome (solo lettere, spazi e apostrofi)
+  const validateNomeCognome = (value: string): boolean => {
+    const pattern = /^[A-Za-zÀ-ÿ\s']+$/;
+    return pattern.test(value);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ✅ Validazione form
+  const isFormValid = generatedEmail && form.password && form.nome && form.cognome;
+
+  // ✅ 2️⃣ POI: CONTROLLO ACCESSO (DOPO TUTTI GLI HOOKS)
+  if (!authService.isAdmin()) {
+    return <AccessDenied />;
+  }
+
+  // ✅ Handler generico per form con validazione real-time
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    // Validazione real-time per nome e cognome
+    if ((name === "nome" || name === "cognome") && value !== "") {
+      if (!validateNomeCognome(value)) {
+        return; // Blocca l'input se contiene caratteri non validi
+      }
+    }
+    
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  // ✅ Rigenera password
+  const handleRegeneratePassword = () => {
+    setForm(prev => ({ ...prev, password: generatePassword() }));
+  };
+
+  // ✅ Submit con gestione errori tipizzata
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage({ type: "", text: "" });
 
     if (!generatedEmail) {
-      setMessage({ type: "error", text: "Nome e cognome sono necessari per generare l'email" });
+      setMessage({ 
+        type: "error", 
+        text: "Nome e cognome sono necessari per generare l'email" 
+      });
       return;
     }
 
     try {
       const dataToSend = {
-        nome: form.nome,
-        cognome: form.cognome,
+        nome: form.nome.trim(),
+        cognome: form.cognome.trim(),
         email: generatedEmail,
         password: form.password,
         ruolo: form.ruolo
@@ -118,219 +143,185 @@ export default function CreaUtenza() {
       
       setMessage({ type: "success", text: "Utente creato con successo!" });
       
+      // ✅ Reset form
       setForm({
         nome: "",
         cognome: "",
         password: generatePassword(),
         ruolo: "Utente"
       });
-      setGeneratedEmail("");
       
+      // ✅ Redirect dopo successo
       setTimeout(() => navigate("/home"), 1500);
       
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error ||
-                          "Errore nella creazione dell'utente";
+    } catch (err) {
+      // ✅ Gestione errori tipizzata
+      if (err instanceof AxiosError) {
+        const apiError = err.response?.data as ApiErrorResponse;
+        const errorMessage = apiError?.message || 
+                            apiError?.error || 
+                            "Errore nella creazione dell'utente";
+        setMessage({ type: "error", text: errorMessage });
+      } else if (err instanceof Error) {
+        setMessage({ type: "error", text: err.message });
+      } else {
+        setMessage({ type: "error", text: "Errore sconosciuto" });
+      }
       
-      setMessage({
-        type: "error",
-        text: errorMessage
-      });
-      
-      console.error("Errore completo:", err.response?.data);
+      console.error("Errore creazione utente:", err);
     }
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
+    <div className={styles.container}>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <header style={{
-          backgroundColor: "white",
-          borderBottom: "1px solid #e5e7eb",
-          padding: "16px 32px",
-          display: "flex",
-          alignItems: "center",
-          gap: "16px"
-        }}>
+      <div className={styles.mainContent}>
+        <header className={styles.header}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            style={{
-              padding: "8px 12px",
-              backgroundColor: "transparent",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "20px",
-              color: "#374151"
-            }}
+            className={styles.menuButton}
+            aria-label="Toggle sidebar"
           >
             ☰
           </button>
           <div>
-            <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", margin: 0 }}>
-              Crea nuovo utente
-            </h2>
-            <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "2px" }}>
+            <h2 className={styles.title}>Crea nuovo utente</h2>
+            <div className={styles.subtitle}>
               Aggiungi un nuovo utente al sistema
             </div>
           </div>
         </header>
 
-        <div style={{ padding: "32px", maxWidth: 600, margin: "0 auto", width: "100%" }}>
-          <div style={{ background: "#fff", borderRadius: 12, padding: 32, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+        <div className={styles.formWrapper}>
+          <div className={styles.formCard}>
             <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
-                  Nome <span style={{ color: "#ef4444" }}>*</span>
+              {/* Nome */}
+              <div className={styles.formGroup}>
+                <label htmlFor="nome" className={styles.label}>
+                  Nome <span className={styles.required}>*</span>
                 </label>
                 <input
+                  id="nome"
                   name="nome"
                   type="text"
                   value={form.nome}
-                  required
                   onChange={handleChange}
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
+                  required
+                  className={styles.input}
+                  placeholder="Inserisci il nome"
+                  autoComplete="given-name"
+                  pattern="[A-Za-zÀ-ÿ\s']+"
+                  title="Solo lettere, spazi e apostrofi"
                 />
+                <small className={styles.hint}>
+                  Solo lettere, spazi e apostrofi
+                </small>
               </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
-                  Cognome <span style={{ color: "#ef4444" }}>*</span>
+              {/* Cognome */}
+              <div className={styles.formGroup}>
+                <label htmlFor="cognome" className={styles.label}>
+                  Cognome <span className={styles.required}>*</span>
                 </label>
                 <input
+                  id="cognome"
                   name="cognome"
                   type="text"
                   value={form.cognome}
-                  required
                   onChange={handleChange}
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
+                  required
+                  className={styles.input}
+                  placeholder="Inserisci il cognome"
+                  autoComplete="family-name"
+                  pattern="[A-Za-zÀ-ÿ\s']+"
+                  title="Solo lettere, spazi e apostrofi"
                 />
+                <small className={styles.hint}>
+                  Solo lettere, spazi e apostrofi
+                </small>
               </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
+              {/* Email autogenerata */}
+              <div className={styles.formGroup}>
+                <label htmlFor="email" className={styles.label}>
                   Email (autogenerata)
                 </label>
                 <input
+                  id="email"
                   type="text"
                   value={generatedEmail}
                   readOnly
                   disabled
                   placeholder="Inserisci nome e cognome per generare l'email"
-                  style={{ 
-                    width: "100%", 
-                    padding: 10, 
-                    border: "1px solid #e5e7eb", 
-                    borderRadius: 6, 
-                    fontSize: 14,
-                    backgroundColor: "#f9fafb",
-                    color: "#374151",
-                    cursor: "not-allowed"
-                  }}
+                  className={`${styles.input} ${styles.inputDisabled}`}
                 />
               </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
+              {/* Password autogenerata */}
+              <div className={styles.formGroup}>
+                <label htmlFor="password" className={styles.label}>
                   Password (autogenerata)
                 </label>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <div className={styles.passwordGroup}>
                   <input
+                    id="password"
                     type="text"
                     value={form.password}
                     readOnly
-                    style={{ 
-                      flex: 1,
-                      padding: "10px 12px", 
-                      border: "1px solid #0d9488", 
-                      borderRadius: 6, 
-                      fontSize: 14,
-                      backgroundColor: "#f0fdfa",
-                      color: "#0d9488",
-                      fontWeight: 600,
-                      fontFamily: "monospace"
-                    }}
+                    className={styles.passwordInput}
                   />
                   <button
                     type="button"
                     onClick={handleRegeneratePassword}
-                    style={{
-                      padding: "10px 16px",
-                      backgroundColor: "#0d9488",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 6,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}
+                    className={styles.regenerateButton}
+                    aria-label="Rigenera password"
                   >
                     🔄 Rigenera
                   </button>
                 </div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+                <div className={styles.passwordWarning}>
                   ⚠️ Salva questa password e comunicala all'utente
                 </div>
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 500 }}>
-                  Ruolo <span style={{ color: "#ef4444" }}>*</span>
+              {/* Ruolo */}
+              <div className={styles.formGroup}>
+                <label htmlFor="ruolo" className={styles.label}>
+                  Ruolo <span className={styles.required}>*</span>
                 </label>
                 <select 
+                  id="ruolo"
                   name="ruolo" 
                   value={form.ruolo} 
-                  onChange={handleChange} 
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 6, fontSize: 14 }}
+                  onChange={handleChange}
+                  className={styles.select}
                 >
                   <option value="Utente">Utente</option>
                   <option value="Amministratore">Amministratore</option>
                 </select>
               </div>
 
+              {/* Messaggi */}
               {message.text && (
-                <div style={{
-                  marginBottom: 16,
-                  padding: "12px 16px",
-                  borderRadius: 8,
-                  color: message.type === "success" ? "#16a34a" : "#dc2626",
-                  backgroundColor: message.type === "success" ? "#f0fdf4" : "#fef2f2",
-                  border: `1px solid ${message.type === "success" ? "#86efac" : "#fca5a5"}`,
-                  fontWeight: 600,
-                  fontSize: 14,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8
-                }}>
-                  <span style={{ fontSize: 18 }}>
+                <div 
+                  className={`${styles.message} ${
+                    message.type === "success" ? styles.messageSuccess : styles.messageError
+                  }`}
+                  role={message.type === "success" ? "status" : "alert"}
+                >
+                  <span className={styles.messageIcon}>
                     {message.type === "success" ? "✅" : "⚠️"}
                   </span>
                   <span>{message.text}</span>
                 </div>
               )}
 
+              {/* Submit */}
               <button 
                 type="submit" 
-                disabled={!generatedEmail || !form.password}
-                style={{ 
-                  width: "100%", 
-                  padding: "10px 20px", 
-                  backgroundColor: (!generatedEmail || !form.password) ? "#9ca3af" : "#0d9488", 
-                  color: "#fff", 
-                  border: "none", 
-                  borderRadius: 8, 
-                  fontWeight: 600, 
-                  cursor: (!generatedEmail || !form.password) ? "not-allowed" : "pointer", 
-                  fontSize: 14,
-                  opacity: (!generatedEmail || !form.password) ? 0.6 : 1
-                }}
+                disabled={!isFormValid}
+                className={styles.submitButton}
               >
                 Crea utente
               </button>

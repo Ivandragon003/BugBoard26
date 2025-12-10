@@ -1,0 +1,195 @@
+/* ===== CONTAINER ===== */
+.uploadContainer {
+  margin-bottom: 24px;
+}
+
+.label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+/* ===== DROPZONE ===== */
+.dropzone {
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 32px 24px;
+  text-align: center;
+  background-color: #f9fafb;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dropzone:hover {
+  border-color: #0d9488;
+  background-color: #f0fdfa;
+}
+
+.dropzoneDisabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dropzoneDisabled:hover {
+  border-color: #d1d5db;
+  background-color: #f3f4f6;
+}
+
+.fileInput {
+  display: none;
+}
+
+.dropzoneLabel {
+  cursor: pointer;
+  display: block;
+}
+
+.dropzoneLabelDisabled {
+  cursor: not-allowed;
+}
+
+/* ===== UPLOAD ICON ===== */
+.uploadIconContainer {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  background-color: #e0f2f1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.uploadTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0d9488;
+  margin: 0 0 4px 0;
+}
+
+.uploadHint {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ===== FILE LIST ===== */
+.fileList {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.fileItem:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.fileContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.fileIconContainer {
+  width: 36px;
+  height: 36px;
+  background-color: #e0f2f1;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.fileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.fileName {
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.fileSize {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* ===== REMOVE BUTTON ===== */
+.removeButton {
+  padding: 6px 10px;
+  background-color: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #dc2626;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.removeButton:hover {
+  background-color: #fecaca;
+}
+
+.removeButtonDisabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.removeButtonDisabled:hover {
+  background-color: #fee2e2;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .dropzone {
+    padding: 24px 16px;
+  }
+
+  .fileItem {
+    padding: 10px 12px;
+  }
+
+  .fileContent {
+    gap: 10px;
+  }
+
+  .fileIconContainer {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .fileName {
+    font-size: 12px;
+  }
+
+  .fileSize {
+    font-size: 11px;
+  }
+}

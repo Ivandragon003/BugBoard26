@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { allegatoService } from '../services/allegatoService';
+import styles from './AttachmentsViewer.module.css';
 
 interface Allegato {
   idAllegato: number;
@@ -15,11 +16,27 @@ interface AttachmentsViewerProps {
   canEdit: boolean;
 }
 
+interface ConfirmDialog {
+  open: boolean;
+  title: string;
+  message: string;
+  allegatoId: number | null;
+}
+
 const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit }) => {
   const [allegati, setAllegati] = useState<Allegato[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
+    open: false,
+    title: '',
+    message: '',
+    allegatoId: null
+  });
 
+  // ✅ MIGLIORAMENTO: useCallback per evitare re-render
   const loadAllegati = useCallback(async () => {
     try {
       setLoading(true);
@@ -28,7 +45,8 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
       setError('');
     } catch (err: any) {
       console.error('Errore caricamento allegati:', err);
-      setError('Errore nel caricamento degli allegati');
+      const message = err.response?.data?.message || 'Errore nel caricamento degli allegati';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -38,8 +56,12 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
     loadAllegati();
   }, [loadAllegati]);
 
+  // ✅ MIGLIORAMENTO: Feedback visivo durante download
   const handleDownload = async (allegato: Allegato) => {
     try {
+      setDownloadingId(allegato.idAllegato);
+      setError('');
+      
       const response = await allegatoService.downloadAllegato(allegato.idAllegato);
       
       const blob = new Blob([response.data], { type: allegato.tipoFile });
@@ -53,12 +75,51 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
       
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+      
+      // ✅ Feedback positivo
+      setSuccess(`File "${allegato.nomeFile}" scaricato con successo`);
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       console.error('Errore download:', err);
-      alert('Errore durante il download del file');
+      const message = err.response?.data?.message || 'Errore durante il download del file';
+      setError(message);
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setDownloadingId(null);
     }
   };
 
+  // ✅ MIGLIORAMENTO: Modal di conferma invece di window.confirm
+  const handleDeleteClick = (allegato: Allegato) => {
+    setShowConfirm({
+      open: true,
+      title: 'Elimina Allegato',
+      message: `Sei sicuro di voler eliminare "${allegato.nomeFile}"? Questa azione non può essere annullata.`,
+      allegatoId: allegato.idAllegato
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!showConfirm.allegatoId) return;
+
+    try {
+      await allegatoService.deleteAllegato(showConfirm.allegatoId);
+      
+      setSuccess('Allegato eliminato con successo');
+      setShowConfirm({ open: false, title: '', message: '', allegatoId: null });
+      
+      // Ricarica la lista
+      await loadAllegati();
+      
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Errore eliminazione:', err);
+      const message = err.response?.data?.message || 'Errore durante l\'eliminazione del file';
+      setError(message);
+      setShowConfirm({ open: false, title: '', message: '', allegatoId: null });
+      setTimeout(() => setError(''), 5000);
+    }
+  };
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -80,59 +141,33 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
   };
 
   const getFileIcon = (tipoFile: string): string => {
-  if (tipoFile.startsWith('image/')) return '🖼️';
-  if (tipoFile === 'application/pdf') return '📄';
-  if (tipoFile.includes('word') || tipoFile.includes('msword')) return '📝';
-  return '📎';
-};
-
+    if (tipoFile.startsWith('image/')) return '🖼️';
+    if (tipoFile === 'application/pdf') return '📄';
+    if (tipoFile.includes('word') || tipoFile.includes('msword')) return '📝';
+    if (tipoFile.includes('excel') || tipoFile.includes('sheet')) return '📊';
+    if (tipoFile.includes('zip') || tipoFile.includes('rar')) return '📦';
+    return '📎';
+  };
 
   if (loading) {
     return (
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        padding: '24px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        marginTop: '24px'
-      }}>
-        <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
+      <div className={styles.loadingContainer}>
+        <div className={styles.spinner} />
+        <div className={styles.loadingText}>
           Caricamento allegati...
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div style={{
-        backgroundColor: '#fee2e2',
-        border: '1px solid #fecaca',
-        borderRadius: '12px',
-        padding: '16px',
-        marginTop: '24px',
-        color: '#dc2626',
-        fontSize: '14px'
-      }}>
-        ⚠️ {error}
-      </div>
-    );
-  }
-
   if (allegati.length === 0) {
     return (
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        padding: '32px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        marginTop: '24px',
-        textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '16px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
+      <div className={styles.emptyContainer}>
+        <div className={styles.emptyIcon}>📎</div>
+        <div className={styles.emptyTitle}>
           Nessun allegato
         </div>
-        <div style={{ fontSize: '14px', color: '#6b7280' }}>
+        <div className={styles.emptySubtitle}>
           {canEdit ? 'Aggiungi allegati modificando l\'issue' : 'Questa issue non ha allegati'}
         </div>
       </div>
@@ -140,116 +175,111 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
   }
 
   return (
-    <div style={{
-      backgroundColor: 'white',
-      borderRadius: '12px',
-      padding: '24px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      marginTop: '24px'
-    }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px'
-      }}>
-        <h3 style={{
-          fontSize: '16px',
-          fontWeight: 600,
-          color: '#1f2937',
-          margin: 0
-        }}>
+    <div className={styles.attachmentsContainer}>
+      {/* ✅ Messaggi di feedback */}
+      {error && (
+        <div className={styles.errorMessage}>
+          ⚠️ {error}
+        </div>
+      )}
+      
+      {success && (
+        <div className={styles.successMessage}>
+          ✅ {success}
+        </div>
+      )}
+
+      <div className={styles.attachmentsHeader}>
+        <h3 className={styles.attachmentsTitle}>
           📎 Allegati ({allegati.length})
         </h3>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className={styles.attachmentsList}>
         {allegati.map((allegato) => (
-          <div
-            key={allegato.idAllegato}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '16px',
-              backgroundColor: '#f9fafb',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f3f4f6';
-              e.currentTarget.style.borderColor = '#d1d5db';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#f9fafb';
-              e.currentTarget.style.borderColor = '#e5e7eb';
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                backgroundColor: '#e0f2f1',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px'
-              }}>
+          <div key={allegato.idAllegato} className={styles.attachmentItem}>
+            <div className={styles.attachmentContent}>
+              <div className={styles.fileIconContainer}>
                 {getFileIcon(allegato.tipoFile)}
               </div>
 
-              <div style={{ flex: 1 }}>
-                <div style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: '#1f2937',
-                  marginBottom: '4px',
-                  wordBreak: 'break-word'
-                }}>
+              <div className={styles.fileInfo}>
+                <div className={styles.fileName} title={allegato.nomeFile}>
                   {allegato.nomeFile}
                 </div>
-                <div style={{
-                  fontSize: '12px',
-                  color: '#6b7280',
-                  display: 'flex',
-                  gap: '12px',
-                  flexWrap: 'wrap'
-                }}>
+                <div className={styles.fileMetadata}>
                   <span>{formatFileSize(allegato.dimensione)}</span>
-                  <span>•</span>
+                  <span className={styles.metadataSeparator}>•</span>
                   <span>{formatDate(allegato.dataCaricamento)}</span>
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div className={styles.attachmentActions}>
               <button
                 onClick={() => handleDownload(allegato)}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#0d9488',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0f766e'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0d9488'}
+                disabled={downloadingId === allegato.idAllegato}
+                className={`${styles.downloadButton} ${downloadingId === allegato.idAllegato ? styles.downloading : ''}`}
+                aria-label={`Scarica ${allegato.nomeFile}`}
               >
-                ⬇️ Scarica
+                {downloadingId === allegato.idAllegato ? (
+                  <>⏳ Scaricando...</>
+                ) : (
+                  <>⬇️ Scarica</>
+                )}
               </button>
+
+              {/* ✅ MIGLIORAMENTO: Pulsante elimina solo se canEdit */}
+              {canEdit && (
+                <button
+                  onClick={() => handleDeleteClick(allegato)}
+                  className={styles.deleteButton}
+                  aria-label={`Elimina ${allegato.nomeFile}`}
+                >
+                  🗑️
+                </button>
+              )}
             </div>
           </div>
         ))}
       </div>
+
+      {/* ✅ MIGLIORAMENTO: Modal di conferma invece di alert */}
+      {showConfirm.open && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>{showConfirm.title}</h3>
+              <button
+                onClick={() => setShowConfirm({ open: false, title: '', message: '', allegatoId: null })}
+                className={styles.modalClose}
+                aria-label="Chiudi"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className={styles.modalBody}>
+              <p className={styles.modalMessage}>{showConfirm.message}</p>
+            </div>
+            
+            <div className={styles.modalActions}>
+              <button
+                onClick={() => setShowConfirm({ open: false, title: '', message: '', allegatoId: null })}
+                className={styles.modalCancelButton}
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmDelete}
+                className={styles.modalConfirmButton}
+              >
+                Elimina
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
