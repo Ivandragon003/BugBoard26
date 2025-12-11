@@ -12,28 +12,26 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState("");
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(false);
   const isAdmin = authService.isAdmin();
   const currentPath = location.pathname;
 
-  // Rileva cambio dimensioni finestra
+  // Rileva se siamo su mobile
   useEffect(() => {
-    const handleResize = () => {
+    const checkMobile = () => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
       
-      // Su desktop apri automaticamente, su mobile chiudi
+      // Su desktop apri sidebar, su mobile chiudi
       if (!mobile) {
         setSidebarOpen(true);
-      } else {
-        setSidebarOpen(false);
       }
     };
 
-    handleResize(); // Chiamata iniziale
-    window.addEventListener('resize', handleResize);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
     
-    return () => window.removeEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', checkMobile);
   }, [setSidebarOpen]);
 
   const handleLogout = () => {
@@ -44,8 +42,8 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const isActive = (path: string) => currentPath === path;
   const showIndicator = (itemName: string) => isActive(`/${itemName}`) || hoveredItem === itemName;
 
-  // Chiudi sidebar quando si clicca un link su mobile
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  // Chiudi sidebar dopo click su mobile
+  const handleLinkClick = () => {
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -53,18 +51,18 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
 
   return (
     <>
-      {/* Pulsante hamburger (solo su mobile) */}
+      {/* PULSANTE HAMBURGER (solo mobile) */}
       {isMobile && (
         <button 
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className={styles.hamburgerBtn}
-          aria-label="Toggle menu"
+          aria-label="Menu"
         >
           {sidebarOpen ? '✕' : '☰'}
         </button>
       )}
 
-      {/* Overlay scuro (solo su mobile quando sidebar aperta) */}
+      {/* OVERLAY SCURO (solo mobile quando aperto) */}
       {isMobile && sidebarOpen && (
         <div 
           className={styles.overlay}
@@ -72,7 +70,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar */}
+      {/* SIDEBAR */}
       <div className={`${styles.sidebar} ${!sidebarOpen ? styles.sidebarClosed : ''}`}>
         <div className={styles.divider} />
         
@@ -91,7 +89,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
               className={`${styles.navItem} ${isActive('/home') ? styles.navItemActive : ''}`}
               onMouseEnter={() => setHoveredItem('home')}
               onMouseLeave={() => setHoveredItem('')}
-              onClick={handleNavClick}
+              onClick={handleLinkClick}
             >
               {showIndicator('home') && <div className={styles.navItemIndicator} />}
               <span className={styles.navItemIcon}>📊</span>
@@ -103,7 +101,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
               className={`${styles.navItem} ${isActive('/issues') ? styles.navItemActive : ''}`}
               onMouseEnter={() => setHoveredItem('issues')}
               onMouseLeave={() => setHoveredItem('')}
-              onClick={handleNavClick}
+              onClick={handleLinkClick}
             >
               {showIndicator('issues') && <div className={styles.navItemIndicator} />}
               <span className={styles.navItemIcon}>📋</span>
@@ -115,7 +113,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
               className={`${styles.navItem} ${isActive('/issues/nuova') ? styles.navItemActive : ''}`}
               onMouseEnter={() => setHoveredItem('nuova')}
               onMouseLeave={() => setHoveredItem('')}
-              onClick={handleNavClick}
+              onClick={handleLinkClick}
             >
               {showIndicator('nuova') && <div className={styles.navItemIndicator} />}
               <span className={styles.navItemIcon}>➕</span>
@@ -128,7 +126,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
                 className={`${styles.navItem} ${isActive('/issues/archiviate') ? styles.navItemActive : ''}`}
                 onMouseEnter={() => setHoveredItem('archiviate')}
                 onMouseLeave={() => setHoveredItem('')}
-                onClick={handleNavClick}
+                onClick={handleLinkClick}
               >
                 {showIndicator('archiviate') && <div className={styles.navItemIndicator} />}
                 <span className={styles.navItemIcon}>📦</span>
@@ -142,7 +140,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
                 className={`${styles.navItem} ${isActive('/crea-utenza') ? styles.navItemActive : ''}`}
                 onMouseEnter={() => setHoveredItem('crea-utenza')}
                 onMouseLeave={() => setHoveredItem('')}
-                onClick={handleNavClick}
+                onClick={handleLinkClick}
               >
                 {showIndicator('crea-utenza') && <div className={styles.navItemIndicator} />}
                 <span className={styles.navItemIcon}>👥</span>
@@ -156,7 +154,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
                 className={`${styles.navItem} ${isActive('/utenti') ? styles.navItemActive : ''}`}
                 onMouseEnter={() => setHoveredItem('utenti')}
                 onMouseLeave={() => setHoveredItem('')}
-                onClick={handleNavClick}
+                onClick={handleLinkClick}
               >
                 {showIndicator('utenti') && <div className={styles.navItemIndicator} />}
                 <span className={styles.navItemIcon}>👨‍💼</span>
@@ -174,7 +172,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             className={`${styles.profileItem} ${isActive('/profilo') ? styles.profileItemActive : ''}`}
             onMouseEnter={() => setHoveredItem('profilo')}
             onMouseLeave={() => setHoveredItem('')}
-            onClick={handleNavClick}
+            onClick={handleLinkClick}
           >
             {showIndicator('profilo') && <div className={styles.navItemIndicator} />}
             <span className={styles.navItemIcon}>👤</span>

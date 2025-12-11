@@ -2,7 +2,7 @@
 .sidebar {
   width: 250px;
   background-color: #0d9488;
-  transition: width 0.3s ease;
+  transition: transform 0.3s ease, width 0.3s ease;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -200,18 +200,86 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* ===== RESPONSIVE ===== */
+/* ===== HAMBURGER BUTTON ===== */
+.hamburgerBtn {
+  display: none;
+}
+
+/* ===== OVERLAY ===== */
+.overlay {
+  display: none;
+}
+
+/* ===== RESPONSIVE MOBILE ===== */
 @media (max-width: 768px) {
+  /* Sidebar diventa fixed e parte nascosta */
   .sidebar {
     position: fixed;
     left: 0;
     top: 0;
     z-index: 1000;
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    transform: translateX(-100%);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
   }
 
+  /* Quando aperta, traduci a 0 */
+  .sidebar:not(.sidebarClosed) {
+    transform: translateX(0);
+  }
+
+  /* Quando chiusa esplicitamente */
   .sidebarClosed {
-    width: 0;
+    transform: translateX(-100%) !important;
+    width: 250px;
     box-shadow: none;
+  }
+
+  /* Pulsante hamburger visibile */
+  .hamburgerBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1001;
+    width: 48px;
+    height: 48px;
+    background-color: #0d9488;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+  }
+
+  .hamburgerBtn:hover {
+    background-color: #0f766e;
+    transform: scale(1.05);
+  }
+
+  .hamburgerBtn:active {
+    transform: scale(0.95);
+  }
+
+  /* Overlay scuro */
+  .overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 }
