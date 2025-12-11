@@ -4,7 +4,6 @@ import it.unina.bugboard.dao.IssueDAO;
 import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.*;
 import it.unina.bugboard.exception.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,11 +16,13 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class IssueController {
 
-	@Autowired
-	private IssueDAO issueDAO;
+	private final IssueDAO issueDAO;
+	private final UtenzaDAO utenzaDAO;
 
-	@Autowired
-	private UtenzaDAO utenzaDAO;
+	public IssueController(IssueDAO issueDAO, UtenzaDAO utenzaDAO) {
+		this.issueDAO = issueDAO;
+		this.utenzaDAO = utenzaDAO;
+	}
 
 	@PostMapping("/crea")
 	@Transactional
@@ -85,28 +86,15 @@ public class IssueController {
 
 		if (ordinamento != null && !ordinamento.isEmpty()) {
 			switch (ordinamento.toLowerCase()) {
-			case "data_recente":
-				issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
-				break;
-			case "data_vecchio":
-				issues.sort((a, b) -> a.getDataCreazione().compareTo(b.getDataCreazione()));
-				break;
-			case "titolo_az":
-				issues.sort((a, b) -> a.getTitolo().compareToIgnoreCase(b.getTitolo()));
-				break;
-			case "titolo_za":
-				issues.sort((a, b) -> b.getTitolo().compareToIgnoreCase(a.getTitolo()));
-				break;
-			case "priorita_alta":
-				issues.sort((a, b) -> Integer.compare(getPrioritaOrdine(a.getPriorita()),
-						getPrioritaOrdine(b.getPriorita())));
-				break;
-			case "priorita_bassa":
-				issues.sort((a, b) -> Integer.compare(getPrioritaOrdine(b.getPriorita()),
-						getPrioritaOrdine(a.getPriorita())));
-				break;
-			default:
-				issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
+			case "data_recente" -> issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
+			case "data_vecchio" -> issues.sort((a, b) -> a.getDataCreazione().compareTo(b.getDataCreazione()));
+			case "titolo_az" -> issues.sort((a, b) -> a.getTitolo().compareToIgnoreCase(b.getTitolo()));
+			case "titolo_za" -> issues.sort((a, b) -> b.getTitolo().compareToIgnoreCase(a.getTitolo()));
+			case "priorita_alta" -> issues.sort(
+					(a, b) -> Integer.compare(getPrioritaOrdine(a.getPriorita()), getPrioritaOrdine(b.getPriorita())));
+			case "priorita_bassa" -> issues.sort(
+					(a, b) -> Integer.compare(getPrioritaOrdine(b.getPriorita()), getPrioritaOrdine(a.getPriorita())));
+			default -> issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
 			}
 		} else {
 			issues.sort((a, b) -> b.getDataCreazione().compareTo(a.getDataCreazione()));
@@ -129,7 +117,6 @@ public class IssueController {
 	public List<Issue> filtraIssue(@RequestParam(value = "stato", required = false) String stato,
 			@RequestParam(value = "priorita", required = false) String priorita,
 			@RequestParam(value = "tipo", required = false) String tipo) {
-
 		if (stato != null && priorita != null)
 			return issueDAO.findByStatoAndPriorita(parseStato(stato), parsePriorita(priorita));
 
@@ -147,8 +134,8 @@ public class IssueController {
 
 	@DeleteMapping("/archivia/{id}")
 	@Transactional
-	public Map<String, String> archiviaIssue(@PathVariable(value = "id") Integer id, 
-			@RequestParam(value = "idArchiviatore") Integer idArchiviatore) {
+	public Map<String, String> archiviaIssue(@PathVariable Integer id,
+			@RequestParam("idArchiviatore") Integer idArchiviatore) {
 		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		if (issue.getArchiviata())
@@ -168,7 +155,7 @@ public class IssueController {
 
 	@PutMapping("/disarchivia/{id}")
 	@Transactional
-	public Map<String, String> disarchiviaIssue(@PathVariable(value = "id") Integer id) {
+	public Map<String, String> disarchiviaIssue(@PathVariable Integer id) {
 		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		if (!issue.getArchiviata())
@@ -184,33 +171,30 @@ public class IssueController {
 
 	@PatchMapping("/{id}/stato")
 	@Transactional
-	public Issue cambiaStato(@PathVariable(value = "id") Integer id, 
-	                         @RequestParam(value = "nuovoStato") String nuovoStato) {
-	    Issue issue = issueDAO.findById(id)
-	            .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
-	    
-	    if (Boolean.TRUE.equals(issue.getArchiviata())) {
-	        throw new InvalidInputException("Non è possibile modificare lo stato di un'issue archiviata");
-	    }
-	    
-	    Stato stato = parseStato(nuovoStato);
-	    issue.setStato(stato);
-	    
-	    return issueDAO.save(issue);
+	public Issue cambiaStato(@PathVariable Integer id, @RequestParam("nuovoStato") String nuovoStato) {
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+
+		if (Boolean.TRUE.equals(issue.getArchiviata())) {
+			throw new InvalidInputException("Non è possibile modificare lo stato di un'issue archiviata");
+		}
+
+		Stato stato = parseStato(nuovoStato);
+		issue.setStato(stato);
+
+		return issueDAO.save(issue);
 	}
-	
+
 	@GetMapping("/visualizza/{id}")
-	public Issue visualizzaIssue(@PathVariable(value = "id") Integer id) {
+	public Issue visualizzaIssue(@PathVariable Integer id) {
 		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 	}
 
 	@DeleteMapping("/elimina/{id}")
 	@Transactional
-	public Map<String, String> eliminaIssue(@PathVariable(value = "id") Integer id) {
+	public Map<String, String> eliminaIssue(@PathVariable Integer id) {
 		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		issueDAO.delete(issue);
-
 		return Map.of("message", "Issue eliminata con successo");
 	}
 
@@ -225,7 +209,7 @@ public class IssueController {
 	}
 
 	@GetMapping("/cerca")
-	public List<Issue> cercaIssue(@RequestParam(value = "titolo") String titolo) {
+	public List<Issue> cercaIssue(@RequestParam("titolo") String titolo) {
 		return issueDAO.findByTitoloContainingIgnoreCase(titolo);
 	}
 
