@@ -244,7 +244,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
         ))}
       </div>
 
-      {/* ✅ MIGLIORAMENTO: Modal di conferma invece di alert */}
+   
       {showConfirm.open && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
