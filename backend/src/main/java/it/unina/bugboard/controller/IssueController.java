@@ -189,7 +189,7 @@ public class IssueController {
 	    Issue issue = issueDAO.findById(id)
 	            .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 	    
-	    if (issue.getArchiviata()) {
+	    if (Boolean.TRUE.equals(issue.getArchiviata())) {
 	        throw new InvalidInputException("Non è possibile modificare lo stato di un'issue archiviata");
 	    }
 	    

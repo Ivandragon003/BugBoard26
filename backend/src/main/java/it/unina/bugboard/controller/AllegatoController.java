@@ -6,7 +6,6 @@ import it.unina.bugboard.model.Allegato;
 import it.unina.bugboard.model.Issue;
 import it.unina.bugboard.exception.*;
 import it.unina.bugboard.util.ImmagineUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,14 +19,17 @@ import java.util.*;
 @RequestMapping("/api/allegato")
 public class AllegatoController {
 
-	@Autowired
-	private AllegatoDAO allegatoDAO;
+	private static final String MESSAGE_KEY = "message";
 
-	@Autowired
-	private IssueDAO issueDAO;
+	private final AllegatoDAO allegatoDAO;
+	private final IssueDAO issueDAO;
+	private final ImmagineUtil immagineUtil;
 
-	@Autowired
-	private ImmagineUtil immagineUtil;
+	public AllegatoController(AllegatoDAO allegatoDAO, IssueDAO issueDAO, ImmagineUtil immagineUtil) {
+		this.allegatoDAO = allegatoDAO;
+		this.issueDAO = issueDAO;
+		this.immagineUtil = immagineUtil;
+	}
 
 	@PostMapping("/upload")
 	@Transactional
@@ -116,6 +118,6 @@ public class AllegatoController {
 		immagineUtil.deleteImmagine(allegato.getPercorso());
 		allegatoDAO.delete(allegato);
 
-		return Map.of("message", "Allegato eliminato con successo");
+		return Map.of(MESSAGE_KEY, "Allegato eliminato con successo");
 	}
 }
