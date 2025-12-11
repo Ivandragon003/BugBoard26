@@ -34,12 +34,10 @@ public class Allegato {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Issue issue;
 
-    // ✅ COSTRUTTORE VUOTO - OBBLIGATORIO PER JPA
     public Allegato() {
         this.dataCaricamento = LocalDate.now();
     }
 
-    // ✅ COSTRUTTORE CON PARAMETRI
     public Allegato(String percorso, String nomeFile, String tipoFile, Integer dimensione, Issue issue) {
         this.percorso = percorso;
         this.nomeFile = nomeFile;
