@@ -170,6 +170,55 @@ function DettagliIssue() {
     });
   };
 
+  const getNextStatus = (currentStatus: string): string | null => {
+    if (currentStatus === "Todo") return "inProgress";
+    if (currentStatus === "inProgress") return "Done";
+    return null;
+  };
+
+  const getNextStatusLabel = (currentStatus: string): string => {
+    const nextStatus = getNextStatus(currentStatus);
+    if (!nextStatus) return "";
+    const statusLabels: { [key: string]: string } = {
+      "inProgress": "In Progress",
+      "Done": "Done"
+    };
+    return statusLabels[nextStatus] || "";
+  };
+
+  const handleStatusClick = () => {
+    if (!issue) return;
+    
+    const nextStatus = getNextStatus(issue.stato);
+    if (!nextStatus) return;
+    
+    const statusLabels: { [key: string]: string } = {
+      "Todo": "To Do",
+      "inProgress": "In Progress",
+      "Done": "Done"
+    };
+    
+    setShowConfirm({
+      open: true,
+      title: "Cambia Stato",
+      message: `Sei sicuro di voler cambiare lo stato da "${statusLabels[issue.stato]}" a "${statusLabels[nextStatus]}"?`,
+      action: async () => {
+        try {
+          await issueService.changeStatus(Number(id), nextStatus);
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+          setSuccess(`Stato cambiato in "${statusLabels[nextStatus]}" con successo!`);
+          await loadIssue();
+          setTimeout(() => setSuccess(""), 3000);
+        } catch (err: any) {
+          console.error("Errore cambio stato:", err);
+          setError(err.response?.data?.message || "Errore nel cambio di stato");
+          setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
+          setTimeout(() => setError(""), 5000);
+        }
+      },
+    });
+  };
+
   const handleConfirmAction = async () => {
     await showConfirm.action();
   };
@@ -313,9 +362,31 @@ function DettagliIssue() {
 
               <div className={styles.infoField}>
                 <label className={styles.infoLabel}>Stato</label>
-                <span className={`${styles.badge} ${getStatoBadgeClass(issue.stato)}`}>
-                  {getStatoLabel(issue.stato)}
-                </span>
+                {!isArchived && getNextStatus(issue.stato) ? (
+                  <>
+                    <button
+                      onClick={handleStatusClick}
+                      className={styles.statusChangeButton}
+                    >
+                      <div className={styles.statusTransition}>
+                        <span className={`${styles.badge} ${getStatoBadgeClass(issue.stato)}`}>
+                          {getStatoLabel(issue.stato)}
+                        </span>
+                        <span className={styles.statusArrow}>→</span>
+                        <span className={`${styles.badge} ${styles.badgeNextStatus} ${getStatoBadgeClass(getNextStatus(issue.stato) || "")}`}>
+                          {getNextStatusLabel(issue.stato)}
+                        </span>
+                      </div>
+                      <div className={styles.statusHint}>
+                        ✨ Clicca per cambiare stato
+                      </div>
+                    </button>
+                  </>
+                ) : (
+                  <span className={`${styles.badge} ${getStatoBadgeClass(issue.stato)}`}>
+                    {getStatoLabel(issue.stato)}
+                  </span>
+                )}
               </div>
 
               <div className={styles.infoField}>

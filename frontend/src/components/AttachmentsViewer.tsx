@@ -76,7 +76,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      // ✅ Feedback positivo
+      
       setSuccess(`File "${allegato.nomeFile}" scaricato con successo`);
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
@@ -89,7 +89,6 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
     }
   };
 
-  // ✅ MIGLIORAMENTO: Modal di conferma invece di window.confirm
   const handleDeleteClick = (allegato: Allegato) => {
     setShowConfirm({
       open: true,
@@ -108,7 +107,6 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
       setSuccess('Allegato eliminato con successo');
       setShowConfirm({ open: false, title: '', message: '', allegatoId: null });
       
-      // Ricarica la lista
       await loadAllegati();
       
       setTimeout(() => setSuccess(''), 3000);

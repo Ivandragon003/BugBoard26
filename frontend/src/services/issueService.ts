@@ -69,6 +69,17 @@ export const issueService = {
     return response.data;
   },
 
+  changeStatus: async (id: number, nuovoStato: string) => {
+  const response = await axios.patch(
+    `${API_BASE_URL}/issue/${id}/stato?nuovoStato=${nuovoStato}`,
+    {},
+    {
+      headers: getAuthHeader()
+    }
+  );
+  return response.data;
+},
+
   getStatistics: async () => {
     const response = await axios.get(`${API_BASE_URL}/issue/statistiche`, {
       headers: getAuthHeader()
@@ -98,7 +109,7 @@ export const issueService = {
     return response.data;
   },
 
-  // NUOVA FUNZIONE: Filtraggio avanzato con ricerca e ordinamento
+  
   filterIssuesAdvanced: async (params: {
     stato?: string;
     priorita?: string;
@@ -124,4 +135,6 @@ export const issueService = {
     );
     return response.data;
   }
+
+  
 };

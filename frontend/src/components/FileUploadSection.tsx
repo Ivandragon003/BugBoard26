@@ -12,34 +12,32 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
   setFiles, 
   disabled = false 
 }) => {
-  // ✅ MIGLIORAMENTO: Stato per errori di validazione
+
   const [error, setError] = useState<string>('');
 
-  // ✅ MIGLIORAMENTO: Costanti di configurazione
+ 
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-  const MAX_FILES = 10; // Limite opzionale
-
-  // ✅ MIGLIORAMENTO: Funzione di validazione
+  const MAX_FILES = 10; 
+ 
   const validateFiles = (newFiles: File[]): string | null => {
-    // Controlla numero massimo di file
+   
     if (files.length + newFiles.length > MAX_FILES) {
       return `Massimo ${MAX_FILES} file consentiti`;
     }
 
-    // Valida ogni file
     for (const file of newFiles) {
-      // Controlla dimensione
+     
       if (file.size > MAX_FILE_SIZE) {
         return `File "${file.name}" troppo grande (max 5MB)`;
       }
 
-      // Controlla tipo
+      
       if (!ALLOWED_TYPES.includes(file.type)) {
         return `File "${file.name}" non supportato. Usa JPEG, PNG, GIF o WebP`;
       }
 
-      // Controlla duplicati
+   
       if (files.some(f => f.name === file.name && f.size === file.size)) {
         return `File "${file.name}" già caricato`;
       }
@@ -52,24 +50,24 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
       
-      // ✅ MIGLIORAMENTO: Validazione prima di aggiungere
+     
       const validationError = validateFiles(newFiles);
       if (validationError) {
         setError(validationError);
         setTimeout(() => setError(''), 5000);
-        e.target.value = ''; // Reset input
+        e.target.value = '';
         return;
       }
 
       setFiles(prev => [...prev, ...newFiles]);
       setError('');
-      e.target.value = ''; // Reset input
+      e.target.value = ''; 
     }
   };
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-    setError(''); // Clear error when removing files
+    setError(''); 
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -90,7 +88,7 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
     if (e.dataTransfer.files) {
       const newFiles = Array.from(e.dataTransfer.files);
       
-      // ✅ MIGLIORAMENTO: Validazione anche per drag & drop
+
       const validationError = validateFiles(newFiles);
       if (validationError) {
         setError(validationError);
@@ -102,9 +100,7 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
       setError('');
     }
   };
-
-  // ✅ MIGLIORAMENTO: Formattazione dimensione file
-  const formatFileSize = (bytes: number): string => {
+ const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
@@ -144,7 +140,7 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
           <p className={styles.uploadHint}>
             Formati supportati: JPEG, PNG, GIF, WebP - Max 5MB
           </p>
-          {/* ✅ MIGLIORAMENTO: Mostra conteggio file */}
+    
           {files.length > 0 && (
             <p className={styles.uploadHint} style={{ marginTop: '0.5rem', color: '#0d9488' }}>
               {files.length} / {MAX_FILES} file caricati
@@ -153,7 +149,7 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
         </label>
       </div>
 
-      {/* ✅ MIGLIORAMENTO: Messaggio di errore */}
+  
       {error && (
         <div className={styles.errorMessage} style={{ 
           marginTop: '0.5rem', 

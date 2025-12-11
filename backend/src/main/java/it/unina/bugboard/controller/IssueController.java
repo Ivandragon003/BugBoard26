@@ -182,6 +182,23 @@ public class IssueController {
 		return Map.of("message", "Issue disarchiviata con successo");
 	}
 
+	@PatchMapping("/{id}/stato")
+	@Transactional
+	public Issue cambiaStato(@PathVariable(value = "id") Integer id, 
+	                         @RequestParam(value = "nuovoStato") String nuovoStato) {
+	    Issue issue = issueDAO.findById(id)
+	            .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+	    
+	    if (issue.getArchiviata()) {
+	        throw new InvalidInputException("Non è possibile modificare lo stato di un'issue archiviata");
+	    }
+	    
+	    Stato stato = parseStato(nuovoStato);
+	    issue.setStato(stato);
+	    
+	    return issueDAO.save(issue);
+	}
+	
 	@GetMapping("/visualizza/{id}")
 	public Issue visualizzaIssue(@PathVariable(value = "id") Integer id) {
 		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));

@@ -235,6 +235,65 @@
   color: #6b7280;
 }
 
+/* ===== STATUS TRANSITION ===== */
+.statusChangeButton {
+  background: none;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+  text-align: left;
+}
+
+.statusChangeButton:hover {
+  border-color: #10b981;
+  background-color: #f0fdf4;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.statusTransition {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.statusArrow {
+  font-size: 20px;
+  color: #10b981;
+  font-weight: bold;
+  transition: transform 0.3s;
+}
+
+.statusChangeButton:hover .statusArrow {
+  transform: translateX(4px);
+}
+
+.badgeNextStatus {
+  opacity: 0.7;
+}
+
+.statusChangeButton:hover .badgeNextStatus {
+  opacity: 1;
+}
+
+.statusHint {
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.3s;
+}
+
+.statusChangeButton:hover .statusHint {
+  color: #10b981;
+  font-weight: 600;
+}
+
 /* ===== BADGES ===== */
 .badge {
   padding: 6px 12px;
@@ -441,5 +500,13 @@
   .modalConfirmButton,
   .modalCancelButton {
     width: 100%;
+  }
+
+    .statusTransition {
+    flex-wrap: wrap;
+  }
+
+  .statusChangeButton {
+    padding: 10px;
   }
 }
