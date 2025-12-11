@@ -81,9 +81,8 @@ public class UtenzaController {
 		String password = utenzaData.get(PASSWORD_KEY);
 		String ruoloStr = utenzaData.get(RUOLO_KEY);
 		
-		// Validazioni
-		validationUtil.validaNomeCognome(nome, "nome");
-		validationUtil.validaNomeCognome(cognome, "cognome");
+		validationUtil.validaNomeCognome(nome, NOME_KEY);
+		validationUtil.validaNomeCognome(cognome, COGNOME_KEY);
 		validationUtil.validaPassword(password);
 		validationUtil.validaUniqueEmail(email);
 		
