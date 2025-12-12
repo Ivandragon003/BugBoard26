@@ -6,18 +6,7 @@ import Sidebar from "./Sidebar";
 import styles from "./VisualizzaProfilo.module.css";
 
 export default function VisualizzaProfilo() {
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-  const saved = localStorage.getItem('sidebarOpen');
-  if (saved !== null) {
-    return saved === 'true';
-  }
-  return window.innerWidth > 768;
-});
-
-useEffect(() => {
-  localStorage.setItem('sidebarOpen', String(sidebarOpen));
-}, [sidebarOpen]);
-
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState<{ email: string; ruolo: string }>({ email: "", ruolo: "" });
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });

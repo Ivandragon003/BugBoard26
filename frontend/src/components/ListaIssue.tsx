@@ -20,22 +20,9 @@ function ListaIssue() {
   const navigate = useNavigate();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-  const saved = localStorage.getItem('sidebarOpen');
-  if (saved !== null) {
-    return saved === 'true';
-  }
-  return window.innerWidth > 768;
-});
-
-useEffect(() => {
-  localStorage.setItem('sidebarOpen', String(sidebarOpen));
-}, [sidebarOpen]);
-
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  
   const [statoFilter, setStatoFilter] = useState("");
   const [tipoFilter, setTipoFilter] = useState("");
   const [prioritaFilter, setPrioritaFilter] = useState("");

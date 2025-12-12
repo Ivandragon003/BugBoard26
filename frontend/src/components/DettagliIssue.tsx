@@ -51,17 +51,7 @@ function DettagliIssue() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-  const saved = localStorage.getItem('sidebarOpen');
-  if (saved !== null) {
-    return saved === 'true';
-  }
-  return window.innerWidth > 768;
-});
-
-useEffect(() => {
-  localStorage.setItem('sidebarOpen', String(sidebarOpen));
-}, [sidebarOpen]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

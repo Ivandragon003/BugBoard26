@@ -29,18 +29,7 @@ const UserIcon = () => (
 
 export default function ListaUtenza() {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-  const saved = localStorage.getItem('sidebarOpen');
-  if (saved !== null) {
-    return saved === 'true';
-  }
-  return window.innerWidth > 768;
-});
-
-useEffect(() => {
-  localStorage.setItem('sidebarOpen', String(sidebarOpen));
-}, [sidebarOpen]);
-
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [utenteSelezionato, setUtenteSelezionato] = useState<Utente | null>(null);
   const [loading, setLoading] = useState(true);
