@@ -16,23 +16,38 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const isAdmin = authService.isAdmin();
   const currentPath = location.pathname;
 
-  // Rileva se siamo su mobile
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
-      
-      // Su desktop apri sidebar, su mobile chiudi
-      if (!mobile) {
-        setSidebarOpen(true);
-      }
     };
 
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebarOpen');
+    
+    if (saved !== null) {
+      setSidebarOpen(saved === 'true');
+    } else {
+      const mobile = window.innerWidth <= 768;
+      setSidebarOpen(!mobile);
+    }
   }, [setSidebarOpen]);
+
+  useEffect(() => {
+    localStorage.setItem('sidebarOpen', String(sidebarOpen));
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname]);
 
   const handleLogout = () => {
     authService.logout();
@@ -42,7 +57,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const isActive = (path: string) => currentPath === path;
   const showIndicator = (itemName: string) => isActive(`/${itemName}`) || hoveredItem === itemName;
 
-  // Chiudi sidebar dopo click su mobile
   const handleLinkClick = () => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -51,7 +65,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
 
   return (
     <>
-      {/* PULSANTE HAMBURGER (solo mobile) */}
       {isMobile && (
         <button 
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -62,7 +75,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
         </button>
       )}
 
-      {/* OVERLAY SCURO (solo mobile quando aperto) */}
       {isMobile && sidebarOpen && (
         <div 
           className={styles.overlay}
@@ -70,7 +82,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
         />
       )}
 
-      {/* SIDEBAR */}
       <div className={`${styles.sidebar} ${!sidebarOpen ? styles.sidebarClosed : ''}`}>
         <div className={styles.divider} />
         
