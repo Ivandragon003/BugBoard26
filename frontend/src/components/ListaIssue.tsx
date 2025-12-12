@@ -20,10 +20,20 @@ function ListaIssue() {
   const navigate = useNavigate();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+  const saved = localStorage.getItem('sidebarOpen');
+  if (saved !== null) {
+    return saved === 'true';
+  }
+  return window.innerWidth > 768;
+});
+
+useEffect(() => {
+  localStorage.setItem('sidebarOpen', String(sidebarOpen));
+}, [sidebarOpen]);
+
   const [searchTerm, setSearchTerm] = useState("");
   
-  // ⚠️ AGGIUNTO: Stato per debounce
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   
   const [statoFilter, setStatoFilter] = useState("");
@@ -42,12 +52,11 @@ function ListaIssue() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 500); // Attendi 500ms dopo l'ultimo carattere digitato
+    }, 800); // Attendi 500ms dopo l'ultimo carattere digitato
 
     return () => clearTimeout(timer); // Pulisce il timer precedente
   }, [searchTerm]);
 
-  // ✅ MODIFICATO: Usa debouncedSearchTerm invece di searchTerm
   const loadFilteredIssues = useCallback(async () => {
     try {
       setLoading(true);

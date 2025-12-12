@@ -41,21 +41,25 @@ function CreaIssue() {
     }
   }, [navigate]);
 
-  // ✅ Gestione upload con feedback
-  const handleFileChange = (newFiles: FileList | null) => {
-    if (!newFiles) return;
-    
-    const validFiles = Array.from(newFiles).filter(file => {
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        setError(`Il file ${file.name} supera i 5MB`);
-        return false;
-      }
-      return true;
-    });
-    
-    setFiles(prev => [...prev, ...validFiles]);
-  };
+const handleFileChange = (newFiles: FileList | null) => {
+  if (!newFiles) return;
+  
+  const validFiles = Array.from(newFiles).filter(file => {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      setError(`Il file ${file.name} supera i 5MB`);
+      return false;
+    }
+    return true;
+  });
+  
+  setFiles(prev => [...prev, ...validFiles]);
+  
+  if (fileInputRef.current) {
+    fileInputRef.current.value = '';
+  }
+};
+
 
   // ✅ Gestione drag & drop
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {

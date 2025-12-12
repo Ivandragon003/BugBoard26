@@ -21,7 +21,18 @@ function ListaIssueArchiviate() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+  const saved = localStorage.getItem('sidebarOpen');
+  if (saved !== null) {
+    return saved === 'true';
+  }
+  return window.innerWidth > 768;
+});
+
+useEffect(() => {
+  localStorage.setItem('sidebarOpen', String(sidebarOpen));
+}, [sidebarOpen]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statoFilter, setStatoFilter] = useState("Tutti gli stati");
   const [tipoFilter, setTipoFilter] = useState("Tutti i tipi");

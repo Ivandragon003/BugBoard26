@@ -57,7 +57,19 @@ const UserIcon = () => (
 
 function Home() {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+const [sidebarOpen, setSidebarOpen] = useState(() => {
+  const saved = localStorage.getItem('sidebarOpen');
+  if (saved !== null) {
+    return saved === 'true';
+  }
+
+  return window.innerWidth > 768;
+});
+
+useEffect(() => {
+  localStorage.setItem('sidebarOpen', String(sidebarOpen));
+}, [sidebarOpen]);
+
   const [issues, setIssues] = useState<Issue[]>([]);
   const [allIssues, setAllIssues] = useState<Issue[]>([]);
   const [error, setError] = useState<string>("");
