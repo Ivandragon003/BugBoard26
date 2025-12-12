@@ -22,6 +22,10 @@ function ListaIssue() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // ⚠️ AGGIUNTO: Stato per debounce
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  
   const [statoFilter, setStatoFilter] = useState("");
   const [tipoFilter, setTipoFilter] = useState("");
   const [prioritaFilter, setPrioritaFilter] = useState("");
@@ -34,6 +38,16 @@ function ListaIssue() {
     }
   }, [navigate]);
 
+  // ⚠️ AGGIUNTO: Debounce del termine di ricerca
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // Attendi 500ms dopo l'ultimo carattere digitato
+
+    return () => clearTimeout(timer); // Pulisce il timer precedente
+  }, [searchTerm]);
+
+  // ✅ MODIFICATO: Usa debouncedSearchTerm invece di searchTerm
   const loadFilteredIssues = useCallback(async () => {
     try {
       setLoading(true);
@@ -46,7 +60,7 @@ function ListaIssue() {
       if (statoFilter) params.stato = statoFilter;
       if (tipoFilter) params.tipo = tipoFilter;
       if (prioritaFilter) params.priorita = prioritaFilter;
-      if (searchTerm) params.ricerca = searchTerm;
+      if (debouncedSearchTerm) params.ricerca = debouncedSearchTerm; // ← Usa debounced
 
       const data = await issueService.filterIssuesAdvanced(params);
       setIssues(data);
@@ -56,7 +70,7 @@ function ListaIssue() {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder]);
+  }, [debouncedSearchTerm, statoFilter, tipoFilter, prioritaFilter, sortOrder]); // ← dipende da debouncedSearchTerm
 
   useEffect(() => {
     loadFilteredIssues();
@@ -64,6 +78,7 @@ function ListaIssue() {
 
   const handleReset = () => {
     setSearchTerm("");
+    setDebouncedSearchTerm(""); // ← Reset anche debounced
     setStatoFilter("");
     setTipoFilter("");
     setPrioritaFilter("");
@@ -177,6 +192,12 @@ function ListaIssue() {
               <div className={styles.filterField}>
                 <label className={styles.filterLabel}>
                   🔍 Cerca issue
+                  {/* ⚠️ AGGIUNTO: Indicatore ricerca in corso */}
+                  {searchTerm !== debouncedSearchTerm && (
+                    <span style={{ fontSize: "12px", color: "#666", marginLeft: "8px" }}>
+                      (ricerca...)
+                    </span>
+                  )}
                 </label>
                 <input
                   type="text"

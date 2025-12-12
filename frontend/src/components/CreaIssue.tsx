@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react"; 
+import React, { useState, useEffect, useRef } from "react"; // ← useRef aggiunto
 import { useNavigate } from "react-router-dom";
 import { AxiosError } from "axios";
 import { issueService } from "../services/issueService";
 import { allegatoService } from "../services/allegatoService";
 import { authService } from "../services/authService"; 
 import Sidebar from "./Sidebar";
-import styles from "./CreaIssue.module.css"; // ✅ Esternalizza gli stili
+import styles from "./CreaIssue.module.css";
 
 // ✅ Tipizza i tipi e priorità
 type TipoIssue = "bug" | "features" | "question" | "documentation";
@@ -27,6 +27,9 @@ function CreaIssue() {
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+
+  // ⚠️ AGGIUNTO: Ref per l'input file
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ✅ Controllo autenticazione
   useEffect(() => {
@@ -70,9 +73,14 @@ function CreaIssue() {
     handleFileChange(e.dataTransfer.files);
   };
 
-  // ✅ Rimozione file
+  // ✅ MODIFICATA: Rimozione file con reset dell'input
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+    
+    // ⚠️ IMPORTANTE: Resetta l'input file per permettere ri-upload stesso file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   // ✅ Submit con gestione errori tipizzata
@@ -236,6 +244,7 @@ function CreaIssue() {
                   className={styles.dropzone}
                 >
                   <input
+                    ref={fileInputRef} // ⚠️ AGGIUNTO: Ref per reset
                     type="file"
                     id="file-input"
                     multiple
