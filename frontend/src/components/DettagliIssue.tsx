@@ -47,11 +47,16 @@ interface ConfirmDialog {
   action: () => Promise<void>;
 }
 
-function DettagliIssue() {
+interface Props {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+function DettagliIssue({ sidebarOpen, setSidebarOpen }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

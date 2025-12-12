@@ -16,11 +16,16 @@ interface Issue {
   archiviata: boolean;
 }
 
-function ListaIssue() {
+interface Props {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+function ListaIssue({ sidebarOpen, setSidebarOpen }: Props) {
   const navigate = useNavigate();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [statoFilter, setStatoFilter] = useState("");

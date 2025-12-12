@@ -59,11 +59,16 @@ const AccessDenied: React.FC = () => (
   </div>
 );
 
-export default function CreaUtenza() {
+interface Props {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+export default function CreaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   const navigate = useNavigate();
   
   // ✅ 1️⃣ PRIMA: TUTTI GLI HOOKS IN CIMA
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+//  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [form, setForm] = useState<FormData>({
     nome: "",
     cognome: "",

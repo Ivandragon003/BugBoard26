@@ -26,10 +26,14 @@ const UserIcon = () => (
     <path d="M6 21C6 17.686 8.686 15 12 15C15.314 15 18 17.686 18 21" stroke="#0d9488" strokeWidth="2" strokeLinecap="round"/>
   </svg>
 );
+interface Props {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
 
-export default function ListaUtenza() {
+export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // const [sidebarOpen, setSidebarOpen] = useState(true);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [utenteSelezionato, setUtenteSelezionato] = useState<Utente | null>(null);
   const [loading, setLoading] = useState(true);

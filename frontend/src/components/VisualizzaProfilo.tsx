@@ -5,8 +5,13 @@ import axios from "axios";
 import Sidebar from "./Sidebar";
 import styles from "./VisualizzaProfilo.module.css";
 
-export default function VisualizzaProfilo() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+interface Props {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+export default function VisualizzaProfilo({ sidebarOpen, setSidebarOpen }: Props) {
+  // const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState<{ email: string; ruolo: string }>({ email: "", ruolo: "" });
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });
@@ -23,7 +28,6 @@ export default function VisualizzaProfilo() {
   const isAdmin = authService.isAdmin();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Permetti solo la modifica della password e conferma password
     if (e.target.name === "password" || e.target.name === "confirmPassword") {
       setForm({ ...form, [e.target.name]: e.target.value });
     }

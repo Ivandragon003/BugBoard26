@@ -12,36 +12,18 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState("");
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const isAdmin = authService.isAdmin();
   const currentPath = location.pathname;
 
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
+      setIsMobile(window.innerWidth <= 768);
     };
 
-    checkMobile();
     window.addEventListener('resize', checkMobile);
-    
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('sidebarOpen');
-    
-    if (saved !== null) {
-      setSidebarOpen(saved === 'true');
-    } else {
-      const mobile = window.innerWidth <= 768;
-      setSidebarOpen(!mobile);
-    }
-  }, [setSidebarOpen]);
-
-  useEffect(() => {
-    localStorage.setItem('sidebarOpen', String(sidebarOpen));
-  }, [sidebarOpen]);
 
   useEffect(() => {
     if (isMobile && sidebarOpen) {

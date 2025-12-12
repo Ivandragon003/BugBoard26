@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"; // ← useRef aggiunto
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AxiosError } from "axios";
 import { issueService } from "../services/issueService";
@@ -7,18 +7,20 @@ import { authService } from "../services/authService";
 import Sidebar from "./Sidebar";
 import styles from "./CreaIssue.module.css";
 
-// ✅ Tipizza i tipi e priorità
 type TipoIssue = "bug" | "features" | "question" | "documentation";
 type Priorita = "none" | "low" | "medium" | "high" | "critical";
 
-// ✅ Interfaccia per errori API
 interface ApiErrorResponse {
   message?: string;
 }
 
-function CreaIssue() {
+interface Props {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+function CreaIssue({ sidebarOpen, setSidebarOpen }: Props) {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [titolo, setTitolo] = useState<string>("");
   const [descrizione, setDescrizione] = useState<string>("");
   const [tipo, setTipo] = useState<TipoIssue>("bug");
@@ -28,10 +30,8 @@ function CreaIssue() {
   const [success, setSuccess] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  // ⚠️ AGGIUNTO: Ref per l'input file
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ Controllo autenticazione
   useEffect(() => {
     const token = authService.getToken();
     const user = authService.getUser();
@@ -41,27 +41,25 @@ function CreaIssue() {
     }
   }, [navigate]);
 
-const handleFileChange = (newFiles: FileList | null) => {
-  if (!newFiles) return;
-  
-  const validFiles = Array.from(newFiles).filter(file => {
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      setError(`Il file ${file.name} supera i 5MB`);
-      return false;
+  const handleFileChange = (newFiles: FileList | null) => {
+    if (!newFiles) return;
+    
+    const validFiles = Array.from(newFiles).filter(file => {
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setError(`Il file ${file.name} supera i 5MB`);
+        return false;
+      }
+      return true;
+    });
+    
+    setFiles(prev => [...prev, ...validFiles]);
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
-    return true;
-  });
-  
-  setFiles(prev => [...prev, ...validFiles]);
-  
-  if (fileInputRef.current) {
-    fileInputRef.current.value = '';
-  }
-};
+  };
 
-
-  // ✅ Gestione drag & drop
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.currentTarget.classList.add(styles.dragActive);
@@ -77,17 +75,14 @@ const handleFileChange = (newFiles: FileList | null) => {
     handleFileChange(e.dataTransfer.files);
   };
 
-  // ✅ MODIFICATA: Rimozione file con reset dell'input
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
     
-    // ⚠️ IMPORTANTE: Resetta l'input file per permettere ri-upload stesso file
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // ✅ Submit con gestione errori tipizzata
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
@@ -116,7 +111,6 @@ const handleFileChange = (newFiles: FileList | null) => {
 
       const nuovaIssue = await issueService.createIssue(dataToSend);
 
-      // ✅ Upload allegati con gestione errori per singolo file
       if (files.length > 0) {
         const uploadResults = await Promise.allSettled(
           files.map(file => allegatoService.uploadAllegato(file, nuovaIssue.idIssue))
@@ -132,7 +126,6 @@ const handleFileChange = (newFiles: FileList | null) => {
       setTimeout(() => navigate("/issues"), 1500);
 
     } catch (err) {
-      // ✅ Gestione errori tipizzata
       if (err instanceof AxiosError) {
         const apiError = err.response?.data as ApiErrorResponse;
         setError(apiError?.message || "Errore del server");
@@ -168,7 +161,6 @@ const handleFileChange = (newFiles: FileList | null) => {
         <div className={styles.formWrapper}>
           <div className={styles.formCard}>
             <form onSubmit={handleSubmit}>
-              {/* Titolo */}
               <div className={styles.formGroup}>
                 <label htmlFor="titolo" className={styles.label}>
                   Titolo *
@@ -186,7 +178,6 @@ const handleFileChange = (newFiles: FileList | null) => {
                 <div className={styles.charCount}>{titolo.length}/200</div>
               </div>
 
-              {/* Descrizione */}
               <div className={styles.formGroup}>
                 <label htmlFor="descrizione" className={styles.label}>
                   Descrizione *
@@ -204,7 +195,6 @@ const handleFileChange = (newFiles: FileList | null) => {
                 <div className={styles.charCount}>{descrizione.length}/5000</div>
               </div>
 
-              {/* Tipo e Priorità */}
               <div className={styles.gridTwo}>
                 <div className={styles.formGroup}>
                   <label htmlFor="tipo" className={styles.label}>Tipo *</label>
@@ -238,7 +228,6 @@ const handleFileChange = (newFiles: FileList | null) => {
                 </div>
               </div>
 
-              {/* Upload Files */}
               <div className={styles.formGroup}>
                 <label className={styles.label}>Allega file (facoltativo)</label>
                 <div
@@ -248,7 +237,7 @@ const handleFileChange = (newFiles: FileList | null) => {
                   className={styles.dropzone}
                 >
                   <input
-                    ref={fileInputRef} // ⚠️ AGGIUNTO: Ref per reset
+                    ref={fileInputRef}
                     type="file"
                     id="file-input"
                     multiple
@@ -265,7 +254,6 @@ const handleFileChange = (newFiles: FileList | null) => {
                   </label>
                 </div>
 
-                {/* Lista file */}
                 {files.length > 0 && (
                   <div className={styles.fileList}>
                     <div className={styles.fileListTitle}>File selezionati:</div>
@@ -291,7 +279,6 @@ const handleFileChange = (newFiles: FileList | null) => {
                 )}
               </div>
 
-              {/* Messaggi */}
               {error && (
                 <div className={styles.errorMessage} role="alert">
                   ⚠️ {error}
@@ -304,7 +291,6 @@ const handleFileChange = (newFiles: FileList | null) => {
                 </div>
               )}
 
-              {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}

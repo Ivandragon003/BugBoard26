@@ -55,9 +55,13 @@ const UserIcon = () => (
   </svg>
 );
 
-function Home() {
+interface Props {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+function Home({ sidebarOpen, setSidebarOpen }: Props) {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [allIssues, setAllIssues] = useState<Issue[]>([]);
   const [error, setError] = useState<string>("");

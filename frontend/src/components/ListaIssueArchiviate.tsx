@@ -16,12 +16,17 @@ interface Issue {
   archiviata: boolean;
 }
 
-function ListaIssueArchiviate() {
+interface Props {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+function ListaIssueArchiviate({ sidebarOpen, setSidebarOpen }: Props) {
   const navigate = useNavigate();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statoFilter, setStatoFilter] = useState("Tutti gli stati");
   const [tipoFilter, setTipoFilter] = useState("Tutti i tipi");
