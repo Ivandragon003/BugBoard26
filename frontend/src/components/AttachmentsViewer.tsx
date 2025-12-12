@@ -161,7 +161,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
   if (allegati.length === 0) {
     return (
       <div className={styles.emptyContainer}>
-        <div className={styles.emptyIcon}>📎</div>
+        <div className={styles.emptyIcon}></div>
         <div className={styles.emptyTitle}>
           Nessun allegato
         </div>
