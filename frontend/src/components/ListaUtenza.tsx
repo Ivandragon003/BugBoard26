@@ -26,6 +26,7 @@ const UserIcon = () => (
     <path d="M6 21C6 17.686 8.686 15 12 15C15.314 15 18 17.686 18 21" stroke="#0d9488" strokeWidth="2" strokeLinecap="round"/>
   </svg>
 );
+
 interface Props {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -33,7 +34,6 @@ interface Props {
 
 export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   const navigate = useNavigate();
-  // const [sidebarOpen, setSidebarOpen] = useState(true);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [utenteSelezionato, setUtenteSelezionato] = useState<Utente | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [utentePerCambioStato, setUtentePerCambioStato] = useState<Utente | null>(null);
-  // ✅ MODIFICA: Solo ruolo nell'editForm
   const [editForm, setEditForm] = useState({ ruolo: '' });
 
   useEffect(() => {
@@ -63,15 +62,46 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   const caricaUtenti = async () => {
     try {
       setLoading(true);
+      setError('');
+      
       const response = await axios.get(`${API_BASE_URL}/utenza/lista`, {
         headers: getAuthHeader()
       });
-      setUtenti(response.data);
-      setError('');
+      
+      if (Array.isArray(response.data)) {
+        setUtenti(response.data);
+      } else {
+        console.warn('Risposta non è un array:', response.data);
+        setUtenti([]);
+        setError('Formato dati non valido ricevuto dal server');
+      }
+      
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Errore nel caricamento degli utenti';
-      setError(message);
-      console.error(err);
+      console.error('Errore caricamento utenti:', err);
+      
+      setUtenti([]);
+      
+      if (err.response) {
+        const status = err.response.status;
+        const message = err.response.data?.message || err.response.data?.error;
+        
+        if (status === 401) {
+          setError('Sessione scaduta. Effettua nuovamente il login.');
+          setTimeout(() => navigate('/login'), 2000);
+        } else if (status === 403) {
+          setError('Non hai i permessi per visualizzare gli utenti.');
+        } else if (status === 404) {
+          setError('Endpoint non trovato. Contatta il supporto tecnico.');
+        } else if (status === 500) {
+          setError('Errore interno del server. Verifica che il backend sia avviato correttamente.');
+        } else {
+          setError(message || `Errore HTTP ${status}`);
+        }
+      } else if (err.request) {
+        setError('Impossibile contattare il server. Verifica che il backend sia in esecuzione.');
+      } else {
+        setError('Errore nella richiesta: ' + err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -84,7 +114,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
 
   const apriModalModifica = (utente: Utente) => {
     setUtenteSelezionato(utente);
-    // ✅ MODIFICA: Solo ruolo
     setEditForm({
       ruolo: utente.ruolo
     });
@@ -102,7 +131,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
     if (!utenteSelezionato) return;
 
     try {
-      // ✅ MODIFICA: Invia solo il ruolo al backend
       await axios.put(
         `${API_BASE_URL}/utenza/${utenteSelezionato.idUtente}`,
         { ruolo: editForm.ruolo },
@@ -221,53 +249,64 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {utenti.map((utente) => (
-                    <tr
-                      key={utente.idUtente}
-                      className={`${styles.tableRow} ${!utente.stato ? styles.tableRowInactive : ''}`}
-                    >
-                      <td className={`${styles.tableCell} ${styles.tableCellName}`}>
-                        {utente.nome} {utente.cognome}
-                      </td>
-                      <td className={`${styles.tableCell} ${styles.tableCellEmail}`}>
-                        {utente.email}
-                      </td>
-                      <td className={styles.tableCell}>
-                        <span className={`${styles.badge} ${utente.ruolo === 'Amministratore' ? styles.badgeRoleAdmin : styles.badgeRoleUser}`}>
-                          {utente.ruolo}
-                        </span>
-                      </td>
-                      <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
-                        <span className={`${styles.badge} ${utente.stato ? styles.badgeStatusActive : styles.badgeStatusInactive}`}>
-                          {utente.stato ? '✓ Attivo' : '✗ Disattivato'}
-                        </span>
-                      </td>
-                      <td className={`${styles.tableCell} ${styles.tableCellActions}`}>
-                        <div className={styles.actionButtons}>
-                          <button
-                            onClick={() => apriModalConferma(utente)}
-                            className={`${styles.buttonToggle} ${utente.stato ? styles.buttonToggleActive : styles.buttonToggleInactive}`}
-                          >
-                            {utente.stato ? '🔴 Disattiva' : '🟢 Attiva'}
-                          </button>
-                          
-                          <button
-                            onClick={() => visualizzaProfiloUtente(utente)}
-                            className={styles.buttonView}
-                          >
-                            Visualizza
-                          </button>
-                          
-                          <button
-                            onClick={() => apriModalModifica(utente)}
-                            className={styles.buttonEdit}
-                          >
-                            Modifica Ruolo
-                          </button>
-                        </div>
+                  {utenti.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                        {error 
+                          ? '❌ Impossibile caricare gli utenti. Verifica che il backend sia in esecuzione.'
+                          : '👥 Nessun utente registrato nel sistema'
+                        }
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    utenti.map((utente) => (
+                      <tr
+                        key={utente.idUtente}
+                        className={`${styles.tableRow} ${!utente.stato ? styles.tableRowInactive : ''}`}
+                      >
+                        <td className={`${styles.tableCell} ${styles.tableCellName}`}>
+                          {utente.nome} {utente.cognome}
+                        </td>
+                        <td className={`${styles.tableCell} ${styles.tableCellEmail}`}>
+                          {utente.email}
+                        </td>
+                        <td className={styles.tableCell}>
+                          <span className={`${styles.badge} ${utente.ruolo === 'Amministratore' ? styles.badgeRoleAdmin : styles.badgeRoleUser}`}>
+                            {utente.ruolo}
+                          </span>
+                        </td>
+                        <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
+                          <span className={`${styles.badge} ${utente.stato ? styles.badgeStatusActive : styles.badgeStatusInactive}`}>
+                            {utente.stato ? '✓ Attivo' : '✗ Disattivato'}
+                          </span>
+                        </td>
+                        <td className={`${styles.tableCell} ${styles.tableCellActions}`}>
+                          <div className={styles.actionButtons}>
+                            <button
+                              onClick={() => apriModalConferma(utente)}
+                              className={`${styles.buttonToggle} ${utente.stato ? styles.buttonToggleActive : styles.buttonToggleInactive}`}
+                            >
+                              {utente.stato ? '🔴 Disattiva' : '🟢 Attiva'}
+                            </button>
+                            
+                            <button
+                              onClick={() => visualizzaProfiloUtente(utente)}
+                              className={styles.buttonView}
+                            >
+                              Visualizza
+                            </button>
+                            
+                            <button
+                              onClick={() => apriModalModifica(utente)}
+                              className={styles.buttonEdit}
+                            >
+                              Modifica Ruolo
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -275,7 +314,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
         </div>
       </div>
 
-      {/* Modal Visualizza Profilo */}
       {showModal && utenteSelezionato && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
@@ -330,7 +368,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
         </div>
       )}
 
-      {/* ✅ MODIFICA: Modal Modifica Ruolo - Solo ruolo modificabile */}
       {showEditModal && utenteSelezionato && (
         <div className={styles.modalOverlay}>
           <div className={`${styles.modalContent} ${styles.modalContentSmall}`}>
@@ -348,7 +385,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
 
             <form onSubmit={handleModificaUtente}>
               <div className={styles.modalBody}>
-                {/* ✅ MODIFICA: Info utente in sola lettura */}
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>Utente</label>
                   <div className={styles.formReadOnly}>
@@ -361,7 +397,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
                   </div>
                 </div>
 
-                {/* ✅ MODIFICA: Solo il ruolo è modificabile */}
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>Ruolo *</label>
                   <select
@@ -402,7 +437,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
         </div>
       )}
 
-      {/* Modal Conferma Cambio Stato */}
       {showConfirmModal && utentePerCambioStato && (
         <div className={styles.modalOverlay}>
           <div className={`${styles.modalContent} ${styles.modalContentMedium}`}>

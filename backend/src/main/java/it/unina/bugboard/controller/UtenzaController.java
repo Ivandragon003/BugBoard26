@@ -10,6 +10,11 @@ import it.unina.bugboard.util.ValidationUtil;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.HashMap;
+
+
 
 @RestController
 @RequestMapping("/api/utenza")
@@ -113,6 +118,35 @@ public class UtenzaController {
 
 		return utente;
 	}
+	
+	@GetMapping("/lista")
+	public List<Map<String, Object>> listaUtenti(@RequestHeader("Authorization") String token) {
+	    Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+	    
+	    if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
+	        throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
+	    }
+	    
+	    if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
+	        throw new InvalidFieldException("Solo gli amministratori possono visualizzare la lista utenti");
+	    }
+	    
+	    List<Utenza> utenti = utenzaDAO.findAll();
+	    
+	    return utenti.stream()
+	        .map(u -> {
+	            Map<String, Object> utenteMap = new HashMap<>();
+	            utenteMap.put("idUtente", u.getIdUtente());
+	            utenteMap.put(NOME_KEY, u.getNome());
+	            utenteMap.put(COGNOME_KEY, u.getCognome());
+	            utenteMap.put(EMAIL_KEY, u.getEmail());
+	            utenteMap.put(RUOLO_KEY, u.getRuolo().toString());
+	            utenteMap.put(STATO_KEY, u.getStato());
+	            return utenteMap;
+	        })
+	        .collect(Collectors.toList());
+	}
+
 
 	@PutMapping("/modifica")
 	public Map<String, Object> modificaProfilo(@RequestBody Map<String, String> datiModifica,
