@@ -56,7 +56,6 @@ function DettagliIssue({ sidebarOpen, setSidebarOpen }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
-  // const [sidebarOpen, setSidebarOpen] = useState(true);
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -95,7 +94,6 @@ function DettagliIssue({ sidebarOpen, setSidebarOpen }: Props) {
       setIssue(data);
       setError("");
     } catch (err: any) {
-      console.error("Errore caricamento:", err);
       setError(err.response?.data?.message || "Errore nel caricamento dell'issue");
     } finally {
       setLoading(false);
@@ -127,7 +125,6 @@ function DettagliIssue({ sidebarOpen, setSidebarOpen }: Props) {
           await loadIssue();
           setTimeout(() => setSuccess(""), 3000);
         } catch (err: any) {
-          console.error("Errore archiviazione:", err);
           setError(err.response?.data?.message || "Errore nell'archiviazione dell'issue");
           setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
           setTimeout(() => setError(""), 5000);
@@ -149,7 +146,6 @@ function DettagliIssue({ sidebarOpen, setSidebarOpen }: Props) {
           await loadIssue();
           setTimeout(() => setSuccess(""), 3000);
         } catch (err: any) {
-          console.error("Errore disarchiviazione:", err);
           setError(err.response?.data?.message || "Errore nella disarchiviazione");
           setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
         }
@@ -167,7 +163,6 @@ function DettagliIssue({ sidebarOpen, setSidebarOpen }: Props) {
           await issueService.deleteIssue(Number(id));
           navigate(getBackPath());
         } catch (err: any) {
-          console.error("Errore eliminazione:", err);
           setError(err.response?.data?.message || "Errore nell'eliminazione");
           setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
         }
@@ -215,7 +210,6 @@ function DettagliIssue({ sidebarOpen, setSidebarOpen }: Props) {
           await loadIssue();
           setTimeout(() => setSuccess(""), 3000);
         } catch (err: any) {
-          console.error("Errore cambio stato:", err);
           setError(err.response?.data?.message || "Errore nel cambio di stato");
           setShowConfirm({ open: false, title: "", message: "", action: async () => {} });
           setTimeout(() => setError(""), 5000);
@@ -368,25 +362,23 @@ function DettagliIssue({ sidebarOpen, setSidebarOpen }: Props) {
               <div className={styles.infoField}>
                 <label className={styles.infoLabel}>Stato</label>
                 {!isArchived && getNextStatus(issue.stato) ? (
-                  <>
-                    <button
-                      onClick={handleStatusClick}
-                      className={styles.statusChangeButton}
-                    >
-                      <div className={styles.statusTransition}>
-                        <span className={`${styles.badge} ${getStatoBadgeClass(issue.stato)}`}>
-                          {getStatoLabel(issue.stato)}
-                        </span>
-                        <span className={styles.statusArrow}>→</span>
-                        <span className={`${styles.badge} ${styles.badgeNextStatus} ${getStatoBadgeClass(getNextStatus(issue.stato) || "")}`}>
-                          {getNextStatusLabel(issue.stato)}
-                        </span>
-                      </div>
-                      <div className={styles.statusHint}>
-                        ✨ Clicca per cambiare stato
-                      </div>
-                    </button>
-                  </>
+                  <button
+                    onClick={handleStatusClick}
+                    className={styles.statusChangeButton}
+                  >
+                    <div className={styles.statusTransition}>
+                      <span className={`${styles.badge} ${getStatoBadgeClass(issue.stato)}`}>
+                        {getStatoLabel(issue.stato)}
+                      </span>
+                      <span className={styles.statusArrow}>→</span>
+                      <span className={`${styles.badge} ${styles.badgeNextStatus} ${getStatoBadgeClass(getNextStatus(issue.stato) || "")}`}>
+                        {getNextStatusLabel(issue.stato)}
+                      </span>
+                    </div>
+                    <div className={styles.statusHint}>
+                      ✨ Clicca per cambiare stato
+                    </div>
+                  </button>
                 ) : (
                   <span className={`${styles.badge} ${getStatoBadgeClass(issue.stato)}`}>
                     {getStatoLabel(issue.stato)}
@@ -463,7 +455,12 @@ function DettagliIssue({ sidebarOpen, setSidebarOpen }: Props) {
             </div>
           </div>
 
-          <AttachmentsViewer idIssue={Number(id)} canEdit={false} />
+          <div style={{ marginTop: '2rem' }}>
+            <AttachmentsViewer 
+              idIssue={Number(id)} 
+              canEdit={isAdmin && !isArchived} 
+            />
+          </div>
         </div>
       </div>
 

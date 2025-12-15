@@ -41,7 +41,7 @@ public class AllegatoController {
 			@RequestParam(value = "file") MultipartFile file,
 			@RequestParam(value = "idIssue") Integer idIssue) throws IOException {
 		
-		// Validazione file
+		
 		if (file == null || file.isEmpty()) {
 			throw new InvalidFieldException("File mancante o vuoto");
 		}
