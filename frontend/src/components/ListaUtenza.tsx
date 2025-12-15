@@ -44,8 +44,24 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [utentePerCambioStato, setUtentePerCambioStato] = useState<Utente | null>(null);
   const [editForm, setEditForm] = useState({ ruolo: '' });
+  const [utenteCorrenteId, setUtenteCorrenteId] = useState<number | null>(null);
 
-  // ✅ WRAPPATO IN useCallback
+  // Carica utente corrente
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/utenza/me`, {
+          headers: getAuthHeader()
+        });
+        setUtenteCorrenteId(response.data.idUtente);
+      } catch (err) {
+        console.error('Errore caricamento utente corrente:', err);
+      }
+    };
+
+    loadCurrentUser();
+  }, []);
+
   const caricaUtenti = useCallback(async () => {
     try {
       setLoading(true);
@@ -94,7 +110,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
     }
   }, [navigate]);
 
-  // ✅ AGGIUNTO caricaUtenti alle dipendenze
   useEffect(() => {
     if (!authService.isAuthenticated()) {
       navigate('/login');
@@ -261,53 +276,79 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
                       </td>
                     </tr>
                   ) : (
-                    utenti.map((utente) => (
-                      <tr
-                        key={utente.idUtente}
-                        className={`${styles.tableRow} ${!utente.stato ? styles.tableRowInactive : ''}`}
-                      >
-                        <td className={`${styles.tableCell} ${styles.tableCellName}`}>
-                          {utente.nome} {utente.cognome}
-                        </td>
-                        <td className={`${styles.tableCell} ${styles.tableCellEmail}`}>
-                          {utente.email}
-                        </td>
-                        <td className={styles.tableCell}>
-                          <span className={`${styles.badge} ${utente.ruolo === 'Amministratore' ? styles.badgeRoleAdmin : styles.badgeRoleUser}`}>
-                            {utente.ruolo}
-                          </span>
-                        </td>
-                        <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
-                          <span className={`${styles.badge} ${utente.stato ? styles.badgeStatusActive : styles.badgeStatusInactive}`}>
-                            {utente.stato ? '✓ Attivo' : '✗ Disattivato'}
-                          </span>
-                        </td>
-                        <td className={`${styles.tableCell} ${styles.tableCellActions}`}>
-                          <div className={styles.actionButtons}>
-                            <button
-                              onClick={() => apriModalConferma(utente)}
-                              className={`${styles.buttonToggle} ${utente.stato ? styles.buttonToggleActive : styles.buttonToggleInactive}`}
-                            >
-                              {utente.stato ? '🔴 Disattiva' : '🟢 Attiva'}
-                            </button>
-                            
-                            <button
-                              onClick={() => visualizzaProfiloUtente(utente)}
-                              className={styles.buttonView}
-                            >
-                              Visualizza
-                            </button>
-                            
-                            <button
-                              onClick={() => apriModalModifica(utente)}
-                              className={styles.buttonEdit}
-                            >
-                              Modifica Ruolo
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                    utenti.map((utente) => {
+                      const isCurrentUser = utente.idUtente === utenteCorrenteId;
+                      
+                      return (
+                        <tr
+                          key={utente.idUtente}
+                          className={`${styles.tableRow} ${!utente.stato ? styles.tableRowInactive : ''} ${isCurrentUser ? styles.tableRowHighlight : ''}`}
+                        >
+                          <td className={`${styles.tableCell} ${styles.tableCellName}`}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {utente.nome} {utente.cognome}
+                              {isCurrentUser && (
+                                <span className={styles.badgeMe}>Tu</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className={`${styles.tableCell} ${styles.tableCellEmail}`}>
+                            {utente.email}
+                          </td>
+                          <td className={styles.tableCell}>
+                            <span className={`${styles.badge} ${utente.ruolo === 'Amministratore' ? styles.badgeRoleAdmin : styles.badgeRoleUser}`}>
+                              {utente.ruolo}
+                            </span>
+                          </td>
+                          <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
+                            <span className={`${styles.badge} ${utente.stato ? styles.badgeStatusActive : styles.badgeStatusInactive}`}>
+                              {utente.stato ? '✓ Attivo' : '✗ Disattivato'}
+                            </span>
+                          </td>
+                          <td className={`${styles.tableCell} ${styles.tableCellActions}`}>
+                            {isCurrentUser ? (
+                              <div className={styles.actionButtonsDisabled}>
+                                <div className={styles.infoBox}>
+                                  <span className={styles.infoIcon}>ℹ️</span>
+                                  <span className={styles.infoText}>
+                                    Non puoi modificare o disattivare il tuo account da questa pagina
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => visualizzaProfiloUtente(utente)}
+                                  className={styles.buttonView}
+                                >
+                                  Visualizza
+                                </button>
+                              </div>
+                            ) : (
+                              <div className={styles.actionButtons}>
+                                <button
+                                  onClick={() => apriModalConferma(utente)}
+                                  className={`${styles.buttonToggle} ${utente.stato ? styles.buttonToggleActive : styles.buttonToggleInactive}`}
+                                >
+                                  {utente.stato ? '🔴 Disattiva' : '🟢 Attiva'}
+                                </button>
+                                
+                                <button
+                                  onClick={() => visualizzaProfiloUtente(utente)}
+                                  className={styles.buttonView}
+                                >
+                                  Visualizza
+                                </button>
+                                
+                                <button
+                                  onClick={() => apriModalModifica(utente)}
+                                  className={styles.buttonEdit}
+                                >
+                                  Modifica Ruolo
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

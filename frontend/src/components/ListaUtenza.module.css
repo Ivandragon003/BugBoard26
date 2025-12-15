@@ -334,6 +334,12 @@
   background-color: #0f766e;
 }
 
+.buttonEdit:disabled {
+  background-color: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* ===== MODAL OVERLAY ===== */
 .modalOverlay {
   position: fixed;
@@ -429,6 +435,13 @@
   font-weight: 500;
   color: #1f2937;
   margin: 0;
+}
+
+.formReadOnly {
+  padding: 12px;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
 }
 
 /* ===== EDIT FORM ===== */
@@ -671,7 +684,74 @@
   background-color: #047857;
 }
 
+/* ===== OPZIONE 2: BADGE "TU" + INFO INLINE (USER-FRIENDLY) ===== */
+
+/* Badge "Tu" verde */
+.badgeMe {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(13, 148, 136, 0.2);
+}
+
+/* Highlight riga utente corrente */
+.tableRowHighlight {
+  background-color: #f0fdfa !important;
+  border-left: 3px solid #0d9488 !important;
+}
+
+.tableRowHighlight:hover {
+  background-color: #ccfbf1 !important;
+}
+
+/* Container azioni disabilitate */
+.actionButtonsDisabled {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+/* Info box blu */
+.infoBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 0.813rem;
+  color: #1e40af;
+  max-width: 280px;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
+}
+
+.infoIcon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.infoText {
+  line-height: 1.5;
+  font-weight: 500;
+}
+
 /* ===== RESPONSIVE ===== */
+@media (max-width: 1200px) {
+  .infoBox {
+    max-width: 220px;
+    font-size: 0.75rem;
+  }
+}
+
 @media (max-width: 768px) {
   .header {
     padding: 12px 16px;
@@ -716,5 +796,19 @@
   .buttonDanger,
   .buttonSuccess {
     width: 100%;
+  }
+
+  /* Responsive per info box */
+  .actionButtonsDisabled {
+    align-items: stretch;
+  }
+  
+  .infoBox {
+    max-width: 100%;
+  }
+  
+  .badgeMe {
+    font-size: 0.688rem;
+    padding: 2px 6px;
   }
 }
