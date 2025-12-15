@@ -159,11 +159,18 @@ public class UtenzaController {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
 		verificaAccountAttivo(utenteCorrente);
 		verificaRuoloAmministratore(utenteCorrente);
-
+		
+		if (utenteCorrente.getIdUtente().equals(id)) {
+	        throw new UnauthorizedException("Non puoi modificare il tuo stesso ruolo");
+	    }
+		
 		Utenza utenzaDaModificare = utenzaDAO.findById(id)
 				.orElseThrow(() -> new NotFoundException("Utente non trovato"));
-
-		// Non puoi modificare altri amministratori
+		
+		if (Boolean.FALSE.equals(utenzaDaModificare.getStato())) {
+	        throw new InvalidFieldException("Non puoi modificare il ruolo di un account disattivato. Attiva prima l'account.");
+	    }
+		
 		if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore)
 				&& !utenzaDaModificare.getIdUtente().equals(utenteCorrente.getIdUtente())) {
 			throw new UnauthorizedException("Non puoi modificare altri amministratori");

@@ -337,12 +337,24 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
                                   Visualizza
                                 </button>
                                 
-                                <button
-                                  onClick={() => apriModalModifica(utente)}
-                                  className={styles.buttonEdit}
-                                >
-                                  Modifica Ruolo
-                                </button>
+                                {/* ✅ Disabilita "Modifica Ruolo" per utenti disattivati */}
+                                {!utente.stato ? (
+                                  <button
+                                    className={styles.buttonEditDisabled}
+                                    disabled
+                                    title="Attiva l'account prima di modificare il ruolo"
+                                  >
+                                    <span className={styles.lockIcon}>🔒</span>
+                                    Modifica Ruolo
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => apriModalModifica(utente)}
+                                    className={styles.buttonEdit}
+                                  >
+                                    Modifica Ruolo
+                                  </button>
+                                )}
                               </div>
                             )}
                           </td>
