@@ -46,7 +46,7 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   const [editForm, setEditForm] = useState({ ruolo: '' });
   const [utenteCorrenteId, setUtenteCorrenteId] = useState<number | null>(null);
 
-  // ✅ Carica utente corrente
+  // Carica utente corrente
   useEffect(() => {
     const loadCurrentUser = async () => {
       try {
@@ -276,72 +276,79 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
                       </td>
                     </tr>
                   ) : (
-                    utenti.map((utente) => (
-                      <tr
-                        key={utente.idUtente}
-                        className={`${styles.tableRow} ${!utente.stato ? styles.tableRowInactive : ''}`}
-                      >
-                        <td className={`${styles.tableCell} ${styles.tableCellName}`}>
-                          {utente.nome} {utente.cognome}
-                          {utente.idUtente === utenteCorrenteId && (
-                            <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#0d9488', fontWeight: 600 }}>
-                              (Tu)
+                    utenti.map((utente) => {
+                      const isCurrentUser = utente.idUtente === utenteCorrenteId;
+                      
+                      return (
+                        <tr
+                          key={utente.idUtente}
+                          className={`${styles.tableRow} ${!utente.stato ? styles.tableRowInactive : ''} ${isCurrentUser ? styles.tableRowHighlight : ''}`}
+                        >
+                          <td className={`${styles.tableCell} ${styles.tableCellName}`}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {utente.nome} {utente.cognome}
+                              {isCurrentUser && (
+                                <span className={styles.badgeMe}>Tu</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className={`${styles.tableCell} ${styles.tableCellEmail}`}>
+                            {utente.email}
+                          </td>
+                          <td className={styles.tableCell}>
+                            <span className={`${styles.badge} ${utente.ruolo === 'Amministratore' ? styles.badgeRoleAdmin : styles.badgeRoleUser}`}>
+                              {utente.ruolo}
                             </span>
-                          )}
-                        </td>
-                        <td className={`${styles.tableCell} ${styles.tableCellEmail}`}>
-                          {utente.email}
-                        </td>
-                        <td className={styles.tableCell}>
-                          <span className={`${styles.badge} ${utente.ruolo === 'Amministratore' ? styles.badgeRoleAdmin : styles.badgeRoleUser}`}>
-                            {utente.ruolo}
-                          </span>
-                        </td>
-                        <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
-                          <span className={`${styles.badge} ${utente.stato ? styles.badgeStatusActive : styles.badgeStatusInactive}`}>
-                            {utente.stato ? '✓ Attivo' : '✗ Disattivato'}
-                          </span>
-                        </td>
-                        <td className={`${styles.tableCell} ${styles.tableCellActions}`}>
-                          <div className={styles.actionButtons}>
-                            <button
-                              onClick={() => apriModalConferma(utente)}
-                              className={`${styles.buttonToggle} ${utente.stato ? styles.buttonToggleActive : styles.buttonToggleInactive}`}
-                              disabled={utente.idUtente === utenteCorrenteId}
-                              style={utente.idUtente === utenteCorrenteId ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                              title={utente.idUtente === utenteCorrenteId ? 'Non puoi modificare il tuo account' : ''}
-                            >
-                              {utente.stato ? '🔴 Disattiva' : '🟢 Attiva'}
-                            </button>
-                            
-                            <button
-                              onClick={() => visualizzaProfiloUtente(utente)}
-                              className={styles.buttonView}
-                            >
-                              Visualizza
-                            </button>
-                            
-                            {utente.idUtente === utenteCorrenteId ? (
-                              <button
-                                className={styles.buttonEdit}
-                                disabled
-                                style={{ opacity: 0.5, cursor: 'not-allowed' }}
-                                title="Non puoi modificare il tuo stesso ruolo"
-                              >
-                                Modifica Ruolo
-                              </button>
+                          </td>
+                          <td className={`${styles.tableCell} ${styles.tableCellCenter}`}>
+                            <span className={`${styles.badge} ${utente.stato ? styles.badgeStatusActive : styles.badgeStatusInactive}`}>
+                              {utente.stato ? '✓ Attivo' : '✗ Disattivato'}
+                            </span>
+                          </td>
+                          <td className={`${styles.tableCell} ${styles.tableCellActions}`}>
+                            {isCurrentUser ? (
+                              <div className={styles.actionButtonsDisabled}>
+                                <div className={styles.infoBox}>
+                                  <span className={styles.infoIcon}>ℹ️</span>
+                                  <span className={styles.infoText}>
+                                    Non puoi modificare o disattivare il tuo account da questa pagina
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => visualizzaProfiloUtente(utente)}
+                                  className={styles.buttonView}
+                                >
+                                  Visualizza
+                                </button>
+                              </div>
                             ) : (
-                              <button
-                                onClick={() => apriModalModifica(utente)}
-                                className={styles.buttonEdit}
-                              >
-                                Modifica Ruolo
-                              </button>
+                              <div className={styles.actionButtons}>
+                                <button
+                                  onClick={() => apriModalConferma(utente)}
+                                  className={`${styles.buttonToggle} ${utente.stato ? styles.buttonToggleActive : styles.buttonToggleInactive}`}
+                                >
+                                  {utente.stato ? '🔴 Disattiva' : '🟢 Attiva'}
+                                </button>
+                                
+                                <button
+                                  onClick={() => visualizzaProfiloUtente(utente)}
+                                  className={styles.buttonView}
+                                >
+                                  Visualizza
+                                </button>
+                                
+                                <button
+                                  onClick={() => apriModalModifica(utente)}
+                                  className={styles.buttonEdit}
+                                >
+                                  Modifica Ruolo
+                                </button>
+                              </div>
                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -350,7 +357,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
         </div>
       </div>
 
-      {/* Resto dei modali invariato */}
       {showModal && utenteSelezionato && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
