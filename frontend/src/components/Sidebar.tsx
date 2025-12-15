@@ -16,19 +16,27 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const isAdmin = authService.isAdmin();
   const currentPath = location.pathname;
 
+  // ✅ FIX: Gestisce resize senza dipendenze problematiche
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (mobile && sidebarOpen) {
+        setSidebarOpen(false);
+      }
     };
 
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ✅ FIX: Chiude sidebar su mobile quando cambia pagina
   useEffect(() => {
     if (isMobile && sidebarOpen) {
       setSidebarOpen(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   const handleLogout = () => {

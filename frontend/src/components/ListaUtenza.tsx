@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { authService } from '../services/authService';
@@ -45,21 +45,8 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   const [utentePerCambioStato, setUtentePerCambioStato] = useState<Utente | null>(null);
   const [editForm, setEditForm] = useState({ ruolo: '' });
 
-  useEffect(() => {
-    if (!authService.isAuthenticated()) {
-      navigate('/login');
-      return;
-    }
-    
-    if (!authService.isAdmin()) {
-      navigate('/home');
-      return;
-    }
-    
-    caricaUtenti();
-  }, [navigate]);
-
-  const caricaUtenti = async () => {
+  // ✅ WRAPPATO IN useCallback
+  const caricaUtenti = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -105,7 +92,22 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  // ✅ AGGIUNTO caricaUtenti alle dipendenze
+  useEffect(() => {
+    if (!authService.isAuthenticated()) {
+      navigate('/login');
+      return;
+    }
+    
+    if (!authService.isAdmin()) {
+      navigate('/home');
+      return;
+    }
+    
+    caricaUtenti();
+  }, [navigate, caricaUtenti]);
 
   const visualizzaProfiloUtente = (utente: Utente) => {
     setUtenteSelezionato(utente);
