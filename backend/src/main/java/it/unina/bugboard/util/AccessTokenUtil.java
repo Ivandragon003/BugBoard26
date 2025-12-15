@@ -5,7 +5,6 @@ import io.jsonwebtoken.security.Keys;
 import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.Utenza;
 import it.unina.bugboard.exception.InvalidFieldException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -14,16 +13,18 @@ import java.util.Date;
 
 @Component
 public class AccessTokenUtil {
-
-    private static final long EXPIRATION_TIME = 30 * 60 * 1000; // 30 minuti in millisecondi
+	private static final long EXPIRATION_TIME = 30L * 60 * 1000; 
     
     @Value("${jwt.secret:mySecretKeyForBugBoardApplicationMustBe256BitsLongForHS256Algorithm}")
     private String secretKeyString;
     
     private SecretKey secretKey;
     
-    @Autowired
-    private UtenzaDAO utenzaDAO;
+    private final UtenzaDAO utenzaDAO;
+
+    public AccessTokenUtil(UtenzaDAO utenzaDAO) {
+        this.utenzaDAO = utenzaDAO;
+    }
 
     public String generaToken(Utenza utenza) {
         if (secretKey == null) {
@@ -32,7 +33,7 @@ public class AccessTokenUtil {
         
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + EXPIRATION_TIME);
-
+        
         return Jwts.builder()
                 .subject(utenza.getIdUtente().toString())
                 .claim("email", utenza.getEmail())
@@ -42,8 +43,7 @@ public class AccessTokenUtil {
                 .signWith(secretKey, Jwts.SIG.HS256)
                 .compact();
     }
-
-
+    
     public Utenza verificaToken(String token) {
         try {
             if (secretKey == null) {
@@ -55,7 +55,6 @@ public class AccessTokenUtil {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-
             Integer idUtente = Integer.parseInt(claims.getSubject());
             
             return utenzaDAO.findById(idUtente)
@@ -67,7 +66,7 @@ public class AccessTokenUtil {
             throw new InvalidFieldException("Token non valido");
         }
     }
-
+    
     public Integer estraiIdUtente(String token) {
         if (secretKey == null) {
             secretKey = Keys.hmacShaKeyFor(secretKeyString.getBytes());
@@ -78,7 +77,6 @@ public class AccessTokenUtil {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-
         return Integer.parseInt(claims.getSubject());
     }
 }
