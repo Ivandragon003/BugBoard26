@@ -8,6 +8,9 @@ const getAuthHeader = () => ({
 
 export const allegatoService = {
 
+  /**
+   * Upload di un allegato associato a un'issue
+   */
   uploadAllegato: async (file: File, idIssue: number) => {
     const MAX_SIZE = 5 * 1024 * 1024; // 5MB
     if (file.size > MAX_SIZE) {
@@ -46,7 +49,9 @@ export const allegatoService = {
     return response.data;
   },
 
-
+  /**
+   * Recupera tutti gli allegati di un'issue
+   */
   getAllegatiByIssue: async (idIssue: number) => {
     const response = await axios.get(
       `${API_BASE_URL}/allegato/issue/${idIssue}`,
@@ -57,7 +62,9 @@ export const allegatoService = {
     return response.data;
   },
 
-  
+  /**
+   * Download di un allegato
+   */
   downloadAllegato: async (id: number) => {
     const response = await axios.get(
       `${API_BASE_URL}/allegato/download/${id}`,
@@ -69,18 +76,9 @@ export const allegatoService = {
     return response;
   },
 
-  
-  deleteAllegato: async (id: number) => {
-    const response = await axios.delete(
-      `${API_BASE_URL}/allegato/${id}`,
-      {
-        headers: getAuthHeader()
-      }
-    );
-    return response.data;
-  },
-
-
+  /**
+   * Ottiene la dimensione totale degli allegati di un'issue
+   */
   getDimensioneTotale: async (idIssue: number) => {
     const response = await axios.get(
       `${API_BASE_URL}/allegato/issue/${idIssue}/dimensione-totale`,
