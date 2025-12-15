@@ -4,6 +4,9 @@ import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.Ruolo;
 import it.unina.bugboard.model.Utenza;
 import it.unina.bugboard.exception.InvalidFieldException;
+import it.unina.bugboard.exception.UnauthorizedException;
+import it.unina.bugboard.exception.NotFoundException;
+import it.unina.bugboard.exception.AlreadyExistsException;
 import it.unina.bugboard.util.AccessTokenUtil;
 import it.unina.bugboard.util.PasswordUtil;
 import it.unina.bugboard.util.ValidationUtil;
@@ -13,8 +16,6 @@ import java.util.Map;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.HashMap;
-
-
 
 @RestController
 @RequestMapping("/api/utenza")
@@ -51,14 +52,14 @@ public class UtenzaController {
 		validationUtil.validaEmailFormat(email);
 
 		Utenza utenza = utenzaDAO.findByEmail(email)
-				.orElseThrow(() -> new InvalidFieldException("Credenziali non valide"));
+				.orElseThrow(() -> new UnauthorizedException("Credenziali non valide"));
 
 		if (Boolean.FALSE.equals(utenza.getStato())) {
-			throw new InvalidFieldException("Account disattivato");
+			throw new UnauthorizedException("Account disattivato");
 		}
 
 		if (!passwordUtil.checkPassword(password, utenza.getPassword())) {
-			throw new InvalidFieldException("Credenziali non valide");
+			throw new UnauthorizedException("Credenziali non valide");
 		}
 
 		String token = accessTokenUtil.generaToken(utenza);
@@ -72,13 +73,8 @@ public class UtenzaController {
 			@RequestHeader("Authorization") String token) {
 		Utenza creatore = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
 
-		if (Boolean.FALSE.equals(creatore.getStato())) {
-			throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
-		}
-
-		if (!creatore.getRuolo().equals(Ruolo.Amministratore)) {
-			throw new InvalidFieldException("Solo gli amministratori possono creare nuove utenze");
-		}
+		verificaAccountAttivo(creatore);
+		verificaRuoloAmministratore(creatore);
 
 		String nome = utenzaData.get(NOME_KEY);
 		String cognome = utenzaData.get(COGNOME_KEY);
@@ -91,12 +87,12 @@ public class UtenzaController {
 		validationUtil.validaPassword(password);
 		validationUtil.validaUniqueEmail(email);
 
+		if (utenzaDAO.existsByEmail(email)) {
+			throw new AlreadyExistsException("Email già registrata");
+		}
+
 		ruoloStr = ruoloStr.substring(0, 1).toUpperCase() + ruoloStr.substring(1).toLowerCase();
 		Ruolo ruolo = Ruolo.valueOf(ruoloStr);
-
-		if (utenzaDAO.existsByEmail(email)) {
-			throw new InvalidFieldException("Email già registrata");
-		}
 
 		String hashedPassword = passwordUtil.hashPassword(password);
 		Utenza nuovaUtenza = new Utenza(nome, cognome, email, hashedPassword, ruolo, creatore);
@@ -111,51 +107,37 @@ public class UtenzaController {
 	@GetMapping("/me")
 	public Utenza getUtenteCorrente(@RequestHeader("Authorization") String token) {
 		Utenza utente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
-		if (Boolean.FALSE.equals(utente.getStato())) {
-			throw new InvalidFieldException("Account disattivato");
-		}
-
+		verificaAccountAttivo(utente);
 		return utente;
 	}
-	
+
 	@GetMapping("/lista")
 	public List<Map<String, Object>> listaUtenti(@RequestHeader("Authorization") String token) {
-	    Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-	    
-	    if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
-	        throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
-	    }
-	    
-	    if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
-	        throw new InvalidFieldException("Solo gli amministratori possono visualizzare la lista utenti");
-	    }
-	    
-	    List<Utenza> utenti = utenzaDAO.findAll();
-	    
-	    return utenti.stream()
-	        .map(u -> {
-	            Map<String, Object> utenteMap = new HashMap<>();
-	            utenteMap.put("idUtente", u.getIdUtente());
-	            utenteMap.put(NOME_KEY, u.getNome());
-	            utenteMap.put(COGNOME_KEY, u.getCognome());
-	            utenteMap.put(EMAIL_KEY, u.getEmail());
-	            utenteMap.put(RUOLO_KEY, u.getRuolo().toString());
-	            utenteMap.put(STATO_KEY, u.getStato());
-	            return utenteMap;
-	        })
-	        .collect(Collectors.toList());
-	}
+		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+		verificaAccountAttivo(utenteCorrente);
+		verificaRuoloAmministratore(utenteCorrente);
 
+		List<Utenza> utenti = utenzaDAO.findAll();
+
+		return utenti.stream()
+				.map(u -> {
+					Map<String, Object> utenteMap = new HashMap<>();
+					utenteMap.put("idUtente", u.getIdUtente());
+					utenteMap.put(NOME_KEY, u.getNome());
+					utenteMap.put(COGNOME_KEY, u.getCognome());
+					utenteMap.put(EMAIL_KEY, u.getEmail());
+					utenteMap.put(RUOLO_KEY, u.getRuolo().toString());
+					utenteMap.put(STATO_KEY, u.getStato());
+					return utenteMap;
+				})
+				.collect(Collectors.toList());
+	}
 
 	@PutMapping("/modifica")
 	public Map<String, Object> modificaProfilo(@RequestBody Map<String, String> datiModifica,
 			@RequestHeader("Authorization") String token) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
-		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
-			throw new InvalidFieldException("Account disattivato. Non puoi modificare il profilo");
-		}
+		verificaAccountAttivo(utenteCorrente);
 
 		String nuovaPassword = datiModifica.get(PASSWORD_KEY);
 
@@ -175,29 +157,25 @@ public class UtenzaController {
 	public Map<String, Object> aggiornaUtenza(@PathVariable Integer id, @RequestBody Map<String, String> utenzaData,
 			@RequestHeader("Authorization") String token) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
-		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
-			throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
-		}
-
-		if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
-			throw new InvalidFieldException("Solo gli amministratori possono modificare gli utenti");
-		}
+		verificaAccountAttivo(utenteCorrente);
+		verificaRuoloAmministratore(utenteCorrente);
 
 		Utenza utenzaDaModificare = utenzaDAO.findById(id)
-				.orElseThrow(() -> new InvalidFieldException("Utente non trovato"));
+				.orElseThrow(() -> new NotFoundException("Utente non trovato"));
 
+		// Non puoi modificare altri amministratori
 		if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore)
 				&& !utenzaDaModificare.getIdUtente().equals(utenteCorrente.getIdUtente())) {
-			throw new InvalidFieldException("Non puoi modificare altri amministratori");
+			throw new UnauthorizedException("Non puoi modificare altri amministratori");
 		}
 
 		if (!utenzaData.containsKey(RUOLO_KEY)) {
 			throw new InvalidFieldException("Il campo ruolo è obbligatorio");
 		}
 
+		// Non puoi cambiare il ruolo di un amministratore esistente
 		if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore)) {
-			throw new InvalidFieldException("Non puoi cambiare il ruolo di un amministratore");
+			throw new UnauthorizedException("Non puoi cambiare il ruolo di un amministratore");
 		}
 
 		String nuovoRuoloStr = utenzaData.get(RUOLO_KEY);
@@ -208,20 +186,16 @@ public class UtenzaController {
 
 		nuovoRuoloStr = nuovoRuoloStr.substring(0, 1).toUpperCase() + nuovoRuoloStr.substring(1).toLowerCase();
 
-		try {
-			Ruolo nuovoRuolo = Ruolo.valueOf(nuovoRuoloStr);
-
-			if (nuovoRuolo.equals(Ruolo.Amministratore)) {
-				throw new InvalidFieldException(
-						"Non puoi promuovere un utente ad amministratore tramite questa funzione");
-			}
-
-			utenzaDaModificare.setRuolo(nuovoRuolo);
-
-		} catch (IllegalArgumentException e) {
+		Ruolo nuovoRuolo;
+		if ("Utente".equals(nuovoRuoloStr)) {
+			nuovoRuolo = Ruolo.Utente;
+		} else if ("Amministratore".equals(nuovoRuoloStr)) {
+			nuovoRuolo = Ruolo.Amministratore;
+		} else {
 			throw new InvalidFieldException("Ruolo non valido. Valori consentiti: Utente, Amministratore");
 		}
 
+		utenzaDaModificare.setRuolo(nuovoRuolo);
 		Utenza utenzaAggiornata = utenzaDAO.save(utenzaDaModificare);
 
 		return Map.of(MESSAGE_KEY, "Ruolo utente aggiornato con successo", UTENZA_KEY,
@@ -233,20 +207,15 @@ public class UtenzaController {
 	@DeleteMapping("/{id}")
 	public Map<String, String> disattivaUtenza(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
-		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
-			throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
-		}
-
-		if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
-			throw new InvalidFieldException("Solo gli amministratori possono disattivare utenti");
-		}
+		verificaAccountAttivo(utenteCorrente);
+		verificaRuoloAmministratore(utenteCorrente);
 
 		if (utenteCorrente.getIdUtente().equals(id)) {
-			throw new InvalidFieldException("Non puoi disattivare il tuo stesso account");
+			throw new UnauthorizedException("Non puoi disattivare il tuo stesso account");
 		}
 
-		Utenza utenza = utenzaDAO.findById(id).orElseThrow(() -> new InvalidFieldException("Utente non trovato"));
+		Utenza utenza = utenzaDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Utente non trovato"));
 
 		utenza.setStato(false);
 		utenzaDAO.save(utenza);
@@ -257,16 +226,11 @@ public class UtenzaController {
 	@PatchMapping("/{id}/riattiva")
 	public Map<String, String> riattivaUtenza(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+		verificaAccountAttivo(utenteCorrente);
+		verificaRuoloAmministratore(utenteCorrente);
 
-		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
-			throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
-		}
-
-		if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
-			throw new InvalidFieldException("Solo gli amministratori possono riattivare utenti");
-		}
-
-		Utenza utenza = utenzaDAO.findById(id).orElseThrow(() -> new InvalidFieldException("Utente non trovato"));
+		Utenza utenza = utenzaDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Utente non trovato"));
 
 		utenza.setStato(true);
 		utenzaDAO.save(utenza);
@@ -278,20 +242,15 @@ public class UtenzaController {
 	public Map<String, Object> cambiaStatoUtenza(@PathVariable Integer id, @RequestBody Map<String, Boolean> data,
 			@RequestHeader("Authorization") String token) {
 		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
-
-		if (Boolean.FALSE.equals(utenteCorrente.getStato())) {
-			throw new InvalidFieldException("Account disattivato. Non puoi eseguire questa operazione");
-		}
-
-		if (!utenteCorrente.getRuolo().equals(Ruolo.Amministratore)) {
-			throw new InvalidFieldException("Solo gli amministratori possono cambiare lo stato degli utenti");
-		}
+		verificaAccountAttivo(utenteCorrente);
+		verificaRuoloAmministratore(utenteCorrente);
 
 		if (utenteCorrente.getIdUtente().equals(id)) {
-			throw new InvalidFieldException("Non puoi cambiare lo stato del tuo stesso account");
+			throw new UnauthorizedException("Non puoi cambiare lo stato del tuo stesso account");
 		}
 
-		Utenza utenza = utenzaDAO.findById(id).orElseThrow(() -> new InvalidFieldException("Utente non trovato"));
+		Utenza utenza = utenzaDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Utente non trovato"));
 
 		Boolean nuovoStato = data.get(STATO_KEY);
 
@@ -306,5 +265,18 @@ public class UtenzaController {
 				Map.of(ID_KEY, utenza.getIdUtente(), NOME_KEY, utenza.getNome(), COGNOME_KEY, utenza.getCognome(),
 						EMAIL_KEY, utenza.getEmail(), RUOLO_KEY, utenza.getRuolo().toString(), STATO_KEY,
 						utenza.getStato()));
+	}
+
+
+	private void verificaAccountAttivo(Utenza utente) {
+		if (Boolean.FALSE.equals(utente.getStato())) {
+			throw new UnauthorizedException("Account disattivato. Non puoi eseguire questa operazione");
+		}
+	}
+
+	private void verificaRuoloAmministratore(Utenza utente) {
+		if (!utente.getRuolo().equals(Ruolo.Amministratore)) {
+			throw new UnauthorizedException("Solo gli amministratori possono eseguire questa operazione");
+		}
 	}
 }
