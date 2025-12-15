@@ -13,28 +13,15 @@ interface Allegato {
 
 interface AttachmentsViewerProps {
   idIssue: number;
-  canEdit: boolean;
+  canEdit: boolean; // Non più usato, ma lo teniamo per retrocompatibilità
 }
 
-interface ConfirmDialog {
-  open: boolean;
-  title: string;
-  message: string;
-  allegatoId: number | null;
-}
-
-const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit }) => {
+const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue }) => {
   const [allegati, setAllegati] = useState<Allegato[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
-  const [showConfirm, setShowConfirm] = useState<ConfirmDialog>({
-    open: false,
-    title: '',
-    message: '',
-    allegatoId: null
-  });
 
   const loadAllegati = useCallback(async () => {
     try {
@@ -67,10 +54,8 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
       console.log('📥 Download allegato:', allegato.idAllegato);
       const response = await allegatoService.downloadAllegato(allegato.idAllegato);
       
-     
       const blob = new Blob([response.data], { type: allegato.tipoFile });
       const url = window.URL.createObjectURL(blob);
-      
       
       const link = document.createElement('a');
       link.href = url;
@@ -78,7 +63,6 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
       document.body.appendChild(link);
       link.click();
       
-     
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
@@ -91,38 +75,6 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
       setTimeout(() => setError(''), 5000);
     } finally {
       setDownloadingId(null);
-    }
-  };
-
-  const handleDeleteClick = (allegato: Allegato) => {
-    setShowConfirm({
-      open: true,
-      title: 'Elimina Allegato',
-      message: `Sei sicuro di voler eliminare "${allegato.nomeFile}"? Questa azione non può essere annullata.`,
-      allegatoId: allegato.idAllegato
-    });
-  };
-
-  const confirmDelete = async () => {
-    if (!showConfirm.allegatoId) return;
-
-    try {
-      console.log('🗑️ Eliminazione allegato:', showConfirm.allegatoId);
-      await allegatoService.deleteAllegato(showConfirm.allegatoId);
-      
-      setSuccess('Allegato eliminato con successo');
-      setShowConfirm({ open: false, title: '', message: '', allegatoId: null });
-      
-      // Ricarica lista allegati
-      await loadAllegati();
-      
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      console.error('❌ Errore eliminazione:', err);
-      const message = err.response?.data?.message || 'Errore durante l\'eliminazione del file';
-      setError(message);
-      setShowConfirm({ open: false, title: '', message: '', allegatoId: null });
-      setTimeout(() => setError(''), 5000);
     }
   };
 
@@ -175,7 +127,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
           Nessun allegato
         </div>
         <div className={styles.emptySubtitle}>
-          {canEdit ? 'Aggiungi allegati modificando l\'issue' : 'Questa issue non ha allegati'}
+          Questa issue non ha allegati
         </div>
       </div>
     );
@@ -235,57 +187,10 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
                   <>⬇️ Scarica</>
                 )}
               </button>
-
-              {canEdit && (
-                <button
-                  onClick={() => handleDeleteClick(allegato)}
-                  className={styles.deleteButton}
-                  aria-label={`Elimina ${allegato.nomeFile}`}
-                >
-                  🗑️
-                </button>
-              )}
             </div>
           </div>
         ))}
       </div>
-
-      {/* Modal di conferma eliminazione */}
-      {showConfirm.open && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>{showConfirm.title}</h3>
-              <button
-                onClick={() => setShowConfirm({ open: false, title: '', message: '', allegatoId: null })}
-                className={styles.modalClose}
-                aria-label="Chiudi"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className={styles.modalBody}>
-              <p className={styles.modalMessage}>{showConfirm.message}</p>
-            </div>
-            
-            <div className={styles.modalActions}>
-              <button
-                onClick={() => setShowConfirm({ open: false, title: '', message: '', allegatoId: null })}
-                className={styles.modalCancelButton}
-              >
-                Annulla
-              </button>
-              <button
-                onClick={confirmDelete}
-                className={styles.modalConfirmButton}
-              >
-                Elimina
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
