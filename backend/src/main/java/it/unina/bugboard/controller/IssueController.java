@@ -4,7 +4,6 @@ import it.unina.bugboard.dao.IssueDAO;
 import it.unina.bugboard.dao.UtenzaDAO;
 import it.unina.bugboard.model.*;
 import it.unina.bugboard.exception.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,11 +16,13 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class IssueController {
 
-	@Autowired
-	private IssueDAO issueDAO;
+	private final IssueDAO issueDAO;
+	private final UtenzaDAO utenzaDAO;
 
-	@Autowired
-	private UtenzaDAO utenzaDAO;
+	public IssueController(IssueDAO issueDAO, UtenzaDAO utenzaDAO) {
+		this.issueDAO = issueDAO;
+		this.utenzaDAO = utenzaDAO;
+	}
 
 	@PostMapping("/crea")
 	@Transactional
@@ -34,7 +35,7 @@ public class IssueController {
 		Integer idCreatore = (Integer) payload.get("idCreatore");
 
 		if (titolo == null || titolo.isBlank()) {
-			throw new InvalidInputException("Il titolo è obbligatorio");
+			throw new InvalidFieldException("Il titolo è obbligatorio");
 		}
 
 		issueDAO.findByTitolo(titolo).ifPresent(i -> {
@@ -115,16 +116,6 @@ public class IssueController {
 		return issues;
 	}
 
-	private int getPrioritaOrdine(Priorita priorita) {
-		return switch (priorita) {
-		case critical -> 0;
-		case high -> 1;
-		case medium -> 2;
-		case low -> 3;
-		case none -> 4;
-		};
-	}
-
 	@GetMapping("/filtra")
 	public List<Issue> filtraIssue(@RequestParam(value = "stato", required = false) String stato,
 			@RequestParam(value = "priorita", required = false) String priorita,
@@ -149,10 +140,11 @@ public class IssueController {
 	@Transactional
 	public Map<String, String> archiviaIssue(@PathVariable(value = "id") Integer id, 
 			@RequestParam(value = "idArchiviatore") Integer idArchiviatore) {
-		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		if (issue.getArchiviata())
-			throw new InvalidInputException("L'issue è già archiviata");
+			throw new InvalidFieldException("L'issue è già archiviata");
 
 		issue.setArchiviata(true);
 		issue.setDataArchiviazione(LocalDateTime.now());
@@ -169,10 +161,11 @@ public class IssueController {
 	@PutMapping("/disarchivia/{id}")
 	@Transactional
 	public Map<String, String> disarchiviaIssue(@PathVariable(value = "id") Integer id) {
-		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		if (!issue.getArchiviata())
-			throw new InvalidInputException("L'issue non è archiviata");
+			throw new InvalidFieldException("L'issue non è archiviata");
 
 		issue.setArchiviata(false);
 		issue.setDataArchiviazione(null);
@@ -190,7 +183,7 @@ public class IssueController {
 	            .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 	    
 	    if (issue.getArchiviata()) {
-	        throw new InvalidInputException("Non è possibile modificare lo stato di un'issue archiviata");
+	        throw new InvalidFieldException("Non è possibile modificare lo stato di un'issue archiviata");
 	    }
 	    
 	    Stato stato = parseStato(nuovoStato);
@@ -201,16 +194,17 @@ public class IssueController {
 	
 	@GetMapping("/visualizza/{id}")
 	public Issue visualizzaIssue(@PathVariable(value = "id") Integer id) {
-		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		return issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 	}
 
 	@DeleteMapping("/elimina/{id}")
 	@Transactional
 	public Map<String, String> eliminaIssue(@PathVariable(value = "id") Integer id) {
-		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		issueDAO.delete(issue);
-
 		return Map.of("message", "Issue eliminata con successo");
 	}
 
@@ -226,6 +220,9 @@ public class IssueController {
 
 	@GetMapping("/cerca")
 	public List<Issue> cercaIssue(@RequestParam(value = "titolo") String titolo) {
+		if (titolo == null || titolo.isBlank()) {
+			throw new InvalidFieldException("Il parametro 'titolo' è obbligatorio per la ricerca");
+		}
 		return issueDAO.findByTitoloContainingIgnoreCase(titolo);
 	}
 
@@ -240,6 +237,18 @@ public class IssueController {
 		return stats;
 	}
 
+	// ===== METODI HELPER PRIVATI =====
+
+	private int getPrioritaOrdine(Priorita priorita) {
+		return switch (priorita) {
+		case critical -> 0;
+		case high -> 1;
+		case medium -> 2;
+		case low -> 3;
+		case none -> 4;
+		};
+	}
+
 	private Priorita parsePriorita(String value) {
 		if (value == null || value.isBlank()) {
 			return Priorita.none;
@@ -251,32 +260,34 @@ public class IssueController {
 		case "high" -> Priorita.high;
 		case "medium" -> Priorita.medium;
 		case "low" -> Priorita.low;
-		default -> throw new InvalidInputException("Priorità non valida: " + value);
+		default -> throw new InvalidFieldException("Priorità non valida: " + value);
 		};
 	}
 
 	private Stato parseStato(String value) {
-		if (value == null)
-			throw new InvalidInputException("Stato non può essere null");
+		if (value == null || value.isBlank()) {
+			throw new InvalidFieldException("Stato non può essere vuoto");
+		}
 
 		return switch (value.toLowerCase()) {
 		case "todo" -> Stato.Todo;
 		case "inprogress", "in_progress" -> Stato.inProgress;
 		case "done" -> Stato.Done;
-		default -> throw new InvalidInputException("Stato non valido: " + value);
+		default -> throw new InvalidFieldException("Stato non valido: " + value);
 		};
 	}
 
 	private Tipo parseTipo(String value) {
-		if (value == null)
-			throw new InvalidInputException("Tipo non può essere null");
+		if (value == null || value.isBlank()) {
+			throw new InvalidFieldException("Tipo non può essere vuoto");
+		}
 
 		return switch (value.toLowerCase()) {
 		case "question" -> Tipo.question;
 		case "features" -> Tipo.features;
 		case "bug" -> Tipo.bug;
 		case "documentation" -> Tipo.documentation;
-		default -> throw new InvalidInputException("Tipo non valido: " + value);
+		default -> throw new InvalidFieldException("Tipo non valido: " + value);
 		};
 	}
 }
