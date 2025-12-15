@@ -2,8 +2,10 @@ package it.unina.bugboard.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.type.SqlTypes;
 import it.unina.bugboard.exception.InvalidFieldException;
 import java.time.LocalDate;
 
@@ -13,6 +15,7 @@ public class Allegato {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "idallegato")
 	private Integer idAllegato;
 
 	@Column(name = "nomefile", nullable = false, length = 255)
@@ -21,45 +24,46 @@ public class Allegato {
 	@Column(name = "tipofile", nullable = false, length = 100)
 	private String tipoFile;
 
-	@Column(nullable = false)
+	@Column(name = "dimensione", nullable = false)
 	private Integer dimensione;
 
-
+	// ✅ FIX DEFINITIVO: Usa JdbcTypeCode per forzare BYTEA
 	@Lob
+	@Basic(fetch = FetchType.LAZY)
 	@Column(name = "filedata", nullable = false)
-	@JsonIgnore 
+	@JdbcTypeCode(SqlTypes.VARBINARY) // Forza PostgreSQL BYTEA
+	@JsonIgnore
 	private byte[] fileData;
 
 	@Column(name = "datacaricamento", nullable = false)
 	private LocalDate dataCaricamento;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "idissue", nullable = false)
+	@JoinColumn(name = "idissue", nullable = false, referencedColumnName = "idissue")
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JsonIgnore
 	private Issue issue;
 
-	
+
 	public Allegato() {
 		this.dataCaricamento = LocalDate.now();
 	}
 
 	public Allegato(String nomeFile, String tipoFile, Integer dimensione, byte[] fileData, Issue issue) {
-		this.nomeFile = nomeFile;
-		this.tipoFile = tipoFile;
-		this.dimensione = dimensione;
-		this.fileData = fileData;
-		this.issue = issue;
-		this.dataCaricamento = LocalDate.now();
+		this();
+		setNomeFile(nomeFile);
+		setTipoFile(tipoFile);
+		setDimensione(dimensione);
+		setFileData(fileData);
+		setIssue(issue);
 	}
 
-	
 	public Integer getIdAllegato() {
-		return  idAllegato;
+		return idAllegato;
 	}
 
-	public void setId(Integer id) {
-		this. idAllegato =  idAllegato;
+	public void setIdAllegato(Integer idAllegato) {
+		this.idAllegato = idAllegato;
 	}
 
 	public String getNomeFile() {
@@ -92,7 +96,6 @@ public class Allegato {
 		this.dimensione = dimensione;
 	}
 
-	// ⭐ NUOVO GETTER/SETTER per fileData
 	public byte[] getFileData() {
 		return fileData;
 	}

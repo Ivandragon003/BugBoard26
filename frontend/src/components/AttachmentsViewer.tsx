@@ -7,8 +7,8 @@ interface Allegato {
   nomeFile: string;
   tipoFile: string;
   dimensione: number;
+  dimensioneMB: string;
   dataCaricamento: string;
-  percorso: string;
 }
 
 interface AttachmentsViewerProps {
@@ -36,16 +36,19 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
     allegatoId: null
   });
 
-  // ✅ MIGLIORAMENTO: useCallback per evitare re-render
   const loadAllegati = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await allegatoService.getAllegatiByIssue(idIssue);
-      setAllegati(data);
       setError('');
+      
+      console.log('🔍 Caricamento allegati per issue:', idIssue);
+      const data = await allegatoService.getAllegatiByIssue(idIssue);
+      
+      console.log('✅ Allegati ricevuti:', data);
+      setAllegati(data);
     } catch (err: any) {
-      console.error('Errore caricamento allegati:', err);
-      const message = err.response?.data?.message || 'Errore nel caricamento degli allegati';
+      console.error('❌ Errore caricamento allegati:', err);
+      const message = err.response?.data?.message || err.message || 'Errore nel caricamento degli allegati';
       setError(message);
     } finally {
       setLoading(false);
@@ -56,16 +59,18 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
     loadAllegati();
   }, [loadAllegati]);
 
-  // ✅ MIGLIORAMENTO: Feedback visivo durante download
   const handleDownload = async (allegato: Allegato) => {
     try {
       setDownloadingId(allegato.idAllegato);
       setError('');
       
+      console.log('📥 Download allegato:', allegato.idAllegato);
       const response = await allegatoService.downloadAllegato(allegato.idAllegato);
       
+     
       const blob = new Blob([response.data], { type: allegato.tipoFile });
       const url = window.URL.createObjectURL(blob);
+      
       
       const link = document.createElement('a');
       link.href = url;
@@ -73,14 +78,14 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
       document.body.appendChild(link);
       link.click();
       
+     
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
       
       setSuccess(`File "${allegato.nomeFile}" scaricato con successo`);
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      console.error('Errore download:', err);
+      console.error('❌ Errore download:', err);
       const message = err.response?.data?.message || 'Errore durante il download del file';
       setError(message);
       setTimeout(() => setError(''), 5000);
@@ -102,16 +107,18 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
     if (!showConfirm.allegatoId) return;
 
     try {
+      console.log('🗑️ Eliminazione allegato:', showConfirm.allegatoId);
       await allegatoService.deleteAllegato(showConfirm.allegatoId);
       
       setSuccess('Allegato eliminato con successo');
       setShowConfirm({ open: false, title: '', message: '', allegatoId: null });
       
+      // Ricarica lista allegati
       await loadAllegati();
       
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      console.error('Errore eliminazione:', err);
+      console.error('❌ Errore eliminazione:', err);
       const message = err.response?.data?.message || 'Errore durante l\'eliminazione del file';
       setError(message);
       setShowConfirm({ open: false, title: '', message: '', allegatoId: null });
@@ -128,14 +135,16 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
   };
 
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('it-IT', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   const getFileIcon = (tipoFile: string): string => {
@@ -161,7 +170,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
   if (allegati.length === 0) {
     return (
       <div className={styles.emptyContainer}>
-        <div className={styles.emptyIcon}></div>
+        <div className={styles.emptyIcon}>📎</div>
         <div className={styles.emptyTitle}>
           Nessun allegato
         </div>
@@ -174,7 +183,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
 
   return (
     <div className={styles.attachmentsContainer}>
-      {/* ✅ Messaggi di feedback */}
+      {/* Messaggi di feedback */}
       {error && (
         <div className={styles.errorMessage}>
           ⚠️ {error}
@@ -227,7 +236,6 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
                 )}
               </button>
 
-              {/* ✅ MIGLIORAMENTO: Pulsante elimina solo se canEdit */}
               {canEdit && (
                 <button
                   onClick={() => handleDeleteClick(allegato)}
@@ -242,7 +250,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
         ))}
       </div>
 
-   
+      {/* Modal di conferma eliminazione */}
       {showConfirm.open && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
