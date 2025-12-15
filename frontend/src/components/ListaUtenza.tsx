@@ -44,8 +44,24 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [utentePerCambioStato, setUtentePerCambioStato] = useState<Utente | null>(null);
   const [editForm, setEditForm] = useState({ ruolo: '' });
+  const [utenteCorrenteId, setUtenteCorrenteId] = useState<number | null>(null);
 
-  // ✅ WRAPPATO IN useCallback
+  // ✅ Carica utente corrente
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/utenza/me`, {
+          headers: getAuthHeader()
+        });
+        setUtenteCorrenteId(response.data.idUtente);
+      } catch (err) {
+        console.error('Errore caricamento utente corrente:', err);
+      }
+    };
+
+    loadCurrentUser();
+  }, []);
+
   const caricaUtenti = useCallback(async () => {
     try {
       setLoading(true);
@@ -94,7 +110,6 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
     }
   }, [navigate]);
 
-  // ✅ AGGIUNTO caricaUtenti alle dipendenze
   useEffect(() => {
     if (!authService.isAuthenticated()) {
       navigate('/login');
@@ -268,6 +283,11 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
                       >
                         <td className={`${styles.tableCell} ${styles.tableCellName}`}>
                           {utente.nome} {utente.cognome}
+                          {utente.idUtente === utenteCorrenteId && (
+                            <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#0d9488', fontWeight: 600 }}>
+                              (Tu)
+                            </span>
+                          )}
                         </td>
                         <td className={`${styles.tableCell} ${styles.tableCellEmail}`}>
                           {utente.email}
@@ -287,6 +307,9 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
                             <button
                               onClick={() => apriModalConferma(utente)}
                               className={`${styles.buttonToggle} ${utente.stato ? styles.buttonToggleActive : styles.buttonToggleInactive}`}
+                              disabled={utente.idUtente === utenteCorrenteId}
+                              style={utente.idUtente === utenteCorrenteId ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                              title={utente.idUtente === utenteCorrenteId ? 'Non puoi modificare il tuo account' : ''}
                             >
                               {utente.stato ? '🔴 Disattiva' : '🟢 Attiva'}
                             </button>
@@ -298,12 +321,23 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
                               Visualizza
                             </button>
                             
-                            <button
-                              onClick={() => apriModalModifica(utente)}
-                              className={styles.buttonEdit}
-                            >
-                              Modifica Ruolo
-                            </button>
+                            {utente.idUtente === utenteCorrenteId ? (
+                              <button
+                                className={styles.buttonEdit}
+                                disabled
+                                style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                                title="Non puoi modificare il tuo stesso ruolo"
+                              >
+                                Modifica Ruolo
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => apriModalModifica(utente)}
+                                className={styles.buttonEdit}
+                              >
+                                Modifica Ruolo
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -316,6 +350,7 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
         </div>
       </div>
 
+      {/* Resto dei modali invariato */}
       {showModal && utenteSelezionato && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
