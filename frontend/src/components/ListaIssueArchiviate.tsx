@@ -142,19 +142,28 @@ function ListaIssueArchiviate({ sidebarOpen, setSidebarOpen }: Props) {
 
       <div className={styles.mainContent}>
         <header className={styles.header}>
-          <div className={styles.headerContent}>
-            <h1 className={styles.title}>Issue Archiviate</h1>
-            <p className={styles.subtitle}>
-              Visualizza e gestisci tutte le issue archiviate
-            </p>
-          </div>
-          <button
-            onClick={() => navigate("/issues")}
-            className={styles.backButton}
-          >
-            ← Torna alla lista
-          </button>
-        </header>
+  <div className={styles.headerLeft}>
+    <button
+      onClick={() => setSidebarOpen(!sidebarOpen)}
+      className={styles.menuButton}
+    >
+      ☰
+    </button>
+    <div className={styles.headerContent}>
+      <h1 className={styles.title}>Issue Archiviate</h1>
+      <p className={styles.subtitle}>
+        Visualizza e gestisci tutte le issue archiviate
+      </p>
+    </div>
+  </div>
+  <button
+    onClick={() => navigate("/issues")}
+    className={styles.backButton}
+  >
+    ← Torna alla lista
+  </button>
+</header>
+
 
         <div className={styles.content}>
           {hasActiveFilters() && (

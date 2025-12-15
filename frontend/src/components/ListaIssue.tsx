@@ -165,19 +165,28 @@ function ListaIssue({ sidebarOpen, setSidebarOpen }: Props) {
 
       <div className={styles.mainContent}>
         <header className={styles.header}>
-          <div className={styles.headerContent}>
-            <h1 className={styles.title}>Issue</h1>
-            <p className={styles.subtitle}>
-              Visualizza e gestisci tutte le tue issue
-            </p>
-          </div>
-          <button
-            onClick={() => navigate("/issues/nuova")}
-            className={styles.createButton}
-          >
-            <span style={{ fontSize: "18px" }}>➕</span> Nuova Issue
-          </button>
-        </header>
+  <div className={styles.headerLeft}>
+    <button
+      onClick={() => setSidebarOpen(!sidebarOpen)}
+      className={styles.menuButton}
+    >
+      ☰
+    </button>
+    <div className={styles.headerContent}>
+      <h1 className={styles.title}>Issue</h1>
+      <p className={styles.subtitle}>
+        Visualizza e gestisci tutte le tue issue
+      </p>
+    </div>
+  </div>
+  <button
+    onClick={() => navigate("/issues/nuova")}
+    className={styles.createButton}
+  >
+    <span style={{ fontSize: "18px" }}>➕</span> Nuova Issue
+  </button>
+</header>
+
 
         <div className={styles.content}>
           {hasActiveFilters() && (
