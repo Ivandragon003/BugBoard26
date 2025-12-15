@@ -138,14 +138,13 @@ public class IssueController {
 
 	@DeleteMapping("/archivia/{id}")
 	@Transactional
-	public Map<String, String> archiviaIssue(@PathVariable(value = "id") Integer id, 
+	public Map<String, String> archiviaIssue(@PathVariable(value = "id") Integer id,
 			@RequestParam(value = "idArchiviatore") Integer idArchiviatore) {
-		Issue issue = issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
-		if (issue.getArchiviata())
+		if (Boolean.TRUE.equals(issue.getArchiviata())) {
 			throw new InvalidFieldException("L'issue è già archiviata");
-
+		}
 		issue.setArchiviata(true);
 		issue.setDataArchiviazione(LocalDateTime.now());
 
@@ -161,8 +160,7 @@ public class IssueController {
 	@PutMapping("/disarchivia/{id}")
 	@Transactional
 	public Map<String, String> disarchiviaIssue(@PathVariable(value = "id") Integer id) {
-		Issue issue = issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		if (!issue.getArchiviata())
 			throw new InvalidFieldException("L'issue non è archiviata");
@@ -177,32 +175,29 @@ public class IssueController {
 
 	@PatchMapping("/{id}/stato")
 	@Transactional
-	public Issue cambiaStato(@PathVariable(value = "id") Integer id, 
-	                         @RequestParam(value = "nuovoStato") String nuovoStato) {
-	    Issue issue = issueDAO.findById(id)
-	            .orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
-	    
-	    if (issue.getArchiviata()) {
-	        throw new InvalidFieldException("Non è possibile modificare lo stato di un'issue archiviata");
-	    }
-	    
-	    Stato stato = parseStato(nuovoStato);
-	    issue.setStato(stato);
-	    
-	    return issueDAO.save(issue);
+	public Issue cambiaStato(@PathVariable(value = "id") Integer id,
+			@RequestParam(value = "nuovoStato") String nuovoStato) {
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+
+		if (Boolean.TRUE.equals(issue.getArchiviata())) {
+			throw new InvalidFieldException("Non è possibile modificare lo stato di un'issue archiviata");
+		}
+
+		Stato stato = parseStato(nuovoStato);
+		issue.setStato(stato);
+
+		return issueDAO.save(issue);
 	}
-	
+
 	@GetMapping("/visualizza/{id}")
 	public Issue visualizzaIssue(@PathVariable(value = "id") Integer id) {
-		return issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 	}
 
 	@DeleteMapping("/elimina/{id}")
 	@Transactional
 	public Map<String, String> eliminaIssue(@PathVariable(value = "id") Integer id) {
-		Issue issue = issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
 
 		issueDAO.delete(issue);
 		return Map.of("message", "Issue eliminata con successo");

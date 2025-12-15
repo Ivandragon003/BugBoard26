@@ -19,7 +19,7 @@ import java.util.*;
 public class AllegatoController {
 
 	private static final String MESSAGE_KEY = "message";
-	private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+	private static final long MAX_FILE_SIZE = 10 * 1024 * 1024L; // 10MB
 	private static final String[] ALLOWED_CONTENT_TYPES = {
 		"image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
 		"application/pdf",
