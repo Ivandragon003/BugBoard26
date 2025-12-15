@@ -198,7 +198,7 @@ const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue, canEdit 
 
       <div className={styles.attachmentsHeader}>
         <h3 className={styles.attachmentsTitle}>
-          📎 Allegati ({allegati.length})
+          Allegati ({allegati.length})
         </h3>
       </div>
 
