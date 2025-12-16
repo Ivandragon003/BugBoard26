@@ -145,7 +145,7 @@ public class AllegatoController {
 		// solo metadata senza i bytes (per performance)
 		return allegati.stream()
 			.map(this::allegatoToMap)
-			.collect(java.util.stream.Collectors.toList());
+			.toList();
 	}
 
 	@GetMapping("/issue/{idIssue}/ordinati-dimensione")
@@ -157,7 +157,7 @@ public class AllegatoController {
 		
 		return allegati.stream()
 			.map(this::allegatoToMap)
-			.collect(java.util.stream.Collectors.toList());
+			.toList();
 	}
 
 	@GetMapping("/issue/{idIssue}/dimensione-totale")
