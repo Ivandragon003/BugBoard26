@@ -9,7 +9,7 @@ function Login() {
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // ✅ MIGLIORAMENTO: Validazione frontend prima di chiamare il backend
+  
   const validateForm = (): string | null => {
     if (!email.trim()) return 'Email richiesta';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -25,7 +25,7 @@ function Login() {
     setMessage('');
     setIsError(false);
 
-    // ✅ MIGLIORAMENTO: Validazione frontend
+   
     const validationError = validateForm();
     if (validationError) {
       setMessage(validationError);
@@ -45,11 +45,11 @@ function Login() {
     } catch (error: any) {
       console.error('Errore login:', error);
       
-      // ✅ MIGLIORAMENTO: Gestione errori più robusta
+    
       let errorMsg = 'Errore imprevisto';
       
       if (error.response) {
-        // Errori dal backend (4xx, 5xx)
+       
         const backendMessage = error.response.data?.message;
         const statusCode = error.response.status;
         
@@ -65,7 +65,7 @@ function Login() {
           errorMsg = 'Richiesta non valida';
         }
       } else if (error.request) {
-        // Nessuna risposta dal server (problemi di rete)
+
         errorMsg = '🔌 Errore di connessione. Verifica la rete.';
       }
       
