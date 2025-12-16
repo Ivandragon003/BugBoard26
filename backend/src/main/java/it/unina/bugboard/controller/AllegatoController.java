@@ -18,7 +18,21 @@ import java.util.*;
 @RequestMapping("/api/allegato")
 public class AllegatoController {
 
+	
 	private static final String MESSAGE_KEY = "message";
+	private static final String ID_ALLEGATO_KEY = "idAllegato";
+	private static final String NOME_FILE_KEY = "nomeFile";
+	private static final String TIPO_FILE_KEY = "tipoFile";
+	private static final String DIMENSIONE_KEY = "dimensione";
+	private static final String DATA_CARICAMENTO_KEY = "dataCaricamento";
+	private static final String DIMENSIONE_MB_KEY = "dimensioneMB";
+	private static final String ID_ISSUE_KEY = "idIssue";
+	
+
+	private static final String ALLEGATO_NON_TROVATO_MSG = "Allegato non trovato con id: ";
+	private static final String ISSUE_NON_TROVATA_MSG = "Issue non trovata con id: ";
+	
+	
 	private static final long MAX_FILE_SIZE = 10 * 1024 * 1024L; // 10MB
 	private static final String[] ALLOWED_CONTENT_TYPES = {
 		"image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
@@ -60,9 +74,9 @@ public class AllegatoController {
 			);
 		}
 
-		// Verifica esistenza issue
+		
 		Issue issue = issueDAO.findById(idIssue)
-				.orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + idIssue));
+				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + idIssue));
 
 		// Salva file nel database come byte array
 		byte[] fileData = file.getBytes();
@@ -76,13 +90,13 @@ public class AllegatoController {
 
 		Allegato saved = allegatoDAO.save(allegato);
 
-		// Restituisci info senza i bytes (per evitare JSON enormi)
+		
 		return Map.of(
-			"idAllegato", saved.getIdAllegato(),
-			"nomeFile", saved.getNomeFile(),
-			"tipoFile", saved.getTipoFile(),
-			"dimensione", saved.getDimensione(),
-			"dataCaricamento", saved.getDataCaricamento(),
+			ID_ALLEGATO_KEY, saved.getIdAllegato(),
+			NOME_FILE_KEY, saved.getNomeFile(),
+			TIPO_FILE_KEY, saved.getTipoFile(),
+			DIMENSIONE_KEY, saved.getDimensione(),
+			DATA_CARICAMENTO_KEY, saved.getDataCaricamento(),
 			MESSAGE_KEY, "File caricato con successo"
 		);
 	}
@@ -91,7 +105,7 @@ public class AllegatoController {
 	@Transactional(readOnly = true)
 	public ResponseEntity<ByteArrayResource> downloadAllegato(@PathVariable(value = "id") Integer id) {
 		Allegato allegato = allegatoDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Allegato non trovato con id: " + id));
+				.orElseThrow(() -> new NotFoundException(ALLEGATO_NON_TROVATO_MSG + id));
 
 		byte[] data = allegato.getFileData();
 		ByteArrayResource resource = new ByteArrayResource(data);
@@ -108,7 +122,7 @@ public class AllegatoController {
 	@Transactional(readOnly = true)
 	public ResponseEntity<ByteArrayResource> previewAllegato(@PathVariable(value = "id") Integer id) {
 		Allegato allegato = allegatoDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Allegato non trovato con id: " + id));
+				.orElseThrow(() -> new NotFoundException(ALLEGATO_NON_TROVATO_MSG + id));
 
 		byte[] data = allegato.getFileData();
 		ByteArrayResource resource = new ByteArrayResource(data);
@@ -128,18 +142,9 @@ public class AllegatoController {
 		
 		List<Allegato> allegati = allegatoDAO.findByIssueIdIssue(idIssue);
 		
-		// Restituisci solo metadata senza i bytes (per performance)
+		// solo metadata senza i bytes (per performance)
 		return allegati.stream()
-			.map(a -> {
-				Map<String, Object> map = new HashMap<>();
-				map.put("idAllegato", a.getIdAllegato());
-				map.put("nomeFile", a.getNomeFile());
-				map.put("tipoFile", a.getTipoFile());
-				map.put("dimensione", a.getDimensione());
-				map.put("dimensioneMB", String.format("%.2f", a.getDimensione() / (1024.0 * 1024.0)));
-				map.put("dataCaricamento", a.getDataCaricamento());
-				return map;
-			})
+			.map(this::allegatoToMap)
 			.collect(java.util.stream.Collectors.toList());
 	}
 
@@ -151,16 +156,7 @@ public class AllegatoController {
 		List<Allegato> allegati = allegatoDAO.findAllegatiByIssueOrderByDimensioneDesc(idIssue);
 		
 		return allegati.stream()
-			.map(a -> {
-				Map<String, Object> map = new HashMap<>();
-				map.put("idAllegato", a.getIdAllegato());
-				map.put("nomeFile", a.getNomeFile());
-				map.put("tipoFile", a.getTipoFile());
-				map.put("dimensione", a.getDimensione());
-				map.put("dimensioneMB", String.format("%.2f", a.getDimensione() / (1024.0 * 1024.0)));
-				map.put("dataCaricamento", a.getDataCaricamento());
-				return map;
-			})
+			.map(this::allegatoToMap)
 			.collect(java.util.stream.Collectors.toList());
 	}
 
@@ -172,7 +168,7 @@ public class AllegatoController {
 		Long totale = Optional.ofNullable(allegatoDAO.sumDimensioniByIssue(idIssue)).orElse(0L);
 
 		return Map.of(
-			"idIssue", idIssue, 
+			ID_ISSUE_KEY, idIssue, 
 			"dimensioneTotaleBytes", totale, 
 			"dimensioneTotaleMB", String.format("%.2f", totale / (1024.0 * 1024.0))
 		);
@@ -183,24 +179,24 @@ public class AllegatoController {
 	public Map<String, Object> countAllegati(@PathVariable(value = "idIssue") Integer idIssue) {
 		verificaEsistenzaIssue(idIssue);
 		long count = allegatoDAO.countByIssueIdIssue(idIssue);
-		return Map.of("idIssue", idIssue, "numeroAllegati", count);
+		return Map.of(ID_ISSUE_KEY, idIssue, "numeroAllegati", count);
 	}
 
 	@DeleteMapping("/{id}")
 	@Transactional
 	public Map<String, String> eliminaAllegato(@PathVariable(value = "id") Integer id) {
 		Allegato allegato = allegatoDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Allegato non trovato con id: " + id));
+				.orElseThrow(() -> new NotFoundException(ALLEGATO_NON_TROVATO_MSG + id));
 
 		allegatoDAO.delete(allegato);
 		return Map.of(MESSAGE_KEY, "Allegato eliminato con successo");
 	}
 
-	// ===== METODI HELPER PRIVATI =====
+
 
 	private void verificaEsistenzaIssue(Integer idIssue) {
 		if (!issueDAO.existsById(idIssue)) {
-			throw new NotFoundException("Issue non trovata con id: " + idIssue);
+			throw new NotFoundException(ISSUE_NON_TROVATA_MSG + idIssue);
 		}
 	}
 
@@ -211,5 +207,16 @@ public class AllegatoController {
 			}
 		}
 		return false;
+	}
+	
+	private Map<String, Object> allegatoToMap(Allegato a) {
+		Map<String, Object> map = new HashMap<>();
+		map.put(ID_ALLEGATO_KEY, a.getIdAllegato());
+		map.put(NOME_FILE_KEY, a.getNomeFile());
+		map.put(TIPO_FILE_KEY, a.getTipoFile());
+		map.put(DIMENSIONE_KEY, a.getDimensione());
+		map.put(DIMENSIONE_MB_KEY, String.format("%.2f", a.getDimensione() / (1024.0 * 1024.0)));
+		map.put(DATA_CARICAMENTO_KEY, a.getDataCaricamento());
+		return map;
 	}
 }
