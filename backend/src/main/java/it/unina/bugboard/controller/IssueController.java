@@ -16,6 +16,10 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class IssueController {
 
+	
+	private static final String MESSAGE_KEY = "message";
+	private static final String ISSUE_NON_TROVATA_MSG = "Issue non trovata con id: ";
+	
 	private final IssueDAO issueDAO;
 	private final UtenzaDAO utenzaDAO;
 
@@ -59,7 +63,7 @@ public class IssueController {
 			@RequestParam(value = "tipo", required = false) String tipo,
 			@RequestParam(value = "ricerca", required = false) String ricerca,
 			@RequestParam(value = "ordinamento", required = false) String ordinamento,
-			@RequestParam(value = "archiviata", required = false, defaultValue = "false") Boolean archiviata) {
+			@RequestParam(value = "archiviata", required = false, defaultValue = "false") boolean archiviata) {
 
 		List<Issue> issues = archiviata ? issueDAO.findByArchiviata(true) : issueDAO.findByArchiviataFalse();
 
@@ -140,7 +144,8 @@ public class IssueController {
 	@Transactional
 	public Map<String, String> archiviaIssue(@PathVariable(value = "id") Integer id,
 			@RequestParam(value = "idArchiviatore") Integer idArchiviatore) {
-		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
 
 		if (Boolean.TRUE.equals(issue.getArchiviata())) {
 			throw new InvalidFieldException("L'issue è già archiviata");
@@ -154,15 +159,16 @@ public class IssueController {
 		issue.setArchiviatore(archiviatore);
 		issueDAO.save(issue);
 
-		return Map.of("message", "Issue archiviata con successo");
+		return Map.of(MESSAGE_KEY, "Issue archiviata con successo");
 	}
 
 	@PutMapping("/disarchivia/{id}")
 	@Transactional
 	public Map<String, String> disarchiviaIssue(@PathVariable(value = "id") Integer id) {
-		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
 
-		if (!issue.getArchiviata())
+		if (Boolean.FALSE.equals(issue.getArchiviata()))
 			throw new InvalidFieldException("L'issue non è archiviata");
 
 		issue.setArchiviata(false);
@@ -170,14 +176,15 @@ public class IssueController {
 		issue.setArchiviatore(null);
 
 		issueDAO.save(issue);
-		return Map.of("message", "Issue disarchiviata con successo");
+		return Map.of(MESSAGE_KEY, "Issue disarchiviata con successo");
 	}
 
 	@PatchMapping("/{id}/stato")
 	@Transactional
 	public Issue cambiaStato(@PathVariable(value = "id") Integer id,
 			@RequestParam(value = "nuovoStato") String nuovoStato) {
-		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
 
 		if (Boolean.TRUE.equals(issue.getArchiviata())) {
 			throw new InvalidFieldException("Non è possibile modificare lo stato di un'issue archiviata");
@@ -191,16 +198,18 @@ public class IssueController {
 
 	@GetMapping("/visualizza/{id}")
 	public Issue visualizzaIssue(@PathVariable(value = "id") Integer id) {
-		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		return issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
 	}
 
 	@DeleteMapping("/elimina/{id}")
 	@Transactional
 	public Map<String, String> eliminaIssue(@PathVariable(value = "id") Integer id) {
-		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException("Issue non trovata con id: " + id));
+		Issue issue = issueDAO.findById(id)
+				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
 
 		issueDAO.delete(issue);
-		return Map.of("message", "Issue eliminata con successo");
+		return Map.of(MESSAGE_KEY, "Issue eliminata con successo");
 	}
 
 	@GetMapping("/visualizza-lista")
@@ -232,7 +241,7 @@ public class IssueController {
 		return stats;
 	}
 
-	// ===== METODI HELPER PRIVATI =====
+	
 
 	private int getPrioritaOrdine(Priorita priorita) {
 		return switch (priorita) {
