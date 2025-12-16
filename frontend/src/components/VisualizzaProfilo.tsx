@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function VisualizzaProfilo({ sidebarOpen, setSidebarOpen }: Props) {
-  // const [sidebarOpen, setSidebarOpen] = useState(true);
+
   const [user, setUser] = useState<{ email: string; ruolo: string }>({ email: "", ruolo: "" });
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });
@@ -37,26 +37,26 @@ export default function VisualizzaProfilo({ sidebarOpen, setSidebarOpen }: Props
     e.preventDefault();
     setMessage({ type: "", text: "" });
     
-    // Validazione: password non vuota
+    
     if (!form.password.trim()) {
       setMessage({ type: "error", text: "Inserisci una nuova password per modificare il profilo." });
       return;
     }
     
-    // Validazione: le password devono coincidere
+    
     if (form.password !== form.confirmPassword) {
       setMessage({ type: "error", text: "Le password non coincidono. Riprova." });
       return;
     }
 
-    // Validazione: lunghezza minima password
+  
     if (form.password.length < 6) {
       setMessage({ type: "error", text: "La password deve essere di almeno 6 caratteri." });
       return;
     }
     
     try {
-      // Invia solo la password, l'email rimane invariata
+     
       await axios.put(
         `${API_BASE_URL}/utenza/modifica`,
         { email: user.email, password: form.password },

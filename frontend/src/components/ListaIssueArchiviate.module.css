@@ -1,4 +1,4 @@
-/* ===== LAYOUT BASE ===== */
+
 .container {
   display: flex;
   min-height: 100vh;
@@ -11,7 +11,7 @@
   flex-direction: column;
 }
 
-/* ===== HEADER ===== */
+
 .header {
   background-color: white;
   border-bottom: 1px solid #e5e7eb;
@@ -85,13 +85,12 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* ===== CONTENT ===== */
+
 .content {
   flex: 1;
   padding: 32px;
 }
 
-/* ===== LOADING STATE ===== */
 .loadingContainer {
   display: flex;
   min-height: 100vh;
@@ -108,7 +107,7 @@
   color: #6b7280;
 }
 
-/* ===== ACTIVE FILTERS NOTICE ===== */
+
 .activeFiltersNotice {
   background-color: #d1fae5;
   border: 1px solid #6ee7b7;
@@ -122,7 +121,7 @@
   color: #065f46;
 }
 
-/* ===== FILTER BAR ===== */
+
 .filterBar {
   background-color: white;
   border-radius: 12px;
@@ -217,7 +216,6 @@
   border-color: #9ca3af;
 }
 
-/* ===== TABLE ===== */
 .tableContainer {
   background-color: white;
   border-radius: 12px;
@@ -287,7 +285,7 @@
   font-size: 15px;
 }
 
-/* ===== BADGES ===== */
+
 .badge {
   padding: 5px 10px;
   border-radius: 6px;
@@ -341,7 +339,7 @@
   color: #6b7280;
 }
 
-/* ===== RESPONSIVE ===== */
+
 @media (max-width: 1200px) {
   .filterGrid {
     grid-template-columns: 1fr 1fr 1fr;

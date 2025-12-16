@@ -26,7 +26,6 @@ function ListaIssueArchiviate({ sidebarOpen, setSidebarOpen }: Props) {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-  // const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statoFilter, setStatoFilter] = useState("Tutti gli stati");
   const [tipoFilter, setTipoFilter] = useState("Tutti i tipi");

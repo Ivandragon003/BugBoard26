@@ -337,7 +337,7 @@ export default function ListaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
                                   Visualizza
                                 </button>
                                 
-                                {/* ✅ Disabilita "Modifica Ruolo" per utenti disattivati */}
+                                {/* Disabilita "Modifica Ruolo" per utenti disattivati */}
                                 {!utente.stato ? (
                                   <button
                                     className={styles.buttonEditDisabled}

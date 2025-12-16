@@ -1,4 +1,4 @@
-/* ===== SIDEBAR CONTAINER ===== */
+
 .sidebar {
   width: 250px;
   background-color: #0d9488;
@@ -16,7 +16,7 @@
   width: 0;
 }
 
-/* ===== DIVIDER ===== */
+
 .divider {
   position: absolute;
   right: 0;
@@ -26,7 +26,7 @@
   background-color: rgba(255, 255, 255, 0.3);
 }
 
-/* ===== HEADER ===== */
+
 .header {
   padding: 20px;
   color: white;
@@ -69,13 +69,12 @@
   opacity: 0.8;
 }
 
-/* ===== NAVIGATION ===== */
 .nav {
   display: flex;
   flex-direction: column;
 }
 
-/* ===== NAV ITEMS ===== */
+
 .navItem {
   display: flex;
   align-items: center;
@@ -121,12 +120,12 @@
   flex-shrink: 0;
 }
 
-/* ===== SPACER ===== */
+
 .spacer {
   flex: 1;
 }
 
-/* ===== FOOTER ===== */
+
 .footer {
   padding: 20px;
   border-top: 2px solid rgba(255, 255, 255, 0.25);
@@ -182,7 +181,6 @@
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* ===== SCROLLBAR ===== */
 .sidebar::-webkit-scrollbar {
   width: 6px;
 }
@@ -200,19 +198,18 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* ===== HAMBURGER BUTTON ===== */
 .hamburgerBtn {
   display: none;
 }
 
-/* ===== OVERLAY ===== */
+
 .overlay {
   display: none;
 }
 
-/* ===== RESPONSIVE MOBILE ===== */
+
 @media (max-width: 768px) {
-  /* Sidebar diventa fixed e parte nascosta */
+
   .sidebar {
     position: fixed;
     left: 0;
@@ -222,19 +219,18 @@
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
   }
 
-  /* Quando aperta, traduci a 0 */
   .sidebar:not(.sidebarClosed) {
     transform: translateX(0);
   }
 
-  /* Quando chiusa esplicitamente */
+  
   .sidebarClosed {
     transform: translateX(-100%) !important;
     width: 250px;
     box-shadow: none;
   }
 
-  /* Pulsante hamburger visibile */
+ 
   .hamburgerBtn {
     display: flex;
     align-items: center;
@@ -264,7 +260,6 @@
     transform: scale(0.95);
   }
 
-  /* Overlay scuro */
   .overlay {
     display: block;
     position: fixed;
