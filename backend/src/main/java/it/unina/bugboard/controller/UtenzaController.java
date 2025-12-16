@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.HashMap;
 
 @RestController
@@ -31,6 +30,8 @@ public class UtenzaController {
 	private static final String MESSAGE_KEY = "message";
 	private static final String UTENTE_KEY = "utente";
 	private static final String UTENZA_KEY = "utenza";
+	private static final String BEARER_PREFIX = "Bearer ";
+	private static final String UTENTE_NON_TROVATO = "Utente non trovato";
 
 	private final UtenzaDAO utenzaDAO;
 	private final AccessTokenUtil accessTokenUtil;
@@ -71,7 +72,7 @@ public class UtenzaController {
 	@PostMapping("/crea")
 	public Map<String, Object> creaUtenza(@RequestBody Map<String, String> utenzaData,
 			@RequestHeader("Authorization") String token) {
-		Utenza creatore = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+		Utenza creatore = accessTokenUtil.verificaToken(token.replace(BEARER_PREFIX, ""));
 
 		verificaAccountAttivo(creatore);
 		verificaRuoloAmministratore(creatore);
@@ -88,7 +89,7 @@ public class UtenzaController {
 		validationUtil.validaUniqueEmail(email);
 
 		if (utenzaDAO.existsByEmail(email)) {
-			throw new AlreadyExistsException("Email già registrata");
+			throw new AlreadyExistsException("Email giÃ  registrata");
 		}
 
 		ruoloStr = ruoloStr.substring(0, 1).toUpperCase() + ruoloStr.substring(1).toLowerCase();
@@ -106,14 +107,14 @@ public class UtenzaController {
 
 	@GetMapping("/me")
 	public Utenza getUtenteCorrente(@RequestHeader("Authorization") String token) {
-		Utenza utente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+		Utenza utente = accessTokenUtil.verificaToken(token.replace(BEARER_PREFIX, ""));
 		verificaAccountAttivo(utente);
 		return utente;
 	}
 
 	@GetMapping("/lista")
 	public List<Map<String, Object>> listaUtenti(@RequestHeader("Authorization") String token) {
-		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace(BEARER_PREFIX, ""));
 		verificaAccountAttivo(utenteCorrente);
 		verificaRuoloAmministratore(utenteCorrente);
 
@@ -130,19 +131,19 @@ public class UtenzaController {
 					utenteMap.put(STATO_KEY, u.getStato());
 					return utenteMap;
 				})
-				.collect(Collectors.toList());
+				.toList();
 	}
 
 	@PutMapping("/modifica")
 	public Map<String, Object> modificaProfilo(@RequestBody Map<String, String> datiModifica,
 			@RequestHeader("Authorization") String token) {
-		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace(BEARER_PREFIX, ""));
 		verificaAccountAttivo(utenteCorrente);
 
 		String nuovaPassword = datiModifica.get(PASSWORD_KEY);
 
 		if (nuovaPassword == null || nuovaPassword.trim().isEmpty()) {
-			throw new InvalidFieldException("La password non può essere vuota");
+			throw new InvalidFieldException("La password non puÃ² essere vuota");
 		}
 
 		utenteCorrente.setPassword(passwordUtil.hashPassword(nuovaPassword));
@@ -156,7 +157,7 @@ public class UtenzaController {
 	@PutMapping("/{id}")
 	public Map<String, Object> aggiornaUtenza(@PathVariable Integer id, @RequestBody Map<String, String> utenzaData,
 			@RequestHeader("Authorization") String token) {
-		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace(BEARER_PREFIX, ""));
 		verificaAccountAttivo(utenteCorrente);
 		verificaRuoloAmministratore(utenteCorrente);
 		
@@ -165,7 +166,7 @@ public class UtenzaController {
 	    }
 		
 		Utenza utenzaDaModificare = utenzaDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Utente non trovato"));
+				.orElseThrow(() -> new NotFoundException(UTENTE_NON_TROVATO));
 		
 		if (Boolean.FALSE.equals(utenzaDaModificare.getStato())) {
 	        throw new InvalidFieldException("Non puoi modificare il ruolo di un account disattivato. Attiva prima l'account.");
@@ -177,7 +178,7 @@ public class UtenzaController {
 		}
 
 		if (!utenzaData.containsKey(RUOLO_KEY)) {
-			throw new InvalidFieldException("Il campo ruolo è obbligatorio");
+			throw new InvalidFieldException("Il campo ruolo Ã¨ obbligatorio");
 		}
 
 		// Non puoi cambiare il ruolo di un amministratore esistente
@@ -188,7 +189,7 @@ public class UtenzaController {
 		String nuovoRuoloStr = utenzaData.get(RUOLO_KEY);
 
 		if (nuovoRuoloStr == null || nuovoRuoloStr.trim().isEmpty()) {
-			throw new InvalidFieldException("Il ruolo non può essere vuoto");
+			throw new InvalidFieldException("Il ruolo non puÃ² essere vuoto");
 		}
 
 		nuovoRuoloStr = nuovoRuoloStr.substring(0, 1).toUpperCase() + nuovoRuoloStr.substring(1).toLowerCase();
@@ -213,7 +214,7 @@ public class UtenzaController {
 
 	@DeleteMapping("/{id}")
 	public Map<String, String> disattivaUtenza(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
-		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace(BEARER_PREFIX, ""));
 		verificaAccountAttivo(utenteCorrente);
 		verificaRuoloAmministratore(utenteCorrente);
 
@@ -222,7 +223,7 @@ public class UtenzaController {
 		}
 
 		Utenza utenza = utenzaDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Utente non trovato"));
+				.orElseThrow(() -> new NotFoundException(UTENTE_NON_TROVATO));
 
 		utenza.setStato(false);
 		utenzaDAO.save(utenza);
@@ -232,12 +233,12 @@ public class UtenzaController {
 
 	@PatchMapping("/{id}/riattiva")
 	public Map<String, String> riattivaUtenza(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
-		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace(BEARER_PREFIX, ""));
 		verificaAccountAttivo(utenteCorrente);
 		verificaRuoloAmministratore(utenteCorrente);
 
 		Utenza utenza = utenzaDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Utente non trovato"));
+				.orElseThrow(() -> new NotFoundException(UTENTE_NON_TROVATO));
 
 		utenza.setStato(true);
 		utenzaDAO.save(utenza);
@@ -248,7 +249,7 @@ public class UtenzaController {
 	@PatchMapping("/{id}/stato")
 	public Map<String, Object> cambiaStatoUtenza(@PathVariable Integer id, @RequestBody Map<String, Boolean> data,
 			@RequestHeader("Authorization") String token) {
-		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace("Bearer ", ""));
+		Utenza utenteCorrente = accessTokenUtil.verificaToken(token.replace(BEARER_PREFIX, ""));
 		verificaAccountAttivo(utenteCorrente);
 		verificaRuoloAmministratore(utenteCorrente);
 
@@ -257,7 +258,7 @@ public class UtenzaController {
 		}
 
 		Utenza utenza = utenzaDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException("Utente non trovato"));
+				.orElseThrow(() -> new NotFoundException(UTENTE_NON_TROVATO));
 
 		Boolean nuovoStato = data.get(STATO_KEY);
 
