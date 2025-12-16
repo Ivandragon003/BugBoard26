@@ -27,11 +27,11 @@ public class Allegato {
 	@Column(name = "dimensione", nullable = false)
 	private Integer dimensione;
 
-	// ✅ FIX DEFINITIVO: Usa JdbcTypeCode per forzare BYTEA
+
 	@Lob
 	@Basic(fetch = FetchType.LAZY)
 	@Column(name = "filedata", nullable = false)
-	@JdbcTypeCode(SqlTypes.VARBINARY) // Forza PostgreSQL BYTEA
+	@JdbcTypeCode(SqlTypes.VARBINARY) 
 	@JsonIgnore
 	private byte[] fileData;
 
