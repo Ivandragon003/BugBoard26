@@ -7,7 +7,6 @@ import API_BASE_URL from "../config";
 import Sidebar from "./Sidebar";
 import styles from "./CreaUtenza.module.css";
 
-// ✅ Tipizzazione
 type Ruolo = "Utente" | "Amministratore";
 
 interface FormData {
@@ -27,26 +26,23 @@ interface ApiErrorResponse {
   error?: string;
 }
 
-// ✅ Utility per generare password sicure
 const generatePassword = (length: number = 12): string => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*";
   return Array.from(
-    { length }, 
+    { length },
     () => chars.charAt(Math.floor(Math.random() * chars.length))
   ).join("");
 };
 
-// ✅ Utility per normalizzare stringhe (rimuove accenti, spazi e apostrofi)
 const normalizeString = (str: string): string => {
   return str
     .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/'/g, "")  // Rimuove apostrofi
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['\s]+/g, "")
+    .replace(/[^a-z]/g, "");
 };
 
-// ✅ Componente di accesso negato separato
 const AccessDenied: React.FC = () => (
   <div className={styles.accessDeniedContainer}>
     <div className={styles.accessDeniedCard}>
@@ -66,9 +62,7 @@ interface Props {
 
 export default function CreaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   const navigate = useNavigate();
-  
-  // ✅ 1️⃣ PRIMA: TUTTI GLI HOOKS IN CIMA
-//  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+
   const [form, setForm] = useState<FormData>({
     nome: "",
     cognome: "",
@@ -77,58 +71,57 @@ export default function CreaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
   });
   const [message, setMessage] = useState<MessageState>({ type: "", text: "" });
 
-  // ✅ Email autogenerata con useMemo
   const generatedEmail = useMemo(() => {
     if (!form.nome || !form.cognome) return "";
-    
+
     const nomeClean = normalizeString(form.nome);
     const cognomeClean = normalizeString(form.cognome);
-    
+
+    if (!nomeClean || !cognomeClean) return "";
+
     return `${nomeClean}.${cognomeClean}@bugboard.it`;
   }, [form.nome, form.cognome]);
 
-  // ✅ Validazione nome/cognome (solo lettere, spazi e apostrofi)
   const validateNomeCognome = (value: string): boolean => {
     const pattern = /^[A-Za-zÀ-ÿ\s']+$/;
     return pattern.test(value);
   };
 
-  // ✅ Validazione form
-  const isFormValid = generatedEmail && form.password && form.nome && form.cognome;
+  const isFormValid = generatedEmail &&
+    form.password &&
+    form.nome &&
+    form.cognome &&
+    generatedEmail.includes('.') &&
+    !generatedEmail.includes('..');
 
-  // ✅ 2️⃣ POI: CONTROLLO ACCESSO (DOPO TUTTI GLI HOOKS)
   if (!authService.isAdmin()) {
     return <AccessDenied />;
   }
 
-  // ✅ Handler generico per form con validazione real-time
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
-    // Validazione real-time per nome e cognome
+
     if ((name === "nome" || name === "cognome") && value !== "") {
       if (!validateNomeCognome(value)) {
-        return; // Blocca l'input se contiene caratteri non validi
+        return;
       }
     }
-    
+
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  // ✅ Rigenera password
   const handleRegeneratePassword = () => {
     setForm(prev => ({ ...prev, password: generatePassword() }));
   };
 
-  // ✅ Submit con gestione errori tipizzata
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage({ type: "", text: "" });
 
-    if (!generatedEmail) {
-      setMessage({ 
-        type: "error", 
-        text: "Nome e cognome sono necessari per generare l'email" 
+    if (!generatedEmail || !generatedEmail.includes('.') || generatedEmail.includes('..')) {
+      setMessage({
+        type: "error",
+        text: "Nome e cognome devono contenere almeno una lettera per generare un'email valida"
       });
       return;
     }
@@ -145,34 +138,31 @@ export default function CreaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
       await axios.post(`${API_BASE_URL}/utenza/crea`, dataToSend, {
         headers: { Authorization: `Bearer ${authService.getToken()}` }
       });
-      
+
       setMessage({ type: "success", text: "Utente creato con successo!" });
-      
-      // ✅ Reset form
+
       setForm({
         nome: "",
         cognome: "",
         password: generatePassword(),
         ruolo: "Utente"
       });
-      
-      // ✅ Redirect dopo successo
+
       setTimeout(() => navigate("/home"), 1500);
-      
+
     } catch (err) {
-      // ✅ Gestione errori tipizzata
       if (err instanceof AxiosError) {
         const apiError = err.response?.data as ApiErrorResponse;
-        const errorMessage = apiError?.message || 
-                            apiError?.error || 
-                            "Errore nella creazione dell'utente";
+        const errorMessage = apiError?.message ||
+          apiError?.error ||
+          "Errore nella creazione dell'utente";
         setMessage({ type: "error", text: errorMessage });
       } else if (err instanceof Error) {
         setMessage({ type: "error", text: err.message });
       } else {
         setMessage({ type: "error", text: "Errore sconosciuto" });
       }
-      
+
       console.error("Errore creazione utente:", err);
     }
   };
@@ -295,10 +285,10 @@ export default function CreaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
                 <label htmlFor="ruolo" className={styles.label}>
                   Ruolo <span className={styles.required}>*</span>
                 </label>
-                <select 
+                <select
                   id="ruolo"
-                  name="ruolo" 
-                  value={form.ruolo} 
+                  name="ruolo"
+                  value={form.ruolo}
                   onChange={handleChange}
                   className={styles.select}
                 >
@@ -309,10 +299,9 @@ export default function CreaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
 
               {/* Messaggi */}
               {message.text && (
-                <div 
-                  className={`${styles.message} ${
-                    message.type === "success" ? styles.messageSuccess : styles.messageError
-                  }`}
+                <div
+                  className={`${styles.message} ${message.type === "success" ? styles.messageSuccess : styles.messageError
+                    }`}
                   role={message.type === "success" ? "status" : "alert"}
                 >
                   <span className={styles.messageIcon}>
@@ -323,8 +312,8 @@ export default function CreaUtenza({ sidebarOpen, setSidebarOpen }: Props) {
               )}
 
               {/* Submit */}
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={!isFormValid}
                 className={styles.submitButton}
               >

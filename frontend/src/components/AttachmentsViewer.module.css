@@ -1,4 +1,3 @@
-/* ===== CONTAINER PRINCIPALE ===== */
 .attachmentsContainer {
   background-color: white;
   border-radius: 12px;
@@ -7,7 +6,6 @@
   margin-top: 24px;
 }
 
-/* ===== HEADER ALLEGATI ===== */
 .attachmentsHeader {
   display: flex;
   justify-content: space-between;
@@ -22,7 +20,6 @@
   margin: 0;
 }
 
-/* ===== STATI (LOADING, ERROR, EMPTY) ===== */
 .loadingContainer,
 .emptyContainer {
   background-color: white;
@@ -63,7 +60,6 @@
   gap: 8px;
 }
 
-/* ===== LISTA ALLEGATI ===== */
 .attachmentsList {
   display: flex;
   flex-direction: column;
@@ -86,7 +82,6 @@
   border-color: #d1d5db;
 }
 
-/* ===== CONTENUTO ALLEGATO ===== */
 .attachmentContent {
   display: flex;
   align-items: center;
@@ -131,7 +126,6 @@
   color: #d1d5db;
 }
 
-/* ===== AZIONI ===== */
 .attachmentActions {
   display: flex;
   gap: 8px;
@@ -162,7 +156,6 @@
   transform: scale(0.98);
 }
 
-/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .attachmentsContainer {
     padding: 20px;

@@ -13,7 +13,7 @@ interface Allegato {
 
 interface AttachmentsViewerProps {
   idIssue: number;
-  canEdit: boolean; // Non più usato, ma lo teniamo per retrocompatibilità
+  canEdit: boolean;
 }
 
 const AttachmentsViewer: React.FC<AttachmentsViewerProps> = ({ idIssue }) => {

@@ -25,14 +25,13 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
     'image/gif', 
     'image/webp',
     'application/pdf',
-    'application/msword', // DOC
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // DOCX
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   ];
   
   const MAX_FILES = 10; 
  
   const validateFiles = (newFiles: File[]): string | null => {
-    // Controllo numero massimo file
     if (files.length + newFiles.length > MAX_FILES) {
       return `Massimo ${MAX_FILES} file consentiti`;
     }
@@ -43,12 +42,10 @@ const FileUploadSection: React.FC<FileUploadSectionProps> = ({
         return `File "${file.name}" troppo grande (max 10MB)`;
       }
 
-      // Controllo tipo file
       if (!ALLOWED_TYPES.includes(file.type)) {
         return `File "${file.name}" non supportato. Formati consentiti: JPEG, PNG, GIF, WebP, PDF, DOC, DOCX`;
       }
 
-      // Controllo duplicati
       if (files.some(f => f.name === file.name && f.size === file.size)) {
         return `File "${file.name}" già caricato`;
       }
