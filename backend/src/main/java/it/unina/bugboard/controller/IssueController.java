@@ -16,10 +16,9 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class IssueController {
 
-	
 	private static final String MESSAGE_KEY = "message";
 	private static final String ISSUE_NON_TROVATA_MSG = "Issue non trovata con id: ";
-	
+
 	private final IssueDAO issueDAO;
 	private final UtenzaDAO utenzaDAO;
 
@@ -31,6 +30,15 @@ public class IssueController {
 	@PostMapping("/crea")
 	@Transactional
 	public Issue creaIssue(@RequestBody Map<String, Object> payload) {
+		
+		if (payload == null) {
+			throw new InvalidFieldException("Payload mancante");
+		}
+		if (!payload.containsKey("idCreatore") || payload.get("idCreatore") == null) {
+			throw new InvalidFieldException("Il campo 'idCreatore' è obbligatorio");
+		}
+
+		
 		String titolo = (String) payload.get("titolo");
 		String descrizione = (String) payload.get("descrizione");
 		String prioritaStr = (String) payload.get("priorita");
@@ -42,17 +50,21 @@ public class IssueController {
 			throw new InvalidFieldException("Il titolo è obbligatorio");
 		}
 
+		
 		issueDAO.findByTitolo(titolo).ifPresent(i -> {
 			throw new AlreadyExistsException("Esiste già un'issue con questo titolo");
 		});
 
+		
 		Priorita priorita = parsePriorita(prioritaStr);
 		Stato stato = parseStato(statoStr);
 		Tipo tipo = parseTipo(tipoStr);
 
+		
 		Utenza creatore = utenzaDAO.findById(idCreatore)
 				.orElseThrow(() -> new NotFoundException("Utente non trovato con id: " + idCreatore));
 
+		
 		Issue issue = new Issue(titolo, descrizione, priorita, stato, tipo, creatore);
 		return issueDAO.save(issue);
 	}
@@ -144,8 +156,7 @@ public class IssueController {
 	@Transactional
 	public Map<String, String> archiviaIssue(@PathVariable(value = "id") Integer id,
 			@RequestParam(value = "idArchiviatore") Integer idArchiviatore) {
-		Issue issue = issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
 
 		if (Boolean.TRUE.equals(issue.getArchiviata())) {
 			throw new InvalidFieldException("L'issue è già archiviata");
@@ -165,8 +176,7 @@ public class IssueController {
 	@PutMapping("/disarchivia/{id}")
 	@Transactional
 	public Map<String, String> disarchiviaIssue(@PathVariable(value = "id") Integer id) {
-		Issue issue = issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
 
 		if (Boolean.FALSE.equals(issue.getArchiviata()))
 			throw new InvalidFieldException("L'issue non è archiviata");
@@ -183,8 +193,7 @@ public class IssueController {
 	@Transactional
 	public Issue cambiaStato(@PathVariable(value = "id") Integer id,
 			@RequestParam(value = "nuovoStato") String nuovoStato) {
-		Issue issue = issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
 
 		if (Boolean.TRUE.equals(issue.getArchiviata())) {
 			throw new InvalidFieldException("Non è possibile modificare lo stato di un'issue archiviata");
@@ -198,15 +207,13 @@ public class IssueController {
 
 	@GetMapping("/visualizza/{id}")
 	public Issue visualizzaIssue(@PathVariable(value = "id") Integer id) {
-		return issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
+		return issueDAO.findById(id).orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
 	}
 
 	@DeleteMapping("/elimina/{id}")
 	@Transactional
 	public Map<String, String> eliminaIssue(@PathVariable(value = "id") Integer id) {
-		Issue issue = issueDAO.findById(id)
-				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
+		Issue issue = issueDAO.findById(id).orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + id));
 
 		issueDAO.delete(issue);
 		return Map.of(MESSAGE_KEY, "Issue eliminata con successo");
@@ -240,8 +247,6 @@ public class IssueController {
 		stats.put("done", issueDAO.countByStato(Stato.Done));
 		return stats;
 	}
-
-	
 
 	private int getPrioritaOrdine(Priorita priorita) {
 		return switch (priorita) {
