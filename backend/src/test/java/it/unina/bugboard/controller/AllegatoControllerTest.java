@@ -14,7 +14,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,435 +24,329 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AllegatoControllerTest {
 
-    @Mock
-    private AllegatoDAO allegatoDAO;
+	@Mock
+	private AllegatoDAO allegatoDAO;
 
-    @Mock
-    private IssueDAO issueDAO;
+	@Mock
+	private IssueDAO issueDAO;
 
-    @InjectMocks
-    private AllegatoController allegatoController;
+	@InjectMocks
+	private AllegatoController allegatoController;
 
-    private Issue issueValida;
-    private Utenza creatore;
+	private Issue issueValida;
+	private Utenza creatore;
 
-    @BeforeEach
-    void setUp() throws Exception {
-        creatore = new Utenza();
-        creatore.setNome("Mario");
-        creatore.setCognome("Rossi");
-        creatore.setEmail("mario@test.com");
-        creatore.setPassword("password123");
-        creatore.setRuolo(Ruolo.Utente);
+	@BeforeEach
+	void setUp() throws Exception {
+		creatore = new Utenza();
+		creatore.setNome("Mario");
+		creatore.setCognome("Rossi");
+		creatore.setEmail("mario@test.com");
+		creatore.setPassword("password123");
+		creatore.setRuolo(Ruolo.Utente);
 
-        issueValida = new Issue();
-        java.lang.reflect.Field idField = Issue.class.getDeclaredField("idIssue");
-        idField.setAccessible(true);
-        idField.set(issueValida, 1);
-        
-        issueValida.setTitolo("Issue Test");
-        issueValida.setDescrizione("Descrizione test");
-        issueValida.setPriorita(Priorita.medium);
-        issueValida.setStato(Stato.Todo);
-        issueValida.setTipo(Tipo.bug);
-        issueValida.setCreatore(creatore);
-    }
+		issueValida = new Issue();
+		java.lang.reflect.Field idField = Issue.class.getDeclaredField("idIssue");
+		idField.setAccessible(true);
+		idField.set(issueValida, 1);
 
-    /**
-     * TEST 1: uploadAllegato - Caso valido
-     * Classe di equivalenza: File valido (immagine JPEG, < 10MB) + Issue esistente
-     */
-    @Test
-    void testUploadAllegato_FileValidoIssueEsistente_Success() throws Exception {
-        byte[] contenutoFile = "test file content".getBytes();
-        MockMultipartFile file = new MockMultipartFile(
-            "file",
-            "test-image.jpg",
-            "image/jpeg",
-            contenutoFile
-        );
-        Integer idIssue = 1;
+		issueValida.setTitolo("Issue Test");
+		issueValida.setDescrizione("Descrizione test");
+		issueValida.setPriorita(Priorita.medium);
+		issueValida.setStato(Stato.Todo);
+		issueValida.setTipo(Tipo.bug);
+		issueValida.setCreatore(creatore);
+	}
 
-        when(issueDAO.findById(idIssue)).thenReturn(Optional.of(issueValida));
-        
-        Allegato allegatoSalvato = new Allegato(
-            file.getOriginalFilename(),
-            file.getContentType(),
-            (int) file.getSize(),
-            contenutoFile,
-            issueValida
-        );
-        java.lang.reflect.Field idAllegatoField = Allegato.class.getDeclaredField("idAllegato");
-        idAllegatoField.setAccessible(true);
-        idAllegatoField.set(allegatoSalvato, 100);
-        
-        when(allegatoDAO.save(any(Allegato.class))).thenReturn(allegatoSalvato);
+	/**
+	 * TEST 1: uploadAllegato - Caso valido Classe di equivalenza: File valido
+	 * (immagine JPEG, < 10MB) + Issue esistente
+	 */
+	@Test
+	void testUploadAllegato_FileValidoIssueEsistente_Success() throws Exception {
+		byte[] contenutoFile = "test file content".getBytes();
+		MockMultipartFile file = new MockMultipartFile("file", "test-image.jpg", "image/jpeg", contenutoFile);
+		Integer idIssue = 1;
 
-        Map<String, Object> result = allegatoController.uploadAllegato(file, idIssue);
+		when(issueDAO.findById(idIssue)).thenReturn(Optional.of(issueValida));
 
-        assertNotNull(result);
-        assertEquals(100, result.get("idAllegato"));
-        assertEquals("test-image.jpg", result.get("nomeFile"));
-        assertEquals("image/jpeg", result.get("tipoFile"));
-        assertTrue(result.get("message").toString().contains("successo"));
-        
-        ArgumentCaptor<Allegato> captor = ArgumentCaptor.forClass(Allegato.class);
-        verify(allegatoDAO).save(captor.capture());
-        
-        Allegato allegatoSalvatoCapturato = captor.getValue();
-        assertEquals("test-image.jpg", allegatoSalvatoCapturato.getNomeFile());
-        assertEquals("image/jpeg", allegatoSalvatoCapturato.getTipoFile());
-        assertEquals(contenutoFile.length, allegatoSalvatoCapturato.getDimensione());
-        assertArrayEquals(contenutoFile, allegatoSalvatoCapturato.getFileData());
-        assertEquals(issueValida, allegatoSalvatoCapturato.getIssue());
-        
-        verify(issueDAO, times(1)).findById(idIssue);
-    }
+		Allegato allegatoSalvato = new Allegato(file.getOriginalFilename(), file.getContentType(), (int) file.getSize(),
+				contenutoFile, issueValida);
+		java.lang.reflect.Field idAllegatoField = Allegato.class.getDeclaredField("idAllegato");
+		idAllegatoField.setAccessible(true);
+		idAllegatoField.set(allegatoSalvato, 100);
 
-    /**
-     * TEST 2: uploadAllegato - File null
-     * Classe di equivalenza: File mancante/null
-     */
-    @Test
-    void testUploadAllegato_FileNull_ThrowsInvalidFieldException() {
-        MultipartFile fileNull = null;
-        Integer idIssue = 1;
+		when(allegatoDAO.save(any(Allegato.class))).thenReturn(allegatoSalvato);
 
-        assertThrows(InvalidFieldException.class, 
-            () -> allegatoController.uploadAllegato(fileNull, idIssue));
-        
-        verify(issueDAO, never()).findById(any());
-        verify(allegatoDAO, never()).save(any());
-    }
+		Map<String, Object> result = allegatoController.uploadAllegato(file, idIssue);
 
-    /**
-     * TEST 3: uploadAllegato - File vuoto
-     * Classe di equivalenza: File con size = 0
-     */
-    @Test
-    void testUploadAllegato_FileVuoto_ThrowsInvalidFieldException() {
-        MockMultipartFile fileVuoto = new MockMultipartFile(
-            "file",
-            "empty.jpg",
-            "image/jpeg",
-            new byte[0]
-        );
-        Integer idIssue = 1;
+		assertNotNull(result);
+		assertEquals(100, result.get("idAllegato"));
+		assertEquals("test-image.jpg", result.get("nomeFile"));
+		assertEquals("image/jpeg", result.get("tipoFile"));
+		assertTrue(result.get("message").toString().contains("successo"));
 
-        assertThrows(InvalidFieldException.class,
-            () -> allegatoController.uploadAllegato(fileVuoto, idIssue));
-        
-        verify(issueDAO, never()).findById(any());
-        verify(allegatoDAO, never()).save(any());
-    }
+		ArgumentCaptor<Allegato> captor = ArgumentCaptor.forClass(Allegato.class);
+		verify(allegatoDAO).save(captor.capture());
 
-    /**
-     * TEST 4: uploadAllegato - File troppo grande
-     * Classe di equivalenza: File con dimensione > 10MB
-     */
-    @Test
-    void testUploadAllegato_FileTroppoGrande_ThrowsInvalidFieldException() {
-        byte[] contenutoGrande = new byte[11 * 1024 * 1024];
-        MockMultipartFile fileTroppoGrande = new MockMultipartFile(
-            "file",
-            "large-file.jpg",
-            "image/jpeg",
-            contenutoGrande
-        );
-        Integer idIssue = 1;
+		Allegato allegatoSalvatoCapturato = captor.getValue();
+		assertEquals("test-image.jpg", allegatoSalvatoCapturato.getNomeFile());
+		assertEquals("image/jpeg", allegatoSalvatoCapturato.getTipoFile());
+		assertEquals(contenutoFile.length, allegatoSalvatoCapturato.getDimensione());
+		assertArrayEquals(contenutoFile, allegatoSalvatoCapturato.getFileData());
+		assertEquals(issueValida, allegatoSalvatoCapturato.getIssue());
 
-        InvalidFieldException exception = assertThrows(
-            InvalidFieldException.class,
-            () -> allegatoController.uploadAllegato(fileTroppoGrande, idIssue)
-        );
-        
-        assertTrue(exception.getMessage().contains("dimensione massima"));
-        verify(issueDAO, never()).findById(any());
-        verify(allegatoDAO, never()).save(any());
-    }
+		verify(issueDAO, times(1)).findById(idIssue);
+	}
 
-    /**
-     * TEST 5: uploadAllegato - Tipo MIME non supportato
-     * Classe di equivalenza: ContentType non in ALLOWED_CONTENT_TYPES
-     */
-    @Test
-    void testUploadAllegato_TipoMimeNonSupportato_ThrowsInvalidFieldException() {
-        MockMultipartFile fileNonSupportato = new MockMultipartFile(
-            "file",
-            "test.exe",
-            "application/x-msdownload",
-            "fake exe content".getBytes()
-        );
-        Integer idIssue = 1;
+	/**
+	 * TEST 2: uploadAllegato - File null Classe di equivalenza: File mancante/null
+	 */
+	@Test
+	void testUploadAllegato_FileNull_ThrowsInvalidFieldException() {
+		MultipartFile fileNull = null;
+		Integer idIssue = 1;
 
-        InvalidFieldException exception = assertThrows(
-            InvalidFieldException.class,
-            () -> allegatoController.uploadAllegato(fileNonSupportato, idIssue)
-        );
-        
-        assertTrue(exception.getMessage().contains("non supportato"));
-        verify(issueDAO, never()).findById(any());
-        verify(allegatoDAO, never()).save(any());
-    }
+		assertThrows(InvalidFieldException.class, () -> allegatoController.uploadAllegato(fileNull, idIssue));
 
-    /**
-     * TEST 6: uploadAllegato - Issue non esistente
-     * Classe di equivalenza: idIssue non presente nel database
-     */
-    @Test
-    void testUploadAllegato_IssueNonEsistente_ThrowsNotFoundException() {
-        MockMultipartFile file = new MockMultipartFile(
-            "file",
-            "test.jpg",
-            "image/jpeg",
-            "test content".getBytes()
-        );
-        Integer idIssueNonEsistente = 999;
+		verify(issueDAO, never()).findById(any());
+		verify(allegatoDAO, never()).save(any());
+	}
 
-        when(issueDAO.findById(idIssueNonEsistente)).thenReturn(Optional.empty());
+	/**
+	 * TEST 3: uploadAllegato - File vuoto Classe di equivalenza: File con size = 0
+	 */
+	@Test
+	void testUploadAllegato_FileVuoto_ThrowsInvalidFieldException() {
+		MockMultipartFile fileVuoto = new MockMultipartFile("file", "empty.jpg", "image/jpeg", new byte[0]);
+		Integer idIssue = 1;
 
-        NotFoundException exception = assertThrows(
-            NotFoundException.class,
-            () -> allegatoController.uploadAllegato(file, idIssueNonEsistente)
-        );
-        
-        assertTrue(exception.getMessage().contains("Issue non trovata"));
-        assertTrue(exception.getMessage().contains("999"));
-        verify(issueDAO, times(1)).findById(idIssueNonEsistente);
-        verify(allegatoDAO, never()).save(any());
-    }
+		assertThrows(InvalidFieldException.class, () -> allegatoController.uploadAllegato(fileVuoto, idIssue));
 
-    /**
-     * TEST 7: uploadAllegato - PDF valido
-     * Classe di equivalenza: File PDF (tipo supportato)
-     */
-    @Test
-    void testUploadAllegato_PdfValido_Success() throws Exception {
-        byte[] contenutoPdf = "fake pdf content".getBytes();
-        MockMultipartFile filePdf = new MockMultipartFile(
-            "file",
-            "documento.pdf",
-            "application/pdf",
-            contenutoPdf
-        );
-        Integer idIssue = 1;
+		verify(issueDAO, never()).findById(any());
+		verify(allegatoDAO, never()).save(any());
+	}
 
-        when(issueDAO.findById(idIssue)).thenReturn(Optional.of(issueValida));
-        
-        Allegato allegatoSalvato = new Allegato(
-            filePdf.getOriginalFilename(),
-            filePdf.getContentType(),
-            (int) filePdf.getSize(),
-            contenutoPdf,
-            issueValida
-        );
-        java.lang.reflect.Field idAllegatoField = Allegato.class.getDeclaredField("idAllegato");
-        idAllegatoField.setAccessible(true);
-        idAllegatoField.set(allegatoSalvato, 200);
-        
-        when(allegatoDAO.save(any(Allegato.class))).thenReturn(allegatoSalvato);
+	/**
+	 * TEST 4: uploadAllegato - File troppo grande Classe di equivalenza: File con
+	 * dimensione > 10MB
+	 */
+	@Test
+	void testUploadAllegato_FileTroppoGrande_ThrowsInvalidFieldException() {
+		byte[] contenutoGrande = new byte[11 * 1024 * 1024];
+		MockMultipartFile fileTroppoGrande = new MockMultipartFile("file", "large-file.jpg", "image/jpeg",
+				contenutoGrande);
+		Integer idIssue = 1;
 
-        Map<String, Object> result = allegatoController.uploadAllegato(filePdf, idIssue);
+		InvalidFieldException exception = assertThrows(InvalidFieldException.class,
+				() -> allegatoController.uploadAllegato(fileTroppoGrande, idIssue));
 
-        assertNotNull(result);
-        assertEquals(200, result.get("idAllegato"));
-        assertEquals("documento.pdf", result.get("nomeFile"));
-        assertEquals("application/pdf", result.get("tipoFile"));
-        
-        ArgumentCaptor<Allegato> captor = ArgumentCaptor.forClass(Allegato.class);
-        verify(allegatoDAO).save(captor.capture());
-        assertEquals("application/pdf", captor.getValue().getTipoFile());
-        
-        verify(issueDAO, times(1)).findById(idIssue);
-    }
+		assertTrue(exception.getMessage().contains("dimensione massima"));
+		verify(issueDAO, never()).findById(any());
+		verify(allegatoDAO, never()).save(any());
+	}
 
-    /**
-     * TEST 8: uploadAllegato - File al limite (10MB esatti)
-     * Classe di equivalenza: File alla dimensione massima consentita (valore di frontiera)
-     */
-    @Test
-    void testUploadAllegato_FileAlLimite10MB_Success() throws Exception {
-        byte[] contenuto10MB = new byte[10 * 1024 * 1024];
-        MockMultipartFile fileAlLimite = new MockMultipartFile(
-            "file",
-            "large-valid.jpg",
-            "image/jpeg",
-            contenuto10MB
-        );
-        Integer idIssue = 1;
+	/**
+	 * TEST 5: uploadAllegato - Tipo MIME non supportato Classe di equivalenza:
+	 * ContentType non in ALLOWED_CONTENT_TYPES
+	 */
+	@Test
+	void testUploadAllegato_TipoMimeNonSupportato_ThrowsInvalidFieldException() {
+		MockMultipartFile fileNonSupportato = new MockMultipartFile("file", "test.exe", "application/x-msdownload",
+				"fake exe content".getBytes());
+		Integer idIssue = 1;
 
-        when(issueDAO.findById(idIssue)).thenReturn(Optional.of(issueValida));
-        
-        Allegato allegatoSalvato = new Allegato(
-            fileAlLimite.getOriginalFilename(),
-            fileAlLimite.getContentType(),
-            (int) fileAlLimite.getSize(),
-            contenuto10MB,
-            issueValida
-        );
-        java.lang.reflect.Field idAllegatoField = Allegato.class.getDeclaredField("idAllegato");
-        idAllegatoField.setAccessible(true);
-        idAllegatoField.set(allegatoSalvato, 300);
-        
-        when(allegatoDAO.save(any(Allegato.class))).thenReturn(allegatoSalvato);
+		InvalidFieldException exception = assertThrows(InvalidFieldException.class,
+				() -> allegatoController.uploadAllegato(fileNonSupportato, idIssue));
 
-        Map<String, Object> result = allegatoController.uploadAllegato(fileAlLimite, idIssue);
+		assertTrue(exception.getMessage().contains("non supportato"));
+		verify(issueDAO, never()).findById(any());
+		verify(allegatoDAO, never()).save(any());
+	}
 
-        assertNotNull(result);
-        assertEquals(300, result.get("idAllegato"));
-        assertEquals(10 * 1024 * 1024, result.get("dimensione"));
-        
-        ArgumentCaptor<Allegato> captor = ArgumentCaptor.forClass(Allegato.class);
-        verify(allegatoDAO).save(captor.capture());
-        assertEquals(10 * 1024 * 1024, captor.getValue().getDimensione());
-        
-        verify(issueDAO, times(1)).findById(idIssue);
-    }
+	/**
+	 * TEST 6: uploadAllegato - Issue non esistente Classe di equivalenza: idIssue
+	 * non presente nel database
+	 */
+	@Test
+	void testUploadAllegato_IssueNonEsistente_ThrowsNotFoundException() {
+		MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "test content".getBytes());
+		Integer idIssueNonEsistente = 999;
 
-    /**
-     * TEST 9 CORRETTO: uploadAllegato - idIssue null con eccezione specifica
-     * Classe di equivalenza: idIssue null (valore limite)
-     */
-    @Test
-    void testUploadAllegato_IdIssueNull_ThrowsException() {
-        MockMultipartFile file = new MockMultipartFile(
-            "file",
-            "test.jpg",
-            "image/jpeg",
-            "test content".getBytes()
-        );
-        Integer idIssueNull = null;
+		when(issueDAO.findById(idIssueNonEsistente)).thenReturn(Optional.empty());
 
-        // ✅ CORREZIONE: Verifica che lanci un'eccezione specifica
-        // Simula il comportamento del DAO quando riceve null
-        when(issueDAO.findById(null)).thenThrow(new IllegalArgumentException("ID cannot be null"));
+		NotFoundException exception = assertThrows(NotFoundException.class,
+				() -> allegatoController.uploadAllegato(file, idIssueNonEsistente));
 
-        // ✅ Ora verifica l'eccezione corretta invece di Exception generica
-        assertThrows(IllegalArgumentException.class,
-            () -> allegatoController.uploadAllegato(file, idIssueNull));
-        
-        verify(allegatoDAO, never()).save(any());
-    }
+		assertTrue(exception.getMessage().contains("Issue non trovata"));
+		assertTrue(exception.getMessage().contains("999"));
+		verify(issueDAO, times(1)).findById(idIssueNonEsistente);
+		verify(allegatoDAO, never()).save(any());
+	}
 
-    /**
-     * TEST 10: uploadAllegato - File Word DOCX valido
-     * Classe di equivalenza: File Word (tipo supportato)
-     */
-    @Test
-    void testUploadAllegato_DocxValido_Success() throws Exception {
-        byte[] contenutoDocx = "fake docx content".getBytes();
-        MockMultipartFile fileDocx = new MockMultipartFile(
-            "file",
-            "documento.docx",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            contenutoDocx
-        );
-        Integer idIssue = 1;
+	/**
+	 * TEST 7: uploadAllegato - PDF valido Classe di equivalenza: File PDF (tipo
+	 * supportato)
+	 */
+	@Test
+	void testUploadAllegato_PdfValido_Success() throws Exception {
+		byte[] contenutoPdf = "fake pdf content".getBytes();
+		MockMultipartFile filePdf = new MockMultipartFile("file", "documento.pdf", "application/pdf", contenutoPdf);
+		Integer idIssue = 1;
 
-        when(issueDAO.findById(idIssue)).thenReturn(Optional.of(issueValida));
-        
-        Allegato allegatoSalvato = new Allegato(
-            fileDocx.getOriginalFilename(),
-            fileDocx.getContentType(),
-            (int) fileDocx.getSize(),
-            contenutoDocx,
-            issueValida
-        );
-        java.lang.reflect.Field idAllegatoField = Allegato.class.getDeclaredField("idAllegato");
-        idAllegatoField.setAccessible(true);
-        idAllegatoField.set(allegatoSalvato, 400);
-        
-        when(allegatoDAO.save(any(Allegato.class))).thenReturn(allegatoSalvato);
+		when(issueDAO.findById(idIssue)).thenReturn(Optional.of(issueValida));
 
-        Map<String, Object> result = allegatoController.uploadAllegato(fileDocx, idIssue);
+		Allegato allegatoSalvato = new Allegato(filePdf.getOriginalFilename(), filePdf.getContentType(),
+				(int) filePdf.getSize(), contenutoPdf, issueValida);
+		java.lang.reflect.Field idAllegatoField = Allegato.class.getDeclaredField("idAllegato");
+		idAllegatoField.setAccessible(true);
+		idAllegatoField.set(allegatoSalvato, 200);
 
-        assertNotNull(result);
-        assertEquals(400, result.get("idAllegato"));
-        
-        ArgumentCaptor<Allegato> captor = ArgumentCaptor.forClass(Allegato.class);
-        verify(allegatoDAO).save(captor.capture());
-        assertTrue(captor.getValue().getTipoFile().contains("wordprocessingml"));
-    }
+		when(allegatoDAO.save(any(Allegato.class))).thenReturn(allegatoSalvato);
 
-    // ========================================
-    // ✅ TEST MANCANTI CRITICI DA AGGIUNGERE
-    // ========================================
+		Map<String, Object> result = allegatoController.uploadAllegato(filePdf, idIssue);
 
-    /**
-     * TEST 11 NUOVO: uploadAllegato - ContentType null
-     * ⚠️ QUESTO MANCAVA ED È CRITICO!
-     * Nel codice c'è: if (contentType == null || !isAllowedContentType(contentType))
-     */
-    @Test
-    void testUploadAllegato_ContentTypeNull_ThrowsInvalidFieldException() {
-        MockMultipartFile file = new MockMultipartFile(
-            "file",
-            "test.jpg",
-            null, // ❌ ContentType NULL
-            "contenuto".getBytes()
-        );
-        
-        InvalidFieldException exception = assertThrows(
-            InvalidFieldException.class,
-            () -> allegatoController.uploadAllegato(file, 1)
-        );
-        
-        assertTrue(exception.getMessage().contains("non supportato"));
-        verify(allegatoDAO, never()).save(any());
-    }
+		assertNotNull(result);
+		assertEquals(200, result.get("idAllegato"));
+		assertEquals("documento.pdf", result.get("nomeFile"));
+		assertEquals("application/pdf", result.get("tipoFile"));
 
-    /**
-     * TEST 12 NUOVO: uploadAllegato - File esattamente 10MB + 1 byte
-     * Valore di frontiera appena oltre il limite
-     */
-    @Test
-    void testUploadAllegato_File10MBPlus1Byte_ThrowsException() {
-        byte[] oversized = new byte[10 * 1024 * 1024 + 1]; // 10MB + 1 byte
-        MockMultipartFile file = new MockMultipartFile(
-            "file", "big.jpg", "image/jpeg", oversized
-        );
-        
-        InvalidFieldException exception = assertThrows(
-            InvalidFieldException.class,
-            () -> allegatoController.uploadAllegato(file, 1)
-        );
-        
-        assertTrue(exception.getMessage().contains("dimensione massima"));
-    }
+		ArgumentCaptor<Allegato> captor = ArgumentCaptor.forClass(Allegato.class);
+		verify(allegatoDAO).save(captor.capture());
+		assertEquals("application/pdf", captor.getValue().getTipoFile());
 
-    /**
-     * TEST 13 NUOVO: uploadAllegato - Verifica TUTTI i tipi MIME supportati
-     * Test di copertura completa
-     */
-    @Test
-    void testUploadAllegato_TuttiTipiMimeValidi_Success() throws Exception {
-        String[] tipiValidi = {
-            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
-            "application/pdf",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        };
-        
-        for (String tipo : tipiValidi) {
-            // Reset mock per ogni iterazione
-            reset(issueDAO, allegatoDAO);
-            
-            when(issueDAO.findById(1)).thenReturn(Optional.of(issueValida));
-            
-            // ✅ CORREZIONE: Usa mock invece di oggetto reale per evitare NullPointerException
-            Allegato allegatoMock = mock(Allegato.class);
-            when(allegatoMock.getIdAllegato()).thenReturn(100);
-            when(allegatoMock.getNomeFile()).thenReturn("test-file");
-            when(allegatoMock.getTipoFile()).thenReturn(tipo);
-            when(allegatoMock.getDimensione()).thenReturn(100);
-            when(allegatoMock.getDataCaricamento()).thenReturn(LocalDateTime.now().toLocalDate());
-            
-            when(allegatoDAO.save(any())).thenReturn(allegatoMock);
-            
-            MockMultipartFile file = new MockMultipartFile("file", "test", tipo, new byte[100]);
-            
-            assertDoesNotThrow(() -> allegatoController.uploadAllegato(file, 1),
-                "Tipo MIME " + tipo + " dovrebbe essere supportato");
-        }
-    }
+		verify(issueDAO, times(1)).findById(idIssue);
+	}
+
+	/**
+	 * TEST 8: uploadAllegato - File al limite (10MB esatti) Classe di equivalenza:
+	 * File alla dimensione massima consentita (valore di frontiera)
+	 */
+	@Test
+	void testUploadAllegato_FileAlLimite10MB_Success() throws Exception {
+		byte[] contenuto10MB = new byte[10 * 1024 * 1024];
+		MockMultipartFile fileAlLimite = new MockMultipartFile("file", "large-valid.jpg", "image/jpeg", contenuto10MB);
+		Integer idIssue = 1;
+
+		when(issueDAO.findById(idIssue)).thenReturn(Optional.of(issueValida));
+
+		Allegato allegatoSalvato = new Allegato(fileAlLimite.getOriginalFilename(), fileAlLimite.getContentType(),
+				(int) fileAlLimite.getSize(), contenuto10MB, issueValida);
+		java.lang.reflect.Field idAllegatoField = Allegato.class.getDeclaredField("idAllegato");
+		idAllegatoField.setAccessible(true);
+		idAllegatoField.set(allegatoSalvato, 300);
+
+		when(allegatoDAO.save(any(Allegato.class))).thenReturn(allegatoSalvato);
+
+		Map<String, Object> result = allegatoController.uploadAllegato(fileAlLimite, idIssue);
+
+		assertNotNull(result);
+		assertEquals(300, result.get("idAllegato"));
+		assertEquals(10 * 1024 * 1024, result.get("dimensione"));
+
+		ArgumentCaptor<Allegato> captor = ArgumentCaptor.forClass(Allegato.class);
+		verify(allegatoDAO).save(captor.capture());
+		assertEquals(10 * 1024 * 1024, captor.getValue().getDimensione());
+
+		verify(issueDAO, times(1)).findById(idIssue);
+	}
+
+	/**
+	 * TEST 9 CORRETTO: uploadAllegato - idIssue null con eccezione specifica Classe
+	 * di equivalenza: idIssue null (valore limite)
+	 */
+	@Test
+	void testUploadAllegato_IdIssueNull_ThrowsIllegalArgumentException() {
+		MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "test content".getBytes());
+
+		when(issueDAO.findById(null)).thenThrow(new IllegalArgumentException("L'ID fornito non deve essere nullo"));
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> allegatoController.uploadAllegato(file, null));
+
+		assertTrue(exception.getMessage().contains("nullo") || exception.getMessage().contains("null"));
+
+		verify(issueDAO).findById(null);
+
+		verify(allegatoDAO, never()).save(any());
+	}
+
+	/**
+	 * TEST 10: uploadAllegato - File Word DOCX valido Classe di equivalenza: File
+	 * Word (tipo supportato)
+	 */
+	@Test
+	void testUploadAllegato_DocxValido_Success() throws Exception {
+		byte[] contenutoDocx = "fake docx content".getBytes();
+		MockMultipartFile fileDocx = new MockMultipartFile("file", "documento.docx",
+				"application/vnd.openxmlformats-officedocument.wordprocessingml.document", contenutoDocx);
+		Integer idIssue = 1;
+
+		when(issueDAO.findById(idIssue)).thenReturn(Optional.of(issueValida));
+
+		Allegato allegatoSalvato = new Allegato(fileDocx.getOriginalFilename(), fileDocx.getContentType(),
+				(int) fileDocx.getSize(), contenutoDocx, issueValida);
+		java.lang.reflect.Field idAllegatoField = Allegato.class.getDeclaredField("idAllegato");
+		idAllegatoField.setAccessible(true);
+		idAllegatoField.set(allegatoSalvato, 400);
+
+		when(allegatoDAO.save(any(Allegato.class))).thenReturn(allegatoSalvato);
+
+		Map<String, Object> result = allegatoController.uploadAllegato(fileDocx, idIssue);
+
+		assertNotNull(result);
+		assertEquals(400, result.get("idAllegato"));
+
+		ArgumentCaptor<Allegato> captor = ArgumentCaptor.forClass(Allegato.class);
+		verify(allegatoDAO).save(captor.capture());
+		assertTrue(captor.getValue().getTipoFile().contains("wordprocessingml"));
+	}
+
+	/**
+	 * TEST 11
+	 */
+	@Test
+	void testUploadAllegato_ContentTypeNull_ThrowsInvalidFieldException() {
+		MockMultipartFile file = new MockMultipartFile("file", "test.jpg", null, "contenuto".getBytes());
+
+		InvalidFieldException exception = assertThrows(InvalidFieldException.class,
+				() -> allegatoController.uploadAllegato(file, 1));
+
+		assertTrue(exception.getMessage().contains("non supportato"));
+
+		verify(issueDAO, never()).findById(any());
+		verify(allegatoDAO, never()).save(any());
+	}
+
+	/**
+	 * TEST 12 NUOVO: uploadAllegato - File esattamente 10MB + 1 byte Valore di
+	 * frontiera appena oltre il limite
+	 */
+	@Test
+	void testUploadAllegato_File10MBPlus1Byte_ThrowsException() {
+		byte[] oversized = new byte[10 * 1024 * 1024 + 1]; // 10MB + 1 byte
+		MockMultipartFile file = new MockMultipartFile("file", "big.jpg", "image/jpeg", oversized);
+
+		InvalidFieldException exception = assertThrows(InvalidFieldException.class,
+				() -> allegatoController.uploadAllegato(file, 1));
+
+		assertTrue(exception.getMessage().contains("dimensione massima"));
+
+		verify(issueDAO, never()).findById(any());
+		verify(allegatoDAO, never()).save(any());
+	}
+
+	@Test
+	void testUploadAllegato_NomeFileNull_ThrowsInvalidFieldException() {
+	    MockMultipartFile file = new MockMultipartFile("file", null, "image/jpeg", "content".getBytes());
+
+	   
+	    when(issueDAO.findById(1)).thenReturn(Optional.of(issueValida));
+
+	    assertThrows(InvalidFieldException.class, 
+	        () -> allegatoController.uploadAllegato(file, 1));
+
+	    verify(issueDAO, times(1)).findById(1);  
+	    verify(allegatoDAO, never()).save(any());
+	}
 }
