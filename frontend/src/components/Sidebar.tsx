@@ -17,27 +17,25 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const currentPath = location.pathname;
 
   
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
-      if (mobile && sidebarOpen) {
-        setSidebarOpen(false);
-      }
-    };
-
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
- 
-  }, []);
-
-  
-  useEffect(() => {
-    if (isMobile && sidebarOpen) {
+useEffect(() => {
+  const checkMobile = () => {
+    const mobile = window.innerWidth <= 768;
+    setIsMobile(mobile);
+    if (mobile && sidebarOpen) {
       setSidebarOpen(false);
     }
-   
-  }, [location.pathname]);
+  };
+
+  window.addEventListener('resize', checkMobile);
+  return () => window.removeEventListener('resize', checkMobile);
+}, [sidebarOpen, setSidebarOpen]);
+
+// Chiudi sidebar su cambio route (mobile)
+useEffect(() => {
+  if (isMobile && sidebarOpen) {
+    setSidebarOpen(false);
+  }
+}, [location.pathname, isMobile, sidebarOpen, setSidebarOpen]);
 
   const handleLogout = () => {
     authService.logout();
