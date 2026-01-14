@@ -181,7 +181,7 @@ public class UtenzaController {
 			throw new InvalidFieldException("Il campo ruolo Ã¨ obbligatorio");
 		}
 
-		// Non puoi cambiare il ruolo di un amministratore esistente
+		
 		if (utenzaDaModificare.getRuolo().equals(Ruolo.Amministratore)) {
 			throw new UnauthorizedException("Non puoi cambiare il ruolo di un amministratore");
 		}

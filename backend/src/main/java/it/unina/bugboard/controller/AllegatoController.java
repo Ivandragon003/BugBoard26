@@ -18,7 +18,6 @@ import java.util.*;
 @RequestMapping("/api/allegato")
 public class AllegatoController {
 
-	
 	private static final String MESSAGE_KEY = "message";
 	private static final String ID_ALLEGATO_KEY = "idAllegato";
 	private static final String NOME_FILE_KEY = "nomeFile";
@@ -27,19 +26,14 @@ public class AllegatoController {
 	private static final String DATA_CARICAMENTO_KEY = "dataCaricamento";
 	private static final String DIMENSIONE_MB_KEY = "dimensioneMB";
 	private static final String ID_ISSUE_KEY = "idIssue";
-	
 
 	private static final String ALLEGATO_NON_TROVATO_MSG = "Allegato non trovato con id: ";
 	private static final String ISSUE_NON_TROVATA_MSG = "Issue non trovata con id: ";
-	
-	
+
 	private static final long MAX_FILE_SIZE = 10 * 1024 * 1024L; // 10MB
-	private static final String[] ALLOWED_CONTENT_TYPES = {
-		"image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
-		"application/pdf",
-		"application/msword",
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-	};
+	private static final String[] ALLOWED_CONTENT_TYPES = { "image/jpeg", "image/jpg", "image/png", "image/gif",
+			"image/webp", "application/pdf", "application/msword",
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
 
 	private final AllegatoDAO allegatoDAO;
 	private final IssueDAO issueDAO;
@@ -51,54 +45,41 @@ public class AllegatoController {
 
 	@PostMapping("/upload")
 	@Transactional
-	public Map<String, Object> uploadAllegato(
-			@RequestParam(value = "file") MultipartFile file,
+	public Map<String, Object> uploadAllegato(@RequestParam(value = "file") MultipartFile file,
 			@RequestParam(value = "idIssue") Integer idIssue) throws IOException {
-		
-		
+
 		if (file == null || file.isEmpty()) {
 			throw new InvalidFieldException("File mancante o vuoto");
 		}
+		
+		   if (file.getOriginalFilename() == null || file.getOriginalFilename().isBlank()) {
+		        throw new InvalidFieldException("Nome file mancante");
+		    }
 
 		if (file.getSize() > MAX_FILE_SIZE) {
-			throw new InvalidFieldException(
-				String.format("Il file supera la dimensione massima consentita di %.0fMB", 
-					MAX_FILE_SIZE / (1024.0 * 1024.0))
-			);
+			throw new InvalidFieldException(String.format("Il file supera la dimensione massima consentita di %.0fMB",
+					MAX_FILE_SIZE / (1024.0 * 1024.0)));
 		}
 
 		String contentType = file.getContentType();
 		if (contentType == null || !isAllowedContentType(contentType)) {
 			throw new InvalidFieldException(
-				"Tipo di file non supportato. Formati consentiti: immagini (JPG, PNG, GIF, WEBP), PDF, DOC, DOCX"
-			);
+					"Tipo di file non supportato. Formati consentiti: immagini (JPG, PNG, GIF, WEBP), PDF, DOC, DOCX");
 		}
 
-		
 		Issue issue = issueDAO.findById(idIssue)
 				.orElseThrow(() -> new NotFoundException(ISSUE_NON_TROVATA_MSG + idIssue));
 
 		// Salva file nel database come byte array
 		byte[] fileData = file.getBytes();
-		Allegato allegato = new Allegato(
-			file.getOriginalFilename(),
-			contentType,
-			(int) file.getSize(),
-			fileData,
-			issue
-		);
+		Allegato allegato = new Allegato(file.getOriginalFilename(), contentType, (int) file.getSize(), fileData,
+				issue);
 
 		Allegato saved = allegatoDAO.save(allegato);
 
-		
-		return Map.of(
-			ID_ALLEGATO_KEY, saved.getIdAllegato(),
-			NOME_FILE_KEY, saved.getNomeFile(),
-			TIPO_FILE_KEY, saved.getTipoFile(),
-			DIMENSIONE_KEY, saved.getDimensione(),
-			DATA_CARICAMENTO_KEY, saved.getDataCaricamento(),
-			MESSAGE_KEY, "File caricato con successo"
-		);
+		return Map.of(ID_ALLEGATO_KEY, saved.getIdAllegato(), NOME_FILE_KEY, saved.getNomeFile(), TIPO_FILE_KEY,
+				saved.getTipoFile(), DIMENSIONE_KEY, saved.getDimensione(), DATA_CARICAMENTO_KEY,
+				saved.getDataCaricamento(), MESSAGE_KEY, "File caricato con successo");
 	}
 
 	@GetMapping("/download/{id}")
@@ -111,10 +92,8 @@ public class AllegatoController {
 		ByteArrayResource resource = new ByteArrayResource(data);
 
 		return ResponseEntity.ok()
-				.header(HttpHeaders.CONTENT_DISPOSITION, 
-					"attachment; filename=\"" + allegato.getNomeFile() + "\"")
-				.contentType(MediaType.parseMediaType(allegato.getTipoFile()))
-				.contentLength(data.length)
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + allegato.getNomeFile() + "\"")
+				.contentType(MediaType.parseMediaType(allegato.getTipoFile())).contentLength(data.length)
 				.body(resource);
 	}
 
@@ -130,8 +109,7 @@ public class AllegatoController {
 		// Inline invece di attachment per visualizzazione diretta nel browser
 		return ResponseEntity.ok()
 				.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + allegato.getNomeFile() + "\"")
-				.contentType(MediaType.parseMediaType(allegato.getTipoFile()))
-				.contentLength(data.length)
+				.contentType(MediaType.parseMediaType(allegato.getTipoFile())).contentLength(data.length)
 				.body(resource);
 	}
 
@@ -139,39 +117,32 @@ public class AllegatoController {
 	@Transactional(readOnly = true)
 	public List<Map<String, Object>> getAllegatiByIssue(@PathVariable(value = "idIssue") Integer idIssue) {
 		verificaEsistenzaIssue(idIssue);
-		
+
 		List<Allegato> allegati = allegatoDAO.findByIssueIdIssue(idIssue);
-		
+
 		// solo metadata senza i bytes (per performance)
-		return allegati.stream()
-			.map(this::allegatoToMap)
-			.toList();
+		return allegati.stream().map(this::allegatoToMap).toList();
 	}
 
 	@GetMapping("/issue/{idIssue}/ordinati-dimensione")
 	@Transactional(readOnly = true)
 	public List<Map<String, Object>> getAllegatiOrderByDimensione(@PathVariable(value = "idIssue") Integer idIssue) {
 		verificaEsistenzaIssue(idIssue);
-		
+
 		List<Allegato> allegati = allegatoDAO.findAllegatiByIssueOrderByDimensioneDesc(idIssue);
-		
-		return allegati.stream()
-			.map(this::allegatoToMap)
-			.toList();
+
+		return allegati.stream().map(this::allegatoToMap).toList();
 	}
 
 	@GetMapping("/issue/{idIssue}/dimensione-totale")
 	@Transactional(readOnly = true)
 	public Map<String, Object> getDimensioneTotale(@PathVariable(value = "idIssue") Integer idIssue) {
 		verificaEsistenzaIssue(idIssue);
-		
+
 		Long totale = Optional.ofNullable(allegatoDAO.sumDimensioniByIssue(idIssue)).orElse(0L);
 
-		return Map.of(
-			ID_ISSUE_KEY, idIssue, 
-			"dimensioneTotaleBytes", totale, 
-			"dimensioneTotaleMB", String.format("%.2f", totale / (1024.0 * 1024.0))
-		);
+		return Map.of(ID_ISSUE_KEY, idIssue, "dimensioneTotaleBytes", totale, "dimensioneTotaleMB",
+				String.format("%.2f", totale / (1024.0 * 1024.0)));
 	}
 
 	@GetMapping("/issue/{idIssue}/count")
@@ -192,8 +163,6 @@ public class AllegatoController {
 		return Map.of(MESSAGE_KEY, "Allegato eliminato con successo");
 	}
 
-
-
 	private void verificaEsistenzaIssue(Integer idIssue) {
 		if (!issueDAO.existsById(idIssue)) {
 			throw new NotFoundException(ISSUE_NON_TROVATA_MSG + idIssue);
@@ -208,7 +177,7 @@ public class AllegatoController {
 		}
 		return false;
 	}
-	
+
 	private Map<String, Object> allegatoToMap(Allegato a) {
 		Map<String, Object> map = new HashMap<>();
 		map.put(ID_ALLEGATO_KEY, a.getIdAllegato());
